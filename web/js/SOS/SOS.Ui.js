@@ -594,8 +594,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       addSelectedIntervalStatsContent: function(panel, stats, hist) {
         var series = this.config.plot.selected[0].item.series;
         var st = jQuery('<div id="sosSelectedIntervalStatsTable" class="sos-selected-interval-stats-table"/>');
-        var sp = jQuery('<div id="sosSelectedIntervalStatsPlot" class="sos-selected-interval-stats-plot"/>');
+        var sp = jQuery('<div id="sosSelectedIntervalStatsPlot" class="sos-selected-interval-stats-plot" style="width: 300px; height: 150px;"/>');
         var tbody = "";
+
+        /* N.B.: It's crucial that any flot plot has width & height set.  The
+                 above somewhat redundant style for the plot div is required
+                 because IE & chrome don't see the CSS class definition before
+                 the plot is generated, causing an uncaught exception */
 
         // Construct stats table
         for(var key in {min: 0, max: 0, mean: 0, median: 0, q1: 0, q3: 0, variance: 0, sd: 0}) {
