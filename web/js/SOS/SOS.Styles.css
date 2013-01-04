@@ -1,0 +1,54 @@
+/******************************************************************************
+* Project: SOS
+* Module:  SOS.Styles.css
+* Purpose: Styles for the UI elements of the SOS project
+* Author:  Paul M. Breen
+* Date:    2012-12-12
+* Id:      $Id$
+******************************************************************************/
+
+.sos-plot {
+  width: 600px;
+  height: 300px;
+}
+
+.sos-plot-overview {
+  margin-left: 50px;
+  margin-top: 10px;
+  width: 530px;
+  height: 50px;
+}
+
+.sos-plot-valuebox {
+  display: none;
+  font-size: 0.65em;
+  background: #ffffff;
+  filter: alpha(opacity=80);
+  opacity: 0.8;
+  border: thin solid grey;
+  padding: 5px;
+  z-index: 1200;
+}
+
+.sos-plot-control-title {
+  font-weight: bold;
+}
+
+.sos-selected-interval-stats-table {
+  font-size: 0.75em;
+}
+
+.sos-selected-interval-stats-plot {
+  width: 300px;
+  height: 150px;
+  font-size: 0.75em;
+  position: absolute;
+  left: 200px;
+  top: 50px;
+}
+
+/* flot legend styles */
+div.legend {
+  font-size: 0.70em;
+}
+

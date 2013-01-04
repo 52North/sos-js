@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GetObservation xmlns="http://www.opengis.net/sos/1.0" version="1.0.0" service="SOS" xmlns:om="http://www.opengis.net/om/1.0" xmlns:ogc="http://www.opengis.net/ogc" xsi:schemaLocation="http://www.opengis.net/sos/1.0 http://schemas.opengis.net/sos/1.0.0/sosGetObservation.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <offering>HalleySynop</offering>
+  <eventTime>
+    <ogc:TM_Equals xmlns:ogc="http://www.opengis.net/ogc">
+      <ogc:PropertyName>urn:ogc:data:time:iso8601</ogc:PropertyName>
+      <gml:TimeInstant xmlns:gml="http://www.opengis.net/gml">
+        <gml:timePosition>latest</gml:timePosition>
+      </gml:TimeInstant>
+    </ogc:TM_Equals>
+  </eventTime>
+  <observedProperty>urn:ogc:def:phenomenon:OGC:1.0.30:air_temperature</observedProperty>
+  <observedProperty>urn:ogc:def:phenomenon:OGC:1.0.30:wind_speed</observedProperty>
+<!--  <observedProperty>urn:ogc:def:phenomenon:OGC:1.0.30:wind_direction</observedProperty>
+  <observedProperty>urn:ogc:def:phenomenon:OGC:1.0.30:station_pressure</observedProperty>
+  <observedProperty>urn:ogc:def:phenomenon:OGC:1.0.30:sea_level_pressure</observedProperty>
+  <observedProperty>urn:ogc:def:phenomenon:OGC:1.0.30:relative_humidity</observedProperty> -->
+  <responseFormat>text/xml;subtype="om/1.0.0"</responseFormat>
+  <!-- <resultModel>om:Measurement</resultModel> -->
+  <responseMode>inline</responseMode>
+</GetObservation>
