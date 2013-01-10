@@ -145,6 +145,164 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       haveValidOfferingObject: function() {
         return SOS.Utils.isValidObject(this.offering);
       },
+
+      /**
+       * Get data from given SOS query result object & return as a table
+       * suitable for displaying
+       */
+      constructDataTable: function(res) {
+        var table = {label: "", name: "", uom: "", data: []};
+
+        // Construct the data table
+        for(var i = 0, len = res.getCountOfObservations(); i < len; i++) {
+          var ob = res.getObservationRecord(i);
+
+          if(table.name.length < 1) {
+            table.name = ob.observedPropertyTitle;
+          }
+          if(table.uom.length < 1) {
+            table.uom = ob.UomTitle;
+          }
+          table.data.push([SOS.Utils.isoToJsTimestamp(ob.time), ob.result.value]);
+        }
+
+        if(res.name) {
+          table.label = res.name;
+        } else if(res.id) {
+          table.label = res.id;
+        } else {
+          table.label = table.name;
+          table.label += (table.uom.length > 0 ? " / " + table.uom : "");
+        }
+
+        return table;
+      },
+
+      /**
+       * Subset an existing data series
+       */
+      subsetDataSeries: function(series, from, to) {
+        var subset = [], n = 0;
+
+        for(var i = 0, slen = series.length; i < slen; i++) {
+          subset[i] = {label: "", name: "", uom: "", data: []};
+          n = 0;
+
+          // Copy all metadata
+          for(var key in {label: "", name: "", uom: ""}) {
+            subset[i][key] = series[i][key];
+          }
+
+          // Only select data whose datetime lie on the given closed interval
+          for(var j = 0, tlen = series[i].data.length; j < tlen; j++) {
+            if(series[i].data[j][0] >= from && series[i].data[j][0] <= to) {
+              subset[i].data[n] = [];
+
+              for(var k = 0, dlen = series[i].data[j].length; k < dlen; k++) {
+                subset[i].data[n][k] = series[i].data[j][k];
+              }
+              n++;
+            }
+          }
+        }
+
+        return subset;
+      },
+
+      /**
+       * Format the given value for display (simple)
+       */
+      formatValueSimple: function(v, L, N) {
+        var x = parseFloat(v);
+        return (Math.abs(x) < L && x != 0 ? x.toExponential(N) : x.toFixed(N));
+      },
+
+      /**
+       * Format the given value for display (fancy)
+       */
+      formatValueFancy: function(v, L, N) {
+        var x = parseFloat(v);
+
+        if(Math.abs(x) < L && x != 0) {
+          x = x.toExponential(N);
+          x = x.replace(/e(.+)/, function(match, $1, offset, original) {return (" x 10 <sup>" + $1 + "</sup>");});
+        } else {
+          x = x.toFixed(N);
+        }
+
+        return x;
+      },
+
+      /**
+       * Display summary stats about the given selected observation data
+       */
+      displaySelectedIntervalStats: function(container, selected) {
+        var series = selected[0].item.series;
+        var start = Math.min(selected[0].item.dataIndex, selected[1].item.dataIndex);
+        var end = Math.max(selected[0].item.dataIndex, selected[1].item.dataIndex);
+        var subset = series.data.slice(start, end + 1);
+        var values = SOS.Utils.extractColumn(subset, 1);
+        var stats = SOS.Utils.computeStats(values);
+        var hist = SOS.Utils.computeHistogram(values);
+
+        var panel = jQuery('<div/>');
+        this.addSelectedIntervalStatsContent(panel, selected, stats, hist);
+        container.after(panel);
+
+        var buttons = [
+          {text: "Close", click: function() {$(this).dialog("close");}}
+        ];
+
+        var dialog = panel.dialog({position: ['center', 'center'], buttons: buttons, title: series.label, width: 540, zIndex: 1010, stack: false});
+        dialog.bind('dialogclose', function() {$(this).dialog("destroy");});
+      },
+
+      /**
+       * Add summary stats content to dialog
+       */
+      addSelectedIntervalStatsContent: function(panel, selected, stats, hist) {
+        var series = selected[0].item.series;
+        var st = jQuery('<div id="sosSelectedIntervalStatsTable" class="sos-selected-interval-stats-table"/>');
+        var sp = jQuery('<div id="sosSelectedIntervalStatsPlot" class="sos-selected-interval-stats-plot" style="width: 300px; height: 150px;"/>');
+        var fv = this.config.format.value;
+        var tcontent = "";
+
+        /* N.B.: It's crucial that any flot plot has width & height set.  The
+                 above somewhat redundant style for the plot div is required
+                 because IE & chrome don't see the CSS class definition before
+                 the plot is generated, causing an uncaught exception */
+
+        // Construct stats table
+        for(var key in {min: 0, max: 0, mean: 0, median: 0, q1: 0, q3: 0, variance: 0, sd: 0}) {
+          tcontent += '<tr>';
+          tcontent += '<td class="sos-plot-control-title">' + key + '</td>';
+          tcontent += '<td> = ' + fv.formatter(parseFloat(stats[key]), fv.sciLimit, fv.digits) + '</td>';
+          tcontent += '</tr>';
+        }
+
+        var table = '<table><tbody>';
+        table += tcontent;
+        table += '</tbody></table>';
+        st.append(table);
+
+        panel.append('<span class="sos-plot-control-title">' + series.name + ' / ' + series.uom + '</span>', '<hr></hr>');
+        panel.append(st, sp);
+
+        // Generate stats plot
+        this.config.stats = this.config.stats || {};
+        this.config.stats.series = [{data: hist.data}];
+        this.config.stats.options = {
+          grid: {borderWidth: 1},
+          series: {
+            color: series.color,
+            bars: {
+              show: true,
+              barWidth: hist.binWidth,
+            },
+          },
+        };
+        this.config.stats.object = jQuery.plot(sp, this.config.stats.series, this.config.stats.options);
+      },
     });
   }
 
@@ -173,7 +331,6 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             grid: {borderWidth: 1, hoverable: true, clickable: true},
             legend: {show: true, backgroundOpacity: 0.5},
             series: {lines: {show: true}, points: {show: false}},
-            values: {sciLimit: 0.1, digits: 2},
           },
         },
         overview: {
@@ -188,6 +345,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             grid: {borderWidth: 1},
             legend: {show: false},
             series: {lines: {show: true, lineWidth: 1}, shadowSize: 0},
+          },
+        },
+        format: {
+          time: {
+            formatter: SOS.Utils.jsTimestampToIso,
+          },
+          value: {
+            sciLimit: 0.1,
+            digits: 2,
+            formatter: SOS.Ui.prototype.formatValueFancy,
           },
         },
       },
@@ -220,7 +387,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       /**
        * Set options for the plot overview
        */
-      setPlotOverviewOptions: function(options) {
+      setOverviewOptions: function(options) {
         jQuery.extend(true, this.config.overview.options, options);
       },
 
@@ -245,58 +412,28 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.config.overview.options[axis].transform = this.config.plot.options[axis].transform;
         this.config.overview.options[axis].inverseTransform = this.config.plot.options[axis].inverseTransform;
       },
-
-      /**
-       * Format the given value for display (simple)
-       */
-      formatValueSimple: function(v, L, N) {
-        return (Math.abs(v) < L && v != 0 ? v.toExponential(N) : v.toFixed(N));
-      },
-
-      /**
-       * Format the given value for display (fancy)
-       */
-      formatValueFancy: function(v, L, N) {
-        var x = v;
-
-        if(Math.abs(v) < L && v != 0) {
-          x = v.toExponential(N);
-          x = x.replace(/e(.+)/, function(match, $1, offset, original) {return (" x 10 <sup>" + $1 + "</sup>");});
-        } else {
-          x = v.toFixed(N);
-        }
-
-        return x;
-      },
-
-      /**
-       * Default formatter for displaying values
-       */
-      formatValue: function() {
-        return SOS.Plot.prototype.formatValueFancy.apply(this, arguments);
-      },
  
       /**
        * Generate the plot using this object's properties to query the SOS
        */
-      plot: function(options) {
-        // Plot parameters can optionally be tweaked for each call to plot()
+      display: function(options) {
+        // Parameters can optionally be tweaked for each call
         if(arguments.length > 0) {
           jQuery.extend(true, this, options);
         }
 
         if(!this.haveValidCapabilitiesObject()) {
-          this.getCapabilities(this._plot);
+          this.getCapabilities(this._display);
         } else {
-          this._plot();
+          this._display();
         }
       },
 
       /**
        * Add to pending plot using given additional options to query the SOS
        */
-      addToPlot: function(options) {
-        // Store plot parameters so they can be added to a base plot
+      add: function(options) {
+        // Store parameters so they can be added to a base plot
         if(arguments.length > 0) {
           this.additional = this.additional || [];
           this.additional.push(options);
@@ -307,14 +444,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Get the observation data from the SOS according to this object's
        * properties, & then draw the plot
        */
-      _plot: function() {
+      _display: function() {
         this._getOffering();
 
         if(this.haveValidOfferingObject()) {
           if(SOS.Utils.isValidObject(this.observedProperty)) {
             this.offering.filterObservedProperties(this.observedProperty);
           }
-          this.offering.registerUserCallback({event: "obsavailable", scope: this, callback: this.drawPlot});
+          this.offering.registerUserCallback({event: "obsavailable", scope: this, callback: this.draw});
           this.offering.getObservations(this.startDatetime, this.endDatetime);
         }
       },
@@ -322,72 +459,39 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       /**
        * Plot the given observation data
        */
-      drawPlot: function() {
-        // Avoid infinite loop as addDataToPlot() also listens for obsavailable
-        this.offering.unregisterUserCallback({event: "obsavailable", scope: this, callback: this.drawPlot});
+      draw: function() {
+        // Avoid infinite loop as addData() also listens for obsavailable
+        this.offering.unregisterUserCallback({event: "obsavailable", scope: this, callback: this.draw});
 
         // Construct the data series
         var table = this.constructDataTable(this.offering);
         this.config.plot.series.push(table);
 
         // Set any last minute defaults if not already set
-        this.applyPlotDefaults();
+        this.applyDefaults();
 
         // Generate the plot
         this.config.plot.object = jQuery.plot(jQuery('#' + this.config.plot.id), this.config.plot.series, this.config.plot.options);
 
         // Optionally generate the plot overview
         if(this.config.overview.options.show) {
-          this.drawOverviewPlot();
+          this.drawOverview();
         }
 
         // Manage the plot's interactive behaviour
-        this.setupPlotBehaviour();
+        this.setupBehaviour();
 
         // Now we have the base plot, plot any additional data
         if(SOS.Utils.isValidObject(this.additional)) {
-          this.addDataToPlot();
+          this.addData();
         }
       },
 
       /**
-       * Get data from given SOS query result object & return as a table
-       * suitable for plotting
+       * Apply any defaults where none have been specified or combination
+       * of options is nonsensical
        */
-      constructDataTable: function(res) {
-        var table = {label: "", name: "", uom: "", data: []};
-
-        // Construct the data table
-        for(var i = 0, len = res.getCountOfObservations(); i < len; i++) {
-          var ob = res.getObservationRecord(i);
-
-          if(table.name.length < 1) {
-            table.name = ob.observedPropertyTitle;
-          }
-          if(table.uom.length < 1) {
-            table.uom = ob.UomTitle;
-          }
-
-          table.data.push([SOS.Utils.isoToJsTimestamp(ob.time), ob.result.value]);
-        }
-
-        if(res.name) {
-          table.label = res.name;
-        } else if(res.id) {
-          table.label = res.id;
-        } else {
-          table.label = table.name;
-          table.label += (table.uom.length > 0 ? " / " + table.uom : "");
-        }
-
-        return table;
-      },
-
-      /**
-       * Apply any defaults to the plot where none have been specified or
-       * combination of options is nonsensical
-       */
-      applyPlotDefaults: function() {
+      applyDefaults: function() {
         var options = this.config.plot.options;
         var series = this.config.plot.series;
 
@@ -410,7 +514,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       /**
        * Plot the given observation data as an overview plot
        */
-      drawOverviewPlot: function() {
+      drawOverview: function() {
         var o = jQuery('#' + this.config.overview.id);
 
         // If overview div doesn't exist (the norm), create one on the fly
@@ -427,16 +531,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       /**
        * Setup event handlers to manage the plot's behaviour
        */
-      setupPlotBehaviour: function() {
+      setupBehaviour: function() {
         var p = jQuery('#' + this.config.plot.id);
         var valueBox = jQuery("#sosPlotValueBox");
         var xlimit = ((p.offset().left + p.outerWidth()) - 220);
         var ylimit = ((p.offset().top + p.outerHeight()) - 100);
-
-        // If no user-supplied tooltip formatter, use built-in
-        if(typeof this.config.plot.options.values.formatter !== "function") {
-          this.config.plot.options.values.formatter = this.formatValue;
-        }
 
         // If valueBox div doesn't exist (the norm), create one on the fly
         if(valueBox.length < 1) {
@@ -445,14 +544,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         }
 
         // Show data coordinates (time, value) as mouse hovers over plot
-        p.bind("plothover", {self: this.config.plot.options.values}, function(evt, pos, item) {
+        p.bind("plothover", {self: this}, function(evt, pos, item) {
           if(item) {
+            var ft = evt.data.self.config.format.time;
+            var fv = evt.data.self.config.format.value;
             // Ensure the value box stays within the plot boundaries.  The
             // small offsets avoid flickering when box is under mouse
             var x = Math.min(item.pageX, xlimit) + 10;
             var y = Math.min(item.pageY, ylimit) + 10;
-            var value = evt.data.self.formatter(pos.y, evt.data.self.sciLimit, evt.data.self.digits);
-            var html = jQuery('<p><span class="sos-plot-control-title">Time:</span> <span>' + SOS.Utils.jsTimestampToIso(pos.x) + '</span><br/><span class="sos-plot-control-title">Value:</span> <span>' + value + ' ' + item.series.uom + '</span></p>');
+            var html = jQuery('<p><span class="sos-plot-control-title">Time:</span> <span>' + ft.formatter(pos.x) + '</span><br/><span class="sos-plot-control-title">Value:</span> <span>' + fv.formatter(pos.y, fv.sciLimit, fv.digits) + ' ' + item.series.uom + '</span></p>');
 
             valueBox.html(html);
             valueBox.css({
@@ -481,17 +581,17 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
             // On first selection, grey-out all other curves on the plot
             if(self.config.plot.selected.length == 1) {
-              self.greyOutCurvesOnPlot(item.seriesIndex);
+              self.greyOutSeries(item.seriesIndex);
             }
 
             if(self.config.plot.selected.length > 1) {
               if(self.config.plot.selected[1].item.seriesIndex == self.config.plot.selected[0].item.seriesIndex) {
-                self.displaySelectedIntervalStats();
+                self.displaySelectedIntervalStats(p, self.config.plot.selected);
               }
               // Reinstate plot, including ungreying-out all other curves
               self.config.plot.object.unhighlight();
               delete self.config.plot.selected;
-              self.updatePlot();
+              self.update();
             }
           }
         });
@@ -525,7 +625,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Get the observation data from the SOS for each additional set of
        * query parameters, & then update the existing plot
        */
-      addDataToPlot: function() {
+      addData: function() {
         if(SOS.Utils.isValidObject(this.additional)) {
           for(var i = 0, len = this.additional.length; i < len; i++) {
             jQuery.extend(true, this, this.additional[i]);
@@ -535,7 +635,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               if(SOS.Utils.isValidObject(this.observedProperty)) {
                 this.offering.filterObservedProperties(this.observedProperty);
               }
-              this.offering.registerUserCallback({event: "obsavailable", scope: this, callback: this.drawAdditionalDataOnPlot});
+              this.offering.registerUserCallback({event: "obsavailable", scope: this, callback: this.drawAdditionalData});
               this.offering.getObservations(this.startDatetime, this.endDatetime);
             }
           }
@@ -545,99 +645,27 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       /**
        * Add the given observation data to an existing plot
        */
-      drawAdditionalDataOnPlot: function() {
+      drawAdditionalData: function() {
         // Avoid infinite loop as each additional listens for obsavailable
-        this.offering.unregisterUserCallback({event: "obsavailable", scope: this, callback: this.drawAdditionalDataOnPlot});
+        this.offering.unregisterUserCallback({event: "obsavailable", scope: this, callback: this.drawAdditionalData});
 
         // Construct the data series
         var table = this.constructDataTable(this.offering);
         this.config.plot.series.push(table);
 
-        this.updatePlot();
+        this.update();
 
         // Optionally update the plot overview also
         if(this.config.overview.options.show) {
           this.config.overview.series = this.config.plot.series;
-          this.updateOverviewPlot();
+          this.updateOverview();
         }
-      },
-
-      /**
-       * Display summary stats about the given selected observation data
-       */
-      displaySelectedIntervalStats: function() {
-        var p = jQuery('#' + this.config.plot.id);
-
-        var series = this.config.plot.selected[0].item.series;
-        var start = Math.min(this.config.plot.selected[0].item.dataIndex, this.config.plot.selected[1].item.dataIndex);
-        var end = Math.max(this.config.plot.selected[0].item.dataIndex, this.config.plot.selected[1].item.dataIndex);
-        var subset = series.data.slice(start, end + 1);
-        var values = SOS.Utils.extractColumn(subset, 1);
-        var stats = SOS.Utils.computeStats(values);
-        var hist = SOS.Utils.computeHistogram(values);
-
-        var panel = jQuery('<div/>');
-        this.addSelectedIntervalStatsContent(panel, stats, hist);
-        p.after(panel);
-
-        var buttons = [
-          {text: "Close", click: function() {$(this).dialog("close");}}
-        ];
-
-        var dialog = panel.dialog({position: ['center', 'center'], buttons: buttons, title: series.label, width: 540, zIndex: 1010, stack: false});
-        dialog.bind('dialogclose', function() {$(this).dialog("destroy");});
-      },
-
-      /**
-       * Add summary stats content to dialog
-       */
-      addSelectedIntervalStatsContent: function(panel, stats, hist) {
-        var series = this.config.plot.selected[0].item.series;
-        var st = jQuery('<div id="sosSelectedIntervalStatsTable" class="sos-selected-interval-stats-table"/>');
-        var sp = jQuery('<div id="sosSelectedIntervalStatsPlot" class="sos-selected-interval-stats-plot" style="width: 300px; height: 150px;"/>');
-        var tbody = "";
-
-        /* N.B.: It's crucial that any flot plot has width & height set.  The
-                 above somewhat redundant style for the plot div is required
-                 because IE & chrome don't see the CSS class definition before
-                 the plot is generated, causing an uncaught exception */
-
-        // Construct stats table
-        for(var key in {min: 0, max: 0, mean: 0, median: 0, q1: 0, q3: 0, variance: 0, sd: 0}) {
-          tbody += '<tr>';
-          tbody += '<td class="sos-plot-control-title">' + key + '</td>';
-          tbody += '<td> = ' + this.formatValue(parseFloat(stats[key]), this.config.plot.options.values.sciLimit, this.config.plot.options.values.digits) + '</td>';
-          tbody += '</tr>';
-        }
-
-        var table = '<table><tbody>';
-        table += tbody;
-        table += '</tbody></table>';
-        st.append(table);
-
-        panel.append('<span class="sos-plot-control-title">' + series.name + ' / ' + series.uom + '</span>', '<hr></hr>');
-        panel.append(st, sp);
-
-        // Generate stats plot
-        this.config.stats = this.config.stats || {};
-        this.config.stats.series = [{data: hist.data}];
-        this.config.stats.options = {
-          grid: {borderWidth: 1},
-          series: {
-            color: series.color,
-            bars: {
-              show: true,
-              barWidth: hist.binWidth,
-            },
-          },
-        };
-        this.config.stats.object = jQuery.plot(sp, this.config.stats.series, this.config.stats.options);
       },
 
       /**
        * Redraw an existing plot
        */
-      updatePlot: function() {
+      update: function() {
         this.config.plot.object.setData(this.config.plot.series);
         this.config.plot.object.setupGrid();
         this.config.plot.object.draw();
@@ -646,18 +674,18 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       /**
        * Redraw an existing overview plot
        */
-      updateOverviewPlot: function() {
+      updateOverview: function() {
         this.config.overview.object.setData(this.config.overview.series);
         this.config.overview.object.setupGrid();
         this.config.overview.object.draw();
       },
 
       /**
-       * Grey-out all except the given curve on the plot.  Specifying a series
-       * index of -1 will grey-out all curves.  Call updatePlot() to reinstate
+       * Grey-out all except the given series on the plot.  Specifying a series
+       * index of -1 will grey-out all series.  Call update() to reinstate
        * plot to original colours
        */
-      greyOutCurvesOnPlot: function(seriesIndex) {
+      greyOutSeries: function(seriesIndex) {
         var series = this.config.plot.object.getData();
 
         for(var i = 0, len = series.length; i < len; i++) {
@@ -667,6 +695,573 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         }
         this.config.plot.object.setupGrid();
         this.config.plot.object.draw();
+      },
+    });
+  }
+
+  /* Create the SOS.Table namespace */
+  if(typeof SOS.Table === "undefined") {
+    /**
+     * SOS.Table Class
+     * Class for displaying a table of data served from a SOS
+     *
+     * Inherits from:
+     *  - <SOS.Ui>
+     */
+    SOS.Table = OpenLayers.Class(SOS.Ui, {
+      url: null,
+      sos: null,
+      offering: null,
+      config: {
+        table: {
+          object: null,
+          id: "sosTable",
+          series: [],
+          options: {
+            header: {},
+          },
+        },
+        overview: {
+          object: null,
+          id: "sosTableOverview",
+          series: [],
+          options: {
+            show: false,
+            xaxis: {ticks: [], mode: "time"},
+            yaxis: {ticks: [], autoscaleMargin: 0.1},
+            selection: {mode: "x"},
+            grid: {borderWidth: 1},
+            legend: {show: false},
+            series: {lines: {show: true, lineWidth: 1}, shadowSize: 0},
+          },
+        },
+        format: {
+          time: {
+            formatter: SOS.Utils.jsTimestampToIso,
+          },
+          value: {
+            sciLimit: 0.1,
+            digits: 2,
+            formatter: SOS.Ui.prototype.formatValueFancy,
+          },
+        },
+      },
+      CLASS_NAME: "SOS.Table",
+
+      /**
+       * Constructor for a SOS.Table object
+       *
+       * @constructor
+       */
+      initialize: function(options) {
+        jQuery.extend(true, this, options);
+      },
+
+      /**
+       * Destructor for a SOS.Table object
+       * 
+       * @destructor
+       */
+      destroy: function() {
+      },
+
+      /**
+       * Set options for the table
+       */
+      setTableOptions: function(options) {
+        jQuery.extend(true, this.config.table.options, options);
+      },
+
+      /**
+       * Set options for the table overview
+       */
+      setOverviewOptions: function(options) {
+        jQuery.extend(true, this.config.overview.options, options);
+      },
+
+      /**
+       * Generate the table using this object's properties to query the SOS
+       */
+      display: function(options) {
+        // Parameters can optionally be tweaked for each call
+        if(arguments.length > 0) {
+          jQuery.extend(true, this, options);
+        }
+
+        if(!this.haveValidCapabilitiesObject()) {
+          this.getCapabilities(this._display);
+        } else {
+          this._display();
+        }
+      },
+
+      /**
+       * Add to pending table using given additional options to query the SOS
+       */
+      add: function(options) {
+        // Store parameters so they can be added to a base table
+        if(arguments.length > 0) {
+          this.additional = this.additional || [];
+          this.additional.push(options);
+        }
+      },
+
+      /**
+       * Get the observation data from the SOS according to this object's
+       * properties, & then draw the table
+       */
+      _display: function() {
+        this._getOffering();
+
+        if(this.haveValidOfferingObject()) {
+          if(SOS.Utils.isValidObject(this.observedProperty)) {
+            this.offering.filterObservedProperties(this.observedProperty);
+          }
+          this.offering.registerUserCallback({event: "obsavailable", scope: this, callback: this.draw});
+          this.offering.getObservations(this.startDatetime, this.endDatetime);
+        }
+      },
+
+      /**
+       * Display the given observation data
+       */
+      draw: function() {
+        // Avoid infinite loop as addData() also listens for obsavailable
+        this.offering.unregisterUserCallback({event: "obsavailable", scope: this, callback: this.draw});
+
+        // Construct the data series
+        var table = this.constructDataTable(this.offering);
+        this.config.table.series.push(table);
+
+        // Set any last minute defaults if not already set
+        this.applyDefaults();
+
+        // Generate the table
+        this.config.table.object = this.generateTable(jQuery('#' + this.config.table.id), this.config.table.series, this.config.table.options);
+
+        // Optionally generate the table overview
+        if(this.config.overview.options.show) {
+          this.drawOverview();
+        }
+
+        // Manage the table's interactive behaviour
+        this.setupBehaviour();
+
+        // Now we have the base table, add any additional data
+        if(SOS.Utils.isValidObject(this.additional)) {
+          this.addData();
+        }
+      },
+
+      /**
+       * Apply any defaults where none have been specified or combination
+       * of options is nonsensical
+       */
+      applyDefaults: function() {
+        var options = this.config.table.options;
+        var series = this.config.table.series;
+
+        if(!SOS.Utils.isValidObject(options.header.headerLabel)) {
+          if(series.length > 0) {
+            options.header.headerLabel = series[0].name;
+            options.header.headerLabel += (series[0].uom.length > 0 ? " / " + series[0].uom : "");
+          }
+        }
+      },
+
+      /**
+       * Plot the given observation data as an overview plot
+       */
+      drawOverview: function() {
+        var o = jQuery('#' + this.config.overview.id);
+
+        // If overview div doesn't exist (the norm), create one on the fly
+        if(o.length < 1) {
+          var t = jQuery('#' + this.config.table.id);
+          o = jQuery('<div id="sosTableOverview" class="sos-plot-overview"/>');
+          t.after(o);
+        }
+
+        this.config.overview.series = this.config.table.series;
+        this.config.overview.object = jQuery.plot(o, this.config.overview.series, this.config.overview.options);
+      },
+
+      /**
+       * Setup event handlers to manage the table's behaviour
+       */
+      setupBehaviour: function() {
+        var t = jQuery('#' + this.config.table.id);
+
+        // Setup custom events for the table
+        this.setupTableEventTriggers(t, "td");
+
+        /* Highlight datetime & value cells as mouse moves over table.  The
+           selecting flag determines between drag selection or discrete click */
+        t.delegate("td", "mouseover mouseout", {self: this}, function(evt) {
+          evt.data.self.config.table.selecting ? evt.data.self.highlightCellGroup(this) : evt.data.self.toggleHighlightCellGroup(this);
+        });
+ 
+        // Show summary stats of a selected interval between two points
+        t.bind("tableclick", {self: this}, function(evt) {
+          var self = evt.data.self;
+          var item = self.eventToItem(evt);
+          delete self.config.table.selecting;
+
+          if(item) {
+            self.config.table.selected = self.config.table.selected || [];
+            self.highlightSelectedCellGroup(evt.target);
+            self.config.table.selected.push({item: item});
+
+            // On first selection, grey-out all other series on the table
+            if(self.config.table.selected.length == 1) {
+              self.greyOutSeries(item.seriesIndex);
+            }
+
+            if(self.config.table.selected.length > 1) {
+              if(self.config.table.selected[1].item.seriesIndex == self.config.table.selected[0].item.seriesIndex) {
+                self.displaySelectedIntervalStats(t, self.config.table.selected);
+              }
+              // Reinstate table, including ungreying-out all other series
+              self.unhighlightSelected();
+              delete self.config.table.selected;
+              self.update();
+            }
+          }
+        });
+
+        // Optionally manage the plot overview behaviour
+        if(this.config.overview.options.show) {
+          var o = jQuery('#' + this.config.overview.id);
+          var overview = this.config.overview;
+
+          // Connect the overview to the table
+          o.bind("plotselected", {self: this}, function(evt, ranges) {
+            // Manage zooming
+            evt.data.self.subset(ranges.xaxis.from, ranges.xaxis.to);
+
+            // Don't fire event on the overview to prevent eternal loop
+            overview.object.setSelection(ranges, true);
+          });
+
+          // Drag selection handlers for table
+          t.delegate("td", "tableselecting", {self: this}, function(evt) {
+            evt.data.self.config.table.selecting = true;
+            evt.data.self.highlightSelectedCellGroup(evt.target);
+          });
+
+          // Subset the table based on the selection.  Overview can reinstate
+          t.delegate("td", "tableselected", {self: this}, function(evt, selection) {
+            var self = evt.data.self;
+            delete self.config.table.selecting;
+
+            if(selection) {
+              self.config.table.selected = selection.items;
+
+              if(self.config.table.selected.length > 1) {
+                var from = self.config.table.selected[0].item.datapoint[0];
+                var to = self.config.table.selected[1].item.datapoint[0];
+                self.subset(from, to);
+                overview.object.setSelection({xaxis: {from: from, to: to}}, true);
+
+                // Clear selection
+                self.unhighlightSelected();
+                self.unhighlight();
+                delete self.config.table.selected;
+              }
+            }
+          });
+
+          o.bind("plotunselected", {self: this}, function(evt) {
+            evt.data.self.update();
+          });
+        }
+      },
+
+      /**
+       * Setup handling for custom event triggers on a table
+       */
+      setupTableEventTriggers: function(t, selectors) {
+        var selection = {active: false, start: null, end: null};
+
+        // Determine between a click or a dragged selection
+        t.delegate(selectors, "mousedown mouseup", {self: this}, function(evt) {
+          var self = evt.data.self;
+          var elem = jQuery(evt.target);
+
+          if(evt.type == "mousedown") {
+            selection.active = true;
+            selection.start = evt;
+            evt.preventDefault();
+            elem.trigger("tableselecting");
+          }
+          if(evt.type == "mouseup") {
+            selection.active = false;
+            selection.end = evt;
+
+            if(selection.start.target == selection.end.target) {
+              elem.trigger("tableclick");
+            } else {
+              var items = [];
+              items.push({item: self.eventToItem(selection.start)});
+              items.push({item: self.eventToItem(selection.end)});
+
+              if(items[1].item.dataIndex < items[0].item.dataIndex) {
+                items.reverse();
+              }
+              elem.trigger("tableselected", {items: items});
+            }
+          }
+        });
+      },
+
+      /**
+       * Get the observation data from the SOS for each additional set of
+       * query parameters, & then update the existing table
+       */
+      addData: function() {
+        if(SOS.Utils.isValidObject(this.additional)) {
+          for(var i = 0, len = this.additional.length; i < len; i++) {
+            jQuery.extend(true, this, this.additional[i]);
+            this._getOffering();
+
+            if(this.haveValidOfferingObject()) {
+              if(SOS.Utils.isValidObject(this.observedProperty)) {
+                this.offering.filterObservedProperties(this.observedProperty);
+              }
+              this.offering.registerUserCallback({event: "obsavailable", scope: this, callback: this.drawAdditionalData});
+              this.offering.getObservations(this.startDatetime, this.endDatetime);
+            }
+          }
+        }
+      },
+
+      /**
+       * Add the given observation data to an existing table
+       */
+      drawAdditionalData: function() {
+        // Avoid infinite loop as each additional listens for obsavailable
+        this.offering.unregisterUserCallback({event: "obsavailable", scope: this, callback: this.drawAdditionalData});
+
+        // Construct the data series
+        var table = this.constructDataTable(this.offering);
+        this.config.table.series.push(table);
+
+        this.update();
+
+        // Optionally update the plot overview also
+        if(this.config.overview.options.show) {
+          this.config.overview.series = this.config.table.series;
+          this.updateOverview();
+        }
+      },
+
+      /**
+       * Redraw an existing table
+       */
+      update: function() {
+        this.config.table.object.html("");
+        this.generateTable(this.config.table.object, this.config.table.series, this.config.table.options);
+      },
+
+      /**
+       * Redraw an existing overview plot
+       */
+      updateOverview: function() {
+        this.config.overview.object.setData(this.config.overview.series);
+        this.config.overview.object.setupGrid();
+        this.config.overview.object.draw();
+      },
+
+      /**
+       * Grey-out all except the given series on the table.  Specifying a series
+       * index of -1 will grey-out all series.  Call update() to reinstate
+       * table to original colours
+       */
+      greyOutSeries: function(seriesIndex) {
+        var series = this.config.table.series;
+        var style = {color: "rgb(240, 240, 240)"};
+
+        for(var i = 0, slen = series.length; i < slen; i++) {
+          if(i != seriesIndex) {
+            jQuery('th[class="sos-table"][id="sl' + i + '"]').css(style);
+            jQuery('th[class="sos-table"][id="ch' + i + '"]').css(style);
+            jQuery('td[class="sos-table"][id^="' + i + '"]').css(style);
+          }
+        }
+      },
+
+      /**
+       * Subset an existing table
+       */
+      subset: function(from, to) {
+        var subset = this.subsetDataSeries(this.config.table.series, from, to);
+
+        if(subset) {
+          this.config.table.object.html("");
+          this.generateTable(jQuery('#' + this.config.table.id), subset, this.config.table.options);
+        }
+      },
+
+      /**
+       * Generate a table of the given observation data
+       */
+      generateTable: function(t, series, options) {
+        var tcontent = "";
+        var lengths = [];
+        var ft = this.config.format.time;
+        var fv = this.config.format.value;
+
+        for(var i = 0, len = series.length; i < len; i++) {
+          lengths.push(series[i].data.length);
+        }
+        var maxrows = Math.max.apply(null, lengths);
+ 
+        tcontent += '<thead class="sos-table">';
+        tcontent += '<tr class="sos-table">';
+
+        // Series label
+        for(var i = 0, len = series.length; i < len; i++) {
+          tcontent += '<th id="sl' + i + '" class="sos-table" colspan="2">' + series[i].label + '</th>';
+        }
+        tcontent += '</tr>';
+        tcontent += '<tr class="sos-table">';
+
+        // Per series column headings
+        for(var i = 0, len = series.length; i < len; i++) {
+          tcontent += '<th id="ch' + i + '" class="sos-table">Time</th>';
+          tcontent += '<th id="ch' + i + '" class="sos-table">Value</th>';
+        }
+        tcontent += '</tr>';
+        tcontent += '</thead>';
+        tcontent += '<tfoot class="sos-table"/>';
+        tcontent += '<tbody class="sos-table">';
+
+        // Per series data
+        for(var i = 0; i < maxrows; i++) {
+          var cssClass = (i % 2 == 0 ? "sos-table-even" : "sos-table-odd");
+          tcontent += '<tr class="' + cssClass + '">';
+
+          for(var j = 0, slen = series.length; j < slen; j++) {
+            if(SOS.Utils.isValidObject(series[j].data[i])) {
+              for(var k = 0, dlen = series[j].data[i].length; k < dlen; k++) {
+                var id = j + "." + i + "." + k, datum;
+
+                // Format the datetime or value accordingly
+                if(k == 0) {
+                  datum = ft.formatter(series[j].data[i][k]);
+                } else {
+                  datum = (SOS.Utils.isNumber(series[j].data[i][k]) ? fv.formatter(parseFloat(series[j].data[i][k]), fv.sciLimit, fv.digits) : series[j].data[i][k]);
+                }
+                tcontent += '<td class="sos-table" id="' + id + '">' + datum + '</td>';
+              }
+            } else {
+              tcontent += '<td></td><td></td>';
+            }
+          }
+          tcontent += '</tr>';
+        }
+        tcontent += '</tbody>';
+
+        var table = '<table class="sos-table">';
+        table += (SOS.Utils.isValidObject(options.header.headerLabel) ? '<caption class="sos-table">' + options.header.headerLabel + '</caption>' : '');
+        table += tcontent;
+        table += '</table>';
+        t.append(table);
+
+        return t;
+      },
+
+      /**
+       * Convert an event object to a flot-item-like object
+       */
+      eventToItem: function(evt) {
+        var item;
+
+        if(evt.target) {
+          var a = evt.target.id.split(".");
+
+          // Only construct the item if a valid data target was clicked on
+          if(a.length >= 2) {
+            item = {datapoint: [], dataIndex: 0, series: {}, seriesIndex: 0, pageX: 0, pageY: 0};
+            item.seriesIndex = parseInt(a[0], 10);
+            item.dataIndex = parseInt(a[1], 10);
+
+            if(SOS.Utils.isValidObject(this.config.table.series)) {
+              item.series = this.config.table.series[item.seriesIndex];
+              item.datapoint = item.series.data[item.dataIndex];
+            }
+            item.pageX = evt.pageX;
+            item.pageY = evt.pageY;
+          }
+        }
+
+        return item;
+      },
+
+      /**
+       * Highlight a given cell in the table
+       */
+      highlight: function(elem) {
+        jQuery(elem).addClass("sos-table-highlight");
+      },
+
+      /**
+       * Toggle highlight on a given cell in the table
+       */
+      toggleHighlight: function(elem) {
+        jQuery(elem).toggleClass("sos-table-highlight");
+      },
+
+      /**
+       * Unhighlight any highlighted cells in the table
+       */
+      unhighlight: function() {
+        if(SOS.Utils.isValidObject(this.config.table.object)) {
+          this.config.table.object.find("td").removeClass("sos-table-highlight");
+        }
+      },
+
+      /**
+       * Highlight a given datetime & value cell-group in the table
+       */
+      highlightCellGroup: function(elem) {
+        var cell = jQuery(elem);
+        this.highlight(cell);
+        (cell.index() % 2 == 0) ? this.highlight(cell.next()) : this.highlight(cell.prev());
+      },
+
+      /**
+       * Toggle highlight on a given datetime & value cell-group in the table
+       */
+      toggleHighlightCellGroup: function(elem) {
+        var cell = jQuery(elem);
+        this.toggleHighlight(cell);
+        (cell.index() % 2 == 0) ? this.toggleHighlight(cell.next()) : this.toggleHighlight(cell.prev());
+      },
+
+      /**
+       * Highlight a given selected cell in the table
+       */
+      highlightSelected: function(elem) {
+        jQuery(elem).addClass("sos-table-highlight-selected");
+      },
+
+      /**
+       * Unhighlight any selected cells in the table
+       */
+      unhighlightSelected: function() {
+        if(SOS.Utils.isValidObject(this.config.table.object)) {
+          this.config.table.object.find("td").removeClass("sos-table-highlight-selected");
+        }
+      },
+
+      /**
+       * Highlight a given selected datetime & value cell-group in the table
+       */
+      highlightSelectedCellGroup: function(elem) {
+        var cell = jQuery(elem);
+        this.highlightSelected(cell);
+        (cell.index() % 2 == 0) ? this.highlightSelected(cell.next()) : this.highlightSelected(cell.prev());
       },
     });
   }

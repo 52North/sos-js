@@ -47,6 +47,54 @@
   top: 50px;
 }
 
+div.sos-table {
+}
+
+table.sos-table {
+}
+
+caption.sos-table {
+  text-align: center;
+  font-weight: bold;
+  padding-bottom: 5px;
+}
+
+thead.sos-table {
+}
+
+tfoot.sos-table {
+}
+
+tbody.sos-table {
+}
+
+tr.sos-table {
+}
+
+tr.sos-table-odd {
+  background-color: #f0f0f0;
+}
+
+tr.sos-table-even {
+}
+
+th.sos-table {
+  border-bottom: thin solid grey;
+}
+
+td.sos-table {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+td.sos-table-highlight, td.sos-table-highlight-selected {
+  background-color: #ffff88;
+}
+
+td.sos-table-highlight-selected {
+  border: thin dotted grey;
+}
+
 /* flot legend styles */
 div.legend {
   font-size: 0.70em;

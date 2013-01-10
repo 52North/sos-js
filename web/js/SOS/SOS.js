@@ -579,6 +579,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         return (Object.prototype.toString.call(x) === "[object Array]");
       },
 
+      isNumber: function(x) {
+        return (!isNaN(parseFloat(x)) && isFinite(x));
+      },
+
       getUniqueList: function(x) {
         var a = [];
 
