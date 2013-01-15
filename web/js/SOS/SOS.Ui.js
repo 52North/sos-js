@@ -1567,5 +1567,299 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
     });
   }
+
+  /* Create the SOS.Menu namespace */
+  if(typeof SOS.Menu === "undefined") {
+    /**
+     * SOS.Menu Class
+     * Class for displaying a menu of data served from a SOS
+     *
+     * Inherits from:
+     *  - <SOS.Ui>
+     */
+    SOS.Menu = OpenLayers.Class(SOS.Ui, {
+      url: null,
+      sos: null,
+      config: {
+        menu: {
+          object: null,
+          id: "sosMenu",
+          entries: [],
+          step: 0,
+          options: {
+            tabs: {
+              offerings: {label: "Offerings"},
+              observedProperties: {label: "Observed Properties"},
+              controls: {label: "Controls"},
+            },
+            listBoxes: {
+              multiple: false,
+              size: 5,
+              useSelectBox: false,
+            },
+          },
+        },
+      },
+      CLASS_NAME: "SOS.Menu",
+
+      /**
+       * Constructor for a SOS.Menu object
+       *
+       * @constructor
+       */
+      initialize: function(options) {
+        jQuery.extend(true, this, options);
+      },
+
+      /**
+       * Destructor for a SOS.Menu object
+       * 
+       * @destructor
+       */
+      destroy: function() {
+      },
+
+      /**
+       * Set options for the menu
+       */
+      setMenuOptions: function(options) {
+        jQuery.extend(true, this.config.menu.options, options);
+      },
+
+      /**
+       * Generate the menu using this object's properties to query the SOS
+       */
+      display: function(options) {
+        // Parameters can optionally be tweaked for each call
+        if(arguments.length > 0) {
+          jQuery.extend(true, this, options);
+        }
+
+        if(!this.haveValidCapabilitiesObject()) {
+          this.getCapabilities(this._display);
+        } else {
+          this._display();
+        }
+      },
+
+      /**
+       * Get data from the SOS according to this object's properties, & then
+       * draw the menu
+       */
+      _display: function() {
+        /* We present the list of offerings, then the observed properties for
+           any selected offering */
+        if(this.config.menu.step == 1) {
+          this.config.menu.step = 2;
+          this.displayObservedProperties();
+        }
+        else {
+          this.config.menu.step = 1;
+          this.displayOfferings();
+        }
+      },
+
+      /**
+       * Display the offerings
+       */
+      displayOfferings: function() {
+        this.constructOfferingsEntries();
+        this.displayMenu();
+        this.setupOfferingsBehaviour();
+      },
+
+      /**
+       * Construct the offerings menu entries
+       */
+      constructOfferingsEntries: function() {
+        var ids = this.sos.getOfferingIds();
+        var names = this.sos.getOfferingNames();
+        this.config.menu.entries = [];
+
+        for(var i = 0, len = ids.length; i < len; i++) {
+          var entry = {value: ids[i], text: names[i]};
+          this.config.menu.entries.push(entry);
+        }
+      },
+
+      /**
+       * Setup event handlers to manage the offerings menu behaviour
+       */
+      setupOfferingsBehaviour: function() {
+        var m = jQuery('#' + this.config.menu.id);
+        var s = jQuery('#' + this.config.menu.id + 'OfferingsTab > .sos-menu-select-list');
+
+        // List observed properties for each selected offering
+        s.bind("change", {self: this}, function(evt) {
+          var self = evt.data.self;
+          var vals = [];
+          self.config.menu.selected = [];
+
+          /* Ensure vals is array, even if listbox is singular
+             (otherwise vals.length is the string length of the entry!) */
+          vals = vals.concat(jQuery(this).val());
+
+          for(var i = 0, len = vals.length; i < len; i++) {
+            var item = {offering: {id: vals[i]}};
+            self.config.menu.selected.push({item: item});
+          }
+          self.constructObservedPropertiesEntries();
+          evt.data.tab = jQuery('#' + self.config.menu.id + 'ObservedPropertiesTab');
+          self.initMenuHandler(evt);
+          self.setupObservedPropertiesBehaviour();
+        });
+      },
+
+      /**
+       * Construct the observed properties menu entries
+       */
+      constructObservedPropertiesEntries: function() {
+        var ids = [], names = [];
+        this.config.menu.entries = [];
+
+        for(var i = 0, len = this.config.menu.selected.length; i < len; i++) {
+          var offeringId = this.config.menu.selected[i].item.offering.id;
+          var offering = this.sos.getOffering(offeringId);
+          ids = offering.getObservedPropertyIds();
+          names = SOS.Utils.toTitleCase(SOS.Utils.toDisplayName(SOS.Utils.urnToName(offering.getObservedPropertyNames())));
+        }
+        for(var i = 0, len = ids.length; i < len; i++) {
+          var entry = {value: ids[i], text: names[i]};
+          this.config.menu.entries.push(entry);
+        }
+      },
+
+      /**
+       * Setup event handlers to manage the observed properties menu behaviour
+       */
+      setupObservedPropertiesBehaviour: function() {
+        var m = jQuery('#' + this.config.menu.id);
+        var s = jQuery('#' + this.config.menu.id + 'ObservedPropertiesTab > .sos-menu-select-list');
+
+        // Each selected item contains the offering & observed property
+        s.bind("change", {self: this}, function(evt) {
+          var self = evt.data.self;
+          var vals = [];
+          self.config.menu.selected = self.config.menu.selected || [];
+          vals = vals.concat(jQuery(this).val());
+
+          for(var i = 0, vlen = vals.length; i < vlen; i++) {
+            for(var j = 0, slen = self.config.menu.selected.length; j < slen; j++) {
+              self.config.menu.selected[j].item.observedProperty = vals[i];
+            }
+          }
+        });
+      },
+  
+      /**
+       * Display a menu according to this object's properties
+       */
+      displayMenu: function() {
+        var mc = jQuery('#' + this.config.menu.id + 'Container');
+        var m = jQuery('#' + this.config.menu.id);
+
+        // If menu container div doesn't exist, create one on the fly
+        if(mc.length < 1) {
+          mc = jQuery('<div id="' + this.config.menu.id + 'Container" class="sos-menu-container"/>');
+          jQuery('body').append(mc);
+        }
+
+        // If menu div doesn't exist, create one on the fly
+        if(m.length < 1) {
+          m = jQuery('<div id="' + this.config.menu.id + '" class="sos-menu"/>');
+          mc.append(m);
+        }
+
+        // Construct the menu according to what tabs have been configured
+        var tabs = this.constructMenuTabs();
+
+        if(tabs) {
+          m.append(tabs);
+        }
+        var tab = jQuery('#' + this.config.menu.id + 'OfferingsTab');
+
+        // Setup menu event handlers
+        m.bind("accordioncreate", {self: this, tab: tab}, this.initMenuHandler);
+        m.bind('accordionchange', {self: this}, this.changeMenuTabHandler);
+        m.accordion({fillSpace: true});
+
+        this.config.menu.object = m;
+      },
+
+      /**
+       * Construct menu tabs according to this object's properties
+       */
+      constructMenuTabs: function() {
+        var tabs, text = "";
+        var options = this.config.menu.options;
+
+        if(SOS.Utils.isValidObject(options.tabs.offerings)) {
+          text += '<h3><a href="#">' + options.tabs.offerings.label + '</a></h3><div id="' + this.config.menu.id + 'OfferingsTab"></div>';
+        }
+        if(SOS.Utils.isValidObject(options.tabs.observedProperties)) {
+          text += '<h3><a href="#">' + options.tabs.observedProperties.label + '</a></h3><div id="' + this.config.menu.id + 'ObservedPropertiesTab"></div>';
+        }
+        if(SOS.Utils.isValidObject(options.tabs.controls)) {
+          text += '<h3><a href="#">' + options.tabs.controls.label + '</a></h3><div id="' + this.config.menu.id + 'ControlsTab"></div>';
+        }
+
+        tabs = jQuery(text);
+
+        return tabs;
+      },
+
+      /**
+       * Initialise menu entries according to this object's properties
+       */
+      initMenuHandler: function(evt, ui) {
+        var self = evt.data.self;
+        var tab = evt.data.tab;
+        var lb = self.config.menu.options.listBoxes;
+        var s = jQuery('<select id="' + self.config.menu.id + 'SelectList"' + (lb.multiple ? ' multiple="multiple"' : '') + (lb.size ? ' size="' + lb.size + '"' : '') + ' class="sos-menu-select-list"></select>');
+        var options = [];
+
+        tab.html("");
+        tab.append(s);
+
+        // Initialise the menu entries
+        for(var i = 0, len = self.config.menu.entries.length; i < len; i++) {
+          options.push('<option value="' + self.config.menu.entries[i].value + '">' + self.config.menu.entries[i].text + '</option>');
+        }
+        s.html(options.join(''));
+
+        if(lb.useSelectBox && typeof jQuery('body').selectBox == "function") {
+          // This call uses a jquery plugin to replace vanilla select boxes
+          jQuery('.sos-menu-select-list').selectBox();
+        }
+      },
+
+      /**
+       * Setup behaviour for when user moves between menu tabs
+       */
+      changeMenuTabHandler: function(evt, ui) {
+        var self = evt.data.self;
+        var options = self.config.menu.options;
+ 
+        if(SOS.Utils.isValidObject(options.tabs.observedProperties)) {
+          if(ui.newHeader.text() == options.tabs.observedProperties.label) {
+            var t = jQuery('#' + self.config.menu.id + 'ObservedPropertiesTab');
+
+            if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
+              t.html("Please select an Offering");
+            }
+          }
+        }
+        if(SOS.Utils.isValidObject(options.tabs.controls)) {
+          if(ui.newHeader.text() == options.tabs.controls.label) {
+            var t = jQuery('#' + self.config.menu.id + 'ControlsTab');
+
+            if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
+              t.html("Please select an Observed Property");
+            }
+          }
+        }
+      },
+    });
+  }
 }
 
