@@ -34,7 +34,7 @@
   font-weight: bold;
 }
 
-.sos-selected-interval-stats-table {
+.sos-selected-interval-stats-table, .sos-embedded-table {
   font-size: 0.75em;
 }
 
@@ -93,6 +93,28 @@ td.sos-table-highlight, td.sos-table-highlight-selected {
 
 td.sos-table-highlight-selected {
   border: thin dotted grey;
+}
+
+.sos-map {
+  width: 768px;
+  height: 512px;
+}
+
+.sos-menu-container {
+  height: 250px;
+}
+
+.sos-menu {
+  width: 200px;
+  padding: 5px;
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  font-size: 0.75em;
+}
+
+.sos-menu-select-list {
+  width: 140px;
 }
 
 /* flot legend styles */

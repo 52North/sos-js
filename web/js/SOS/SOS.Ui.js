@@ -21,6 +21,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
    typeof SOS !== "undefined" && SOS !== null &&
    typeof jQuery !== "undefined" && jQuery !== null &&
    typeof jQuery.plot !== "undefined" && jQuery.plot !== null) {
+  /* Enable internationalisation of all strings */
+  OpenLayers.Lang.setCode("en");
+  OpenLayers.Util.extend(OpenLayers.Lang.en, {
+    "SOSObservedPropertyString": "Observed Property",
+    "SOSTimeString": "Time",
+    "SOSValueString": "Value",
+  });
 
   /* Create the SOS.Ui namespace */
   if(typeof SOS.Ui === "undefined") {
@@ -250,11 +257,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         container.after(panel);
 
         var buttons = [
-          {text: "Close", click: function() {$(this).dialog("close");}}
+          {text: "Close", click: function() {jQuery(this).dialog("close");}}
         ];
 
         var dialog = panel.dialog({position: ['center', 'center'], buttons: buttons, title: series.label, width: 540, zIndex: 1010, stack: false});
-        dialog.bind('dialogclose', function() {$(this).dialog("destroy");});
+        dialog.bind('dialogclose', function() {jQuery(this).dialog("destroy");});
       },
 
       /**
@@ -1262,6 +1269,301 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var cell = jQuery(elem);
         this.highlightSelected(cell);
         (cell.index() % 2 == 0) ? this.highlightSelected(cell.next()) : this.highlightSelected(cell.prev());
+      },
+    });
+  }
+
+  /* Create the SOS.Map namespace */
+  if(typeof SOS.Map === "undefined") {
+    /**
+     * SOS.Map Class
+     * Class for displaying a map of data served from a SOS
+     *
+     * Inherits from:
+     *  - <SOS.Ui>
+     */
+    SOS.Map = OpenLayers.Class(SOS.Ui, {
+      url: null,
+      sos: null,
+      config: {
+        map: {
+          object: null,
+          id: "sosMap",
+          options: {
+            defaultProjection: new OpenLayers.Projection("EPSG:4326"),
+            centre: new OpenLayers.LonLat(0, 0),
+            params: {
+              projection: "EPSG:4326",
+              displayProjection: new OpenLayers.Projection("EPSG:4326"),
+            },
+          },
+        },
+        overview: {
+          options: {
+            show: false,
+          },
+        },
+        baseLayer: {
+          object: null,
+          id: "sosMapBaseLayer",
+          options: {
+            label: "Background Layer",
+            url: "http://vmap0.tiles.osgeo.org/wms/vmap0?",
+            params: {
+              layers: "basic",
+            },
+          },
+        },
+        offeringsLayer: {
+          object: null,
+          id: "sosMapOfferingsLayer",
+          options: {
+            label: "Offerings",
+            pointStyle: new OpenLayers.Style({
+              "pointRadius": 5,
+              "fillColor": "#F80000",
+              "strokeWidth": 1,
+              "label": "${name}",
+              "fontSize": "12px",
+              "fontFamily": "Courier New, monospace",
+              "fontWeight": "bold",
+              "labelAlign": "rb",
+              "labelXOffset": -10,
+              "labelOutlineColor": "white",
+              "labelOutlineWidth": 3,
+            }),
+          },
+        },
+      },
+      CLASS_NAME: "SOS.Map",
+
+      /**
+       * Constructor for a SOS.Map object
+       *
+       * @constructor
+       */
+      initialize: function(options) {
+        jQuery.extend(true, this, options);
+      },
+
+      /**
+       * Destructor for a SOS.Map object
+       * 
+       * @destructor
+       */
+      destroy: function() {
+      },
+
+      /**
+       * Set options for the map
+       */
+      setMapOptions: function(options) {
+        jQuery.extend(true, this.config.map.options, options);
+      },
+
+      /**
+       * Set options for the map overview
+       */
+      setOverviewOptions: function(options) {
+        jQuery.extend(true, this.config.overview.options, options);
+      },
+
+      /**
+       * Set options for the base layer
+       */
+      setBaseLayerOptions: function(options) {
+        jQuery.extend(true, this.config.baseLayer.options, options);
+      },
+
+      /**
+       * Set options for the offerings layer
+       */
+      setOfferingsLayerOptions: function(options) {
+        jQuery.extend(true, this.config.offeringsLayer.options, options);
+      },
+
+      /**
+       * Generate the map using this object's properties to query the SOS
+       */
+      display: function(options) {
+        // Parameters can optionally be tweaked for each call
+        if(arguments.length > 0) {
+          jQuery.extend(true, this, options);
+        }
+
+        if(!this.haveValidCapabilitiesObject()) {
+          this.getCapabilities(this._display);
+        } else {
+          this._display();
+        }
+      },
+
+      /**
+       * Get data from the SOS according to this object's properties, & then
+       * draw the map
+       */
+      _display: function() {
+        this.initMap();
+        this.initView();
+        this.displayOfferings();
+      },
+ 
+      /**
+       * Initialise the map
+       */
+      initMap: function() {
+        var m = jQuery('#' + this.config.map.id);
+
+        // If map div doesn't exist, create one on the fly
+        if(m.length < 1) {
+          m = jQuery('<div id="' + this.config.map.id + '" class="sos-map"/>');
+          jQuery('body').append(m);
+        }
+
+        // Setup the map object, its base layer, and its controls
+        var map = new OpenLayers.Map(this.config.map.id, this.config.map.options.params);
+        var baseLayer = new OpenLayers.Layer.WMS(this.config.baseLayer.options.label, this.config.baseLayer.options.url, this.config.baseLayer.options.params);
+
+        map.addLayers([baseLayer]);
+        map.addControl(new OpenLayers.Control.LayerSwitcher());
+        map.addControl(new OpenLayers.Control.MousePosition());
+
+        // Optionally generate the map overview
+        if(this.config.overview.options.show) {
+          var params = this.config.overview.options.params || {};
+          map.addControl(new OpenLayers.Control.OverviewMap(params));
+        }
+
+        this.config.map.object = map;
+        this.config.baseLayer.object = baseLayer;
+      },
+ 
+      /**
+       * Initialise the map view
+       */
+      initView: function() {
+        var map = this.config.map.object;
+        var centre = this.config.map.options.centre || new OpenLayers.LonLat(0, 0);
+
+        map.setCenter(centre);
+        map.zoomToMaxExtent();
+      },
+  
+      /**
+       * Display the offerings layer
+       */
+      displayOfferings: function() {
+        var styleMap = new OpenLayers.StyleMap(this.config.offeringsLayer.options.pointStyle);
+
+        // Query FOIs from the SOS and present them as a vector layer
+        var layer = new OpenLayers.Layer.Vector(this.config.offeringsLayer.options.label, {
+          strategies: [new OpenLayers.Strategy.Fixed()],
+          protocol: new OpenLayers.Protocol.SOS({
+            formatOptions: {
+              internalProjection: this.config.map.object.getProjectionObject(),
+              externalProjection: this.config.map.options.defaultProjection
+            },
+            url: this.url,
+            fois: this.sos.getFeatureOfInterestIds(),
+          }),
+          styleMap: styleMap
+        });
+        this.config.map.object.addLayer(layer);
+
+        // Setup behaviour for this layer
+        var ctrl = new OpenLayers.Control.SelectFeature(layer, {
+          scope: this,
+          onSelect: this.onFeatureSelect
+        });
+        this.config.map.object.addControl(ctrl);
+        ctrl.activate();
+
+        this.config.offeringsLayer.object = layer;
+      },
+
+      /**
+       * Setup behaviour for when user clicks on a Feature of Interest (FOI)
+       */
+      onFeatureSelect: function(feature) {
+        var item = {
+          foi: {id: feature.attributes.id, geometry: feature.geometry},
+        };
+        var offerings = [];
+        item.offerings = offerings.concat(this.sos.getOfferingsForFeatureOfInterestId(item.foi.id));
+
+        // Store each selected item (FOI & associated offerings)
+        this.config.map.selected = [];
+        this.config.map.selected.push({item: item});
+
+        // Show this FOI's latest observation values in a popup
+        this.sos.registerUserCallback({event: "latestobsavailable", scope: this, callback: this.displayLatestObservations});
+        this.sos.getLatestObservationsForFeatureOfInterestId(item.foi.id);
+      },
+
+      /**
+       * Display the latest observation values for the selected FOI
+       */
+      displayLatestObservations: function() {
+        var map = this.config.map.object;
+
+        if(SOS.Utils.isValidObject(this.config.map.selected)) {
+          var feature = this.config.map.selected[0].item.foi;
+
+          // Remove any existing popups (works but is a bit blunt!)
+          for(var i = 0, len = map.popups.length; i < len; i++) {
+            map.removePopup(map.popups[i]);
+          };
+
+          // Display latest observations table for this feature in a popup
+          var popup = new OpenLayers.Popup.FramedCloud("sosLatestObservations",
+            feature.geometry.getBounds().getCenterLonLat(),
+            null,
+            this.populateMultivariateTable(this.sos),
+            null,
+            true,
+            function(e) {
+              this.hide();
+              OpenLayers.Event.stop(e);
+              // Unselect so popup can be shown again
+              this.map.getControlsByClass('OpenLayers.Control.SelectFeature')[0].unselectAll();
+          });
+          map.addPopup(popup);
+        }
+      },
+
+      /**
+       * Construct a table of data from multiple variables
+       */
+      populateMultivariateTable: function(sos) {
+        var tcontent = "", html = "";
+
+        if(SOS.Utils.isValidObject(sos)) {
+          for(var i = 0, len = sos.getCountOfObservations(); i < len; i++) {
+            var ob = sos.getObservationRecord(i);
+            var cssClass = (i % 2 == 0 ? "sos-table-even" : "sos-table-odd");
+            tcontent += '<tr class="' + cssClass + '">';
+            tcontent += '<td class="sos-table">' + ob.observedPropertyTitle + '</td>';
+            tcontent += '<td class="sos-table">' + ob.time + '</td>';
+            tcontent += '<td class="sos-table">' + ob.result.value + ' ' + ob.UomTitle + '</td>';
+            tcontent += '</tr>';
+          }
+          html += '<table class="sos-table sos-embedded-table">';
+          html += '<caption class="sos-table"></caption>';
+          html += '<thead class="sos-table">';
+          html += '<tr class="sos-table">';
+          html += '<th class="sos-table">Observed Property</th>';
+          html += '<th class="sos-table">Time</th>';
+          html += '<th class="sos-table">Value</th>';
+          html += '</tr>';
+          html += '</thead>';
+          html += '<tfoot/>';
+          html += '<tbody>';
+          html += tcontent;
+          html += '</tbody>';
+          html += '</table>';
+        }
+
+        return html;
       },
     });
   }
