@@ -726,6 +726,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           series: [],
           options: {
             header: {},
+            scrollable: false,
           },
         },
         overview: {
@@ -1169,10 +1170,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         }
         tcontent += '</tbody>';
 
-        var table = '<table class="sos-table">';
-        table += (SOS.Utils.isValidObject(options.header.headerLabel) ? '<caption class="sos-table">' + options.header.headerLabel + '</caption>' : '');
-        table += tcontent;
-        table += '</table>';
+        var tableText = '<table class="sos-table">';
+        tableText += (SOS.Utils.isValidObject(options.header.headerLabel) ? '<caption class="sos-table">' + options.header.headerLabel + '</caption>' : '');
+        tableText += tcontent;
+        tableText += '</table>';
+        var table = jQuery(tableText);
+
+        // Optionally the table can be scrollable
+        if(options.scrollable) {
+          table.addClass("sos-table-scrollable");
+        }
         t.append(table);
 
         return t;
@@ -1307,18 +1314,18 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           object: null,
           id: "sosMapBaseLayer",
           options: {
-            label: "Background Layer",
+            label: "OpenLayers WMS",
             url: "http://vmap0.tiles.osgeo.org/wms/vmap0?",
             params: {
               layers: "basic",
             },
           },
         },
-        offeringsLayer: {
+        featureOfInterestLayer: {
           object: null,
-          id: "sosMapOfferingsLayer",
+          id: "sosMapFeatureOfInterestLayer",
           options: {
-            label: "Offerings",
+            label: "Feature Of Interest",
             pointStyle: new OpenLayers.Style({
               "pointRadius": 5,
               "fillColor": "#F80000",
@@ -1376,10 +1383,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
-       * Set options for the offerings layer
+       * Set options for the feature-of-interest (FOI) layer
        */
-      setOfferingsLayerOptions: function(options) {
-        jQuery.extend(true, this.config.offeringsLayer.options, options);
+      setFeatureOfInterestLayerOptions: function(options) {
+        jQuery.extend(true, this.config.featureOfInterestLayer.options, options);
       },
 
       /**
@@ -1404,8 +1411,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       _display: function() {
         this.initMap();
+        this.initBaseLayer();
         this.initView();
-        this.displayOfferings();
+        this.initFeatureOfInterestLayer();
       },
  
       /**
@@ -1420,11 +1428,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           jQuery('body').append(m);
         }
 
-        // Setup the map object, its base layer, and its controls
+        // Setup the map object & its controls
         var map = new OpenLayers.Map(this.config.map.id, this.config.map.options.params);
-        var baseLayer = new OpenLayers.Layer.WMS(this.config.baseLayer.options.label, this.config.baseLayer.options.url, this.config.baseLayer.options.params);
 
-        map.addLayers([baseLayer]);
         map.addControl(new OpenLayers.Control.LayerSwitcher());
         map.addControl(new OpenLayers.Control.MousePosition());
 
@@ -1435,6 +1441,19 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         }
 
         this.config.map.object = map;
+      },
+ 
+      /**
+       * Initialise the map base layer
+       */
+      initBaseLayer: function() {
+        var map = this.config.map.object;
+
+        // Setup the map's base layer, and its controls
+        var baseLayer = new OpenLayers.Layer.WMS(this.config.baseLayer.options.label, this.config.baseLayer.options.url, this.config.baseLayer.options.params);
+
+        map.addLayers([baseLayer]);
+
         this.config.baseLayer.object = baseLayer;
       },
  
@@ -1450,13 +1469,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
   
       /**
-       * Display the offerings layer
+       * Initialise the feature-of-interest layer
        */
-      displayOfferings: function() {
-        var styleMap = new OpenLayers.StyleMap(this.config.offeringsLayer.options.pointStyle);
+      initFeatureOfInterestLayer: function() {
+        var styleMap = new OpenLayers.StyleMap(this.config.featureOfInterestLayer.options.pointStyle);
 
         // Query FOIs from the SOS and present them as a vector layer
-        var layer = new OpenLayers.Layer.Vector(this.config.offeringsLayer.options.label, {
+        var layer = new OpenLayers.Layer.Vector(this.config.featureOfInterestLayer.options.label, {
           strategies: [new OpenLayers.Strategy.Fixed()],
           protocol: new OpenLayers.Protocol.SOS({
             formatOptions: {
@@ -1473,31 +1492,32 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         // Setup behaviour for this layer
         var ctrl = new OpenLayers.Control.SelectFeature(layer, {
           scope: this,
-          onSelect: this.onFeatureSelect
+          onSelect: this.featureOfInterestSelectHandler
         });
         this.config.map.object.addControl(ctrl);
         ctrl.activate();
 
-        this.config.offeringsLayer.object = layer;
+        this.config.featureOfInterestLayer.object = layer;
       },
 
       /**
-       * Setup behaviour for when user clicks on a Feature of Interest (FOI)
+       * Setup behaviour for when user clicks on a feature-of-interest (FOI)
        */
-      onFeatureSelect: function(feature) {
+      featureOfInterestSelectHandler: function(feature) {
         var item = {
           foi: {id: feature.attributes.id, geometry: feature.geometry},
         };
-        var offerings = [];
-        item.offerings = offerings.concat(this.sos.getOfferingsForFeatureOfInterestId(item.foi.id));
 
-        // Store each selected item (FOI & associated offerings)
+        // Store each selected item (FOI)
         this.config.map.selected = [];
         this.config.map.selected.push({item: item});
 
         // Show this FOI's latest observation values in a popup
         this.sos.registerUserCallback({event: "latestobsavailable", scope: this, callback: this.displayLatestObservations});
         this.sos.getLatestObservationsForFeatureOfInterestId(item.foi.id);
+
+        // For external listeners (application-level plumbing)
+        this.sos.events.triggerEvent("sosMapFeatureOfInterestSelect");
       },
 
       /**
@@ -1588,9 +1608,18 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           step: 0,
           options: {
             tabs: {
-              offerings: {label: "Offerings"},
-              observedProperties: {label: "Observed Properties"},
-              controls: {label: "Controls"},
+              offerings: {
+                label: "Offerings",
+                prompt: "Please select a Feature Of Interest",
+              },
+              observedProperties: {
+                label: "Observed Properties",
+                prompt: "Please select an Offering",
+              },
+              controls: {
+                label: "Controls",
+                prompt: "Please select an Observed Property",
+              },
             },
             listBoxes: {
               multiple: false,
@@ -1627,6 +1656,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Set the menu initially empty (waiting for an FOI to be provided)
+       */
+      setInitialViewBlank: function() {
+        this.config.menu.step = -1;
+      },
+
+      /**
        * Generate the menu using this object's properties to query the SOS
        */
       display: function(options) {
@@ -1647,9 +1683,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * draw the menu
        */
       _display: function() {
-        /* We present the list of offerings, then the observed properties for
-           any selected offering */
-        if(this.config.menu.step == 1) {
+        this.constructMenu();
+
+        // We can use the step property to determine initial menu view
+        if(this.config.menu.step == -1) {
+          this.config.menu.step = 0;
+          this.displayBlankMenu();
+        } else if(this.config.menu.step == 1) {
           this.config.menu.step = 2;
           this.displayObservedProperties();
         }
@@ -1660,11 +1700,19 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Display an initial empty menu (waiting for an FOI to be provided)
+       */
+      displayBlankMenu: function() {
+        this.initBlankMenu();
+      },
+
+      /**
        * Display the offerings
        */
       displayOfferings: function() {
+        var tab = jQuery('#' + this.config.menu.id + 'OfferingsTab');
         this.constructOfferingsEntries();
-        this.displayMenu();
+        this.initMenu(tab);
         this.setupOfferingsBehaviour();
       },
 
@@ -1672,9 +1720,24 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Construct the offerings menu entries
        */
       constructOfferingsEntries: function() {
-        var ids = this.sos.getOfferingIds();
-        var names = this.sos.getOfferingNames();
+        var ids = [], names = [];
         this.config.menu.entries = [];
+
+        /* If an FOI was selected, then only get offerings for that FOI.
+           Otherwise we get all offerings */
+        if(this.config.menu.selected && this.config.menu.selected.length > 0) {
+          var foiId = this.config.menu.selected[0].item.foi.id;
+          var offerings = [];
+          offerings = offerings.concat(this.sos.getOfferingsForFeatureOfInterestId(foiId));
+
+          for(var i = 0, len = offerings.length; i < len; i++) {
+            ids.push(offerings[i].id);
+            names.push(offerings[i].name);
+          }
+        } else {
+          ids = this.sos.getOfferingIds();
+          names = this.sos.getOfferingNames();
+        }
 
         for(var i = 0, len = ids.length; i < len; i++) {
           var entry = {value: ids[i], text: names[i]};
@@ -1703,11 +1766,21 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             var item = {offering: {id: vals[i]}};
             self.config.menu.selected.push({item: item});
           }
-          self.constructObservedPropertiesEntries();
-          evt.data.tab = jQuery('#' + self.config.menu.id + 'ObservedPropertiesTab');
-          self.initMenuHandler(evt);
-          self.setupObservedPropertiesBehaviour();
+          self.displayObservedProperties();
+
+          // For external listeners (application-level plumbing)
+          self.sos.events.triggerEvent("sosMenuOfferingChange");
         });
+      },
+
+      /**
+       * Display the observed properties
+       */
+      displayObservedProperties: function() {
+        var tab = jQuery('#' + this.config.menu.id + 'ObservedPropertiesTab');
+        this.constructObservedPropertiesEntries();
+        this.initMenu(tab);
+        this.setupObservedPropertiesBehaviour();
       },
 
       /**
@@ -1748,13 +1821,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               self.config.menu.selected[j].item.observedProperty = vals[i];
             }
           }
+          // For external listeners (application-level plumbing)
+          self.sos.events.triggerEvent("sosMenuObservedPropertyChange");
         });
       },
   
       /**
-       * Display a menu according to this object's properties
+       * Construct the menu according to this object's properties
        */
-      displayMenu: function() {
+      constructMenu: function() {
         var mc = jQuery('#' + this.config.menu.id + 'Container');
         var m = jQuery('#' + this.config.menu.id);
 
@@ -1776,10 +1851,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(tabs) {
           m.append(tabs);
         }
-        var tab = jQuery('#' + this.config.menu.id + 'OfferingsTab');
 
         // Setup menu event handlers
-        m.bind("accordioncreate", {self: this, tab: tab}, this.initMenuHandler);
         m.bind('accordionchange', {self: this}, this.changeMenuTabHandler);
         m.accordion({fillSpace: true});
 
@@ -1811,19 +1884,17 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       /**
        * Initialise menu entries according to this object's properties
        */
-      initMenuHandler: function(evt, ui) {
-        var self = evt.data.self;
-        var tab = evt.data.tab;
-        var lb = self.config.menu.options.listBoxes;
-        var s = jQuery('<select id="' + self.config.menu.id + 'SelectList"' + (lb.multiple ? ' multiple="multiple"' : '') + (lb.size ? ' size="' + lb.size + '"' : '') + ' class="sos-menu-select-list"></select>');
+      initMenu: function(tab) {
+        var lb = this.config.menu.options.listBoxes;
+        var s = jQuery('<select id="' + this.config.menu.id + 'SelectList"' + (lb.multiple ? ' multiple="multiple"' : '') + (lb.size ? ' size="' + lb.size + '"' : '') + ' class="sos-menu-select-list"></select>');
         var options = [];
 
         tab.html("");
         tab.append(s);
 
         // Initialise the menu entries
-        for(var i = 0, len = self.config.menu.entries.length; i < len; i++) {
-          options.push('<option value="' + self.config.menu.entries[i].value + '">' + self.config.menu.entries[i].text + '</option>');
+        for(var i = 0, len = this.config.menu.entries.length; i < len; i++) {
+          options.push('<option value="' + this.config.menu.entries[i].value + '">' + this.config.menu.entries[i].text + '</option>');
         }
         s.html(options.join(''));
 
@@ -1834,18 +1905,56 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Initialise an initial blank menu according to this object's properties
+       */
+      initBlankMenu: function() {
+        var options = this.config.menu.options;
+
+        if(SOS.Utils.isValidObject(options.tabs.offerings)) {
+          var t = jQuery('#' + this.config.menu.id + 'OfferingsTab');
+
+          if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
+            t.html(options.tabs.offerings.prompt);
+          }
+        }
+        if(SOS.Utils.isValidObject(options.tabs.observedProperties)) {
+          var t = jQuery('#' + this.config.menu.id + 'ObservedPropertiesTab');
+
+          if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
+            t.html(options.tabs.observedProperties.prompt);
+          }
+        }
+        if(SOS.Utils.isValidObject(options.tabs.controls)) {
+          var t = jQuery('#' + this.config.menu.id + 'ControlsTab');
+
+          if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
+            t.html(options.tabs.controls.prompt);
+          }
+        }
+      },
+
+      /**
        * Setup behaviour for when user moves between menu tabs
        */
       changeMenuTabHandler: function(evt, ui) {
         var self = evt.data.self;
         var options = self.config.menu.options;
- 
+
+        if(SOS.Utils.isValidObject(options.tabs.offerings)) {
+          if(ui.newHeader.text() == options.tabs.offerings.label) {
+            var t = jQuery('#' + self.config.menu.id + 'OfferingsTab');
+
+            if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
+              t.html(options.tabs.offerings.prompt);
+            }
+          }
+        }
         if(SOS.Utils.isValidObject(options.tabs.observedProperties)) {
           if(ui.newHeader.text() == options.tabs.observedProperties.label) {
             var t = jQuery('#' + self.config.menu.id + 'ObservedPropertiesTab');
 
             if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
-              t.html("Please select an Offering");
+              t.html(options.tabs.observedProperties.prompt);
             }
           }
         }
@@ -1854,10 +1963,402 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             var t = jQuery('#' + self.config.menu.id + 'ControlsTab');
 
             if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
-              t.html("Please select an Observed Property");
+              t.html(options.tabs.controls.prompt);
             }
           }
         }
+      },
+    });
+  }
+
+  /* Create the SOS.App namespace */
+  if(typeof SOS.App === "undefined") {
+    /**
+     * SOS.App Class
+     * Application class for pulling all the SOS.Ui components together
+     *
+     * Inherits from:
+     *  - <SOS.Ui>
+     */
+    SOS.App = OpenLayers.Class(SOS.Ui, {
+      url: null,
+      sos: null,
+      offering: null,
+      observedProperty: null,
+      config: {
+        app: {
+          object: null,
+          id: "sosApp",
+          step: 0,
+          components: {
+            menu: null,
+            map: null,
+            plot: null,
+            table: null,
+          },
+          options: {
+            tabs: {
+              map: {label: "Map"},
+              plot: {label: "Plot"},
+              table: {label: "Table"},
+            },
+            time: {
+              useOfferingTimePeriod: false,
+              ms: 30 * 8.64e7,
+            },
+            overview: {
+              show: true,
+            },
+          },
+        },
+      },
+      CLASS_NAME: "SOS.App",
+
+      /**
+       * Constructor for a SOS.App object
+       *
+       * @constructor
+       */
+      initialize: function(options) {
+        jQuery.extend(true, this, options);
+      },
+
+      /**
+       * Destructor for a SOS.App object
+       * 
+       * @destructor
+       */
+      destroy: function() {
+      },
+
+      /**
+       * Set options for the app
+       */
+      setAppOptions: function(options) {
+        jQuery.extend(true, this.config.app.options, options);
+      },
+
+      /**
+       * Generate the app using this object's properties to query the SOS
+       */
+      display: function(options) {
+        // Parameters can optionally be tweaked for each call
+        if(arguments.length > 0) {
+          jQuery.extend(true, this, options);
+        }
+
+        if(!this.haveValidCapabilitiesObject()) {
+          this.getCapabilities(this._display);
+        } else {
+          this._display();
+        }
+      },
+
+      /**
+       * Get data from the SOS according to this object's properties, & then
+       * draw the app
+       */
+      _display: function() {
+        this.setupPlumbing();
+        this.displayApp();
+      },
+ 
+      /**
+       * Setup the plumbing between this app's components
+       */
+      setupPlumbing: function() {
+        this.initComponents();
+        this.setupComponentsBehaviour();
+      },
+ 
+      /**
+       * Initialise this app's components
+       */
+      initComponents: function() {
+        var components = this.config.app.components;
+        var options = {
+          url: this.url,
+          sos: this.sos,
+        };
+
+        // Instantiate the components of the app with common options
+        components.menu = new SOS.Menu(options);
+        components.map = new SOS.Map(options);
+        components.plot = new SOS.Plot(options);
+        components.table = new SOS.Table(options);
+
+        // Set the IDs of where each component is located on the page
+        components.menu.config.menu.id = this.config.app.id + "Menu";
+        components.map.config.map.id = this.config.app.id + "MapPanel";
+        components.plot.config.plot.id = this.config.app.id + "PlotPanel";
+        components.table.config.table.id = this.config.app.id + "TablePanel";
+
+        // Set any component-specific initial options
+        components.menu.setInitialViewBlank();
+        components.table.setTableOptions({scrollable: true});
+        components.map.setOverviewOptions({show: true});
+
+        // Optionally show a data overview (shared by plot, table etc.)
+        if(this.config.app.options.overview.show) {
+          components.plot.config.overview.id = this.config.app.id + "Overview";
+          components.table.config.overview.id = this.config.app.id + "Overview";
+          components.plot.setOverviewOptions({show: true});
+          components.table.setOverviewOptions({show: true});
+        }
+      },
+ 
+      /**
+       * Setup the behaviour for this app's components
+       */
+      setupComponentsBehaviour: function() {
+        // Register event handlers to tie the components together
+        this.sos.registerUserCallback({event: "sosMapFeatureOfInterestSelect", scope: this, callback: this.sosMapFeatureOfInterestSelectHandler});
+
+        this.sos.registerUserCallback({event: "sosMenuOfferingChange", scope: this, callback: this.sosMenuChangeHandler});
+
+        this.sos.registerUserCallback({event: "sosMenuObservedPropertyChange", scope: this, callback: this.sosMenuChangeHandler});
+      },
+ 
+      /**
+       * Display the app according to this object's properties
+       */
+      displayApp: function() {
+        var ac = jQuery('#' + this.config.app.id + 'Container');
+        var amc = jQuery('#' + this.config.app.id + 'MenuContainer');
+        var am = jQuery('#' + this.config.app.id + 'Menu');
+        var a = jQuery('#' + this.config.app.id);
+
+        // If app container div doesn't exist, create one on the fly
+        if(ac.length < 1) {
+          ac = jQuery('<div id="' + this.config.app.id + 'Container" class="sos-app-container"/>');
+          jQuery('body').append(ac);
+        }
+
+        // If app menu container div doesn't exist, create one on the fly
+        if(amc.length < 1) {
+          amc = jQuery('<div id="' + this.config.app.id + 'MenuContainer" class="sos-menu-container"/>');
+          ac.append(amc);
+        }
+
+        // If app menu div doesn't exist, create one on the fly
+        if(am.length < 1) {
+          am = jQuery('<div id="' + this.config.app.id + 'Menu" class="sos-menu"/>');
+          amc.append(am);
+        }
+
+        // If app div doesn't exist, create one on the fly
+        if(a.length < 1) {
+          a = jQuery('<div id="' + this.config.app.id + '" class="sos-app"/>');
+          ac.append(a);
+        }
+
+        // Construct the app menu
+        this.config.app.components.menu.display();
+
+        // Construct the app according to what tabs have been configured
+        var tabs = this.constructAppTabs(a);
+
+        // Setup app tabs event handlers
+        a.bind("tabscreate", {self: this}, this.initAppHandler);
+        a.tabs();
+
+        this.config.app.object = a;
+      },
+ 
+      /**
+       * Construct app tabs according to this object's properties
+       */
+      constructAppTabs: function(container) {
+        var tabs, div, divId, a, item;
+        var options = this.config.app.options;
+
+        tabs = jQuery('<ul/>');
+        container.append(tabs);
+
+        if(SOS.Utils.isValidObject(options.tabs.map)) {
+          divId = this.config.app.id + "MapPanel";
+          div = jQuery('<div id="' + divId + '" class="sos-map"/>');
+          container.append(div);
+          a = jQuery('<a href="#' + divId + '"><span class="sos-tab-header">' + options.tabs.map.label + '</span></a>');
+          a.bind('click', {self: this, componentName: "map"}, this.changeAppTabHandler);
+          item = jQuery('<li id="' + this.config.app.id + 'MapTab"></li>');
+          item.append(a);
+          tabs.append(item);
+
+          // If we have a map panel, initialise it here
+          this.initMap();
+        }
+        if(SOS.Utils.isValidObject(options.tabs.plot)) {
+          divId = this.config.app.id + "PlotPanel";
+          div = jQuery('<div id="' + divId + '" class="sos-plot"/>');
+          container.append(div);
+          a = jQuery('<a href="#' + divId + '"><span class="sos-tab-header">' + options.tabs.plot.label + '</span></a>');
+          a.bind('click', {self: this, componentName: "plot"}, this.changeAppTabHandler);
+          item = jQuery('<li id="' + this.config.app.id + 'PlotTab"></li>');
+          item.append(a);
+          tabs.append(item);
+        }
+        if(SOS.Utils.isValidObject(options.tabs.table)) {
+          divId = this.config.app.id + "TablePanel";
+          div = jQuery('<div id="' + divId + '" class="sos-table"/>');
+          container.append(div);
+          a = jQuery('<a href="#' + divId + '"><span class="sos-tab-header">' + options.tabs.table.label + '</span></a>');
+          a.bind('click', {self: this, componentName: "table"}, this.changeAppTabHandler);
+          item = jQuery('<li id="' + this.config.app.id + 'TableTab"></li>');
+          item.append(a);
+          tabs.append(item);
+        }
+
+        // Optionally show a data overview (for plot, table etc.)
+        if(this.config.app.options.overview.show) {
+          divId = this.config.app.id + "Overview";
+          div = jQuery('<div id="' + divId + '" class="sos-plot-overview"/>');
+          container.append(div);
+        }
+
+        return tabs;
+      },
+
+      /**
+       * Initialise app tabs according to this object's properties
+       */
+      initAppHandler: function(evt) {
+        var self = evt.data.self;
+      },
+
+      /**
+       * Setup behaviour for when user moves between app tabs
+       */
+      changeAppTabHandler: function(evt) {
+        var self = evt.data.self;
+        var components = self.config.app.components;
+        var o = jQuery('#' + self.config.app.id + 'Overview');
+
+        // Only show overview plot on pertinent component panels
+        if(o.length > 0) {
+          evt.data.componentName == "map" ? o.hide() : o.show();
+        }
+      },
+ 
+      /**
+       * Initialise the app map
+       */
+      initMap: function() {
+        this.config.app.components.map.display();
+      },
+ 
+      /**
+       * Event handler for map feature-of-interest (FOI) select
+       */
+      sosMapFeatureOfInterestSelectHandler: function(evt) {
+        var components = this.config.app.components;
+
+        // Store map FOI selection in menu, & then display offerings for FOI
+        components.menu.config.menu.selected = components.map.config.map.selected;
+        components.menu.displayOfferings();
+      },
+ 
+      /**
+       * Event handler for menu selection change
+       */
+      sosMenuChangeHandler: function(evt) {
+        var components = this.config.app.components;
+        var item;
+
+        if(components.menu.config.menu.selected) {
+          item = components.menu.config.menu.selected[0].item;
+          item.time = this.getObservationQueryTimeParameters(item);
+        }
+
+        // Fetch & display observation data.  Update both plot & table
+        if(this.haveRequiredObservationQueryParameters(item)) {
+          jQuery.extend(true, this, {
+            offeringId: item.offering.id,
+            observedProperty: item.observedProperty,
+            startDatetime: item.time.startDatetime,
+            endDatetime: item.time.endDatetime,
+          });
+          this.getObservationData();
+        }
+      },
+
+      /**
+       * Check whether the given item object contains the required
+       * parameters to perform a getObservation request
+       */
+      haveRequiredObservationQueryParameters: function(item) {
+        return (SOS.Utils.isValidObject(item) &&
+                SOS.Utils.isValidObject(item.offering.id) &&
+                SOS.Utils.isValidObject(item.observedProperty) &&
+                SOS.Utils.isValidObject(item.time.startDatetime) &&
+                SOS.Utils.isValidObject(item.time.endDatetime));
+      },
+
+      /**
+       * Extract the time parameters for performing a getObservation request
+       * from the given item object, or use fallback defaults
+       */
+      getObservationQueryTimeParameters: function(item) {
+        var time = {startDatetime: null, endDatetime: null};
+
+        // If times have been explicitly set, we just use them
+        if(SOS.Utils.isValidObject(item.time) && SOS.Utils.isValidObject(item.time.startDatetime) && SOS.Utils.isValidObject(item.time.endDatetime)) {
+          time = item.time;
+        } else {
+          /* Optionally we can take the full available times from the
+             offering, however this could lead to performance problems */
+          if(this.config.app.options.time.useOfferingTimePeriod) {
+            if(SOS.Utils.isValidObject(item.offering)) {
+              var offering = this.sos.getOffering(item.offering.id);
+              time.startDatetime = offering.time.timePeriod.beginPosition;
+              time.endDatetime = offering.time.timePeriod.endPosition;
+            }
+          } else {
+            // Fallback default: show data between configured ms ago up to now
+            if(this.config.app.options.time.ms) {
+              var now = new Date();
+              var then = new Date();
+              then.setMilliseconds(now.getMilliseconds() - this.config.app.options.time.ms);
+              time.startDatetime = then.toISOString();
+              time.endDatetime = now.toISOString();
+            }
+          }
+        }
+
+        return time;
+      },
+ 
+      /**
+       * Get the observation data from the SOS according to this object's
+       * properties, & then draw the plot
+       */
+      getObservationData: function() {
+        this._getOffering();
+
+        if(this.haveValidOfferingObject()) {
+          if(SOS.Utils.isValidObject(this.observedProperty)) {
+            this.offering.filterObservedProperties(this.observedProperty);
+          }
+          this.offering.registerUserCallback({event: "obsavailable", scope: this, callback: this.drawObservationData});
+          this.offering.getObservations(this.startDatetime, this.endDatetime);
+        }
+      },
+
+      /**
+       * Display the given observation data (plot, table etc.)
+       */
+      drawObservationData: function() {
+        var components = this.config.app.components;
+
+        // Make the plot tab the active tab, then draw the plot & table
+        jQuery('#' + this.config.app.id + 'PlotPanel').html("");
+        jQuery('#' + this.config.app.id + 'PlotTab a').trigger('click');
+        components.plot.offering = this.offering;
+        components.plot.draw();
+
+        jQuery('#' + this.config.app.id + 'TablePanel').html("");
+        components.table.offering = this.offering;
+        components.table.draw();
       },
     });
   }

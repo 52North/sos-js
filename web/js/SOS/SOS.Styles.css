@@ -51,6 +51,7 @@ div.sos-table {
 }
 
 table.sos-table {
+  font-size: 0.75em;
 }
 
 caption.sos-table {
@@ -95,9 +96,16 @@ td.sos-table-highlight-selected {
   border: thin dotted grey;
 }
 
+table.sos-table-scrollable {
+  display: block;
+  width: 100%;
+  height: 300px;
+  overflow: auto;
+}
+
 .sos-map {
-  width: 768px;
-  height: 512px;
+  width: 660px;
+  height: 440px;
 }
 
 .sos-menu-container {
@@ -115,6 +123,24 @@ td.sos-table-highlight-selected {
 
 .sos-menu-select-list {
   width: 140px;
+}
+
+.sos-app-container {
+  width: 1024px;
+  height: 768px;
+}
+
+.sos-app {
+  width: 80%;
+  height: 80%;
+  padding: 5px;
+  position: absolute;
+  left: 210px;
+  top: 5px;
+}
+
+.sos-tab-header {
+  font-size: 0.9em;
 }
 
 /* flot legend styles */
