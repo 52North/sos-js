@@ -30,8 +30,13 @@
   z-index: 1200;
 }
 
-.sos-plot-control-title {
+.sos-control-title {
   font-weight: bold;
+}
+
+.sos-control-section {
+  margin-bottom: 5px;
+  font-size: 0.9em;
 }
 
 .sos-selected-interval-stats-table, .sos-embedded-table {
@@ -146,5 +151,10 @@ table.sos-table-scrollable {
 /* flot legend styles */
 div.legend {
   font-size: 0.70em;
+}
+
+/* jquery ui styles */
+div.ui-datepicker{
+  font-size: 62.5%;
 }
 

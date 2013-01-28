@@ -337,14 +337,19 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
        * Construct a GML time period given start and end datetimes
        */
       constructGmlTimeperiod: function(start, end) {
+        // We slightly increase the time interval to make it inclusive
+        var t = SOS.Utils.isoToTimeInterval(start, end);
+        t = SOS.Utils.adjustTimeInterval(t, -1, 1);
+
         /* N.B.: The "inclusive" attribute isn't implemented in the 52n SOS so
-                 this is an open interval, in the strict mathematical sense */
+                 this is an open interval, in the strict mathematical sense.
+                 Hence the need to broaden the given time interval, above */
         var s = "<eventTime>" +
                   "<ogc:TM_During>" +
                     "<ogc:PropertyName>om:samplingTime</ogc:PropertyName>" +
                     "<gml:TimePeriod>" +
-                      "<gml:beginPosition>" + start + "</gml:beginPosition>" +
-                      "<gml:endPosition>" + end + "</gml:endPosition>" +
+                      "<gml:beginPosition>" + t.start.toISOString() + "</gml:beginPosition>" +
+                      "<gml:endPosition>" + t.end.toISOString() + "</gml:endPosition>" +
                     "</gml:TimePeriod>" +
                   "</ogc:TM_During>" +
                 "</eventTime>";
@@ -694,9 +699,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
       isoToDateObject: function(x) {
         var y = x;
 
-        // Example datetime string: 2012-01-01T01:00:00.000Z
+        // Example datetime string: 2012-01-01T01:00:00.000Z (or date only)
         if(typeof x == "string") {
           var a = x.split(/T/);
+          if(a.length < 2) {a[1] = "00:00:00.000Z";}
           var d = a[0].split(/-/);
           a[1] = a[1].replace(/Z$/, "");
           var t = a[1].split(/:/);
@@ -753,6 +759,75 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         }
 
         return y;
+      },
+
+      isoToTimeInterval: function(start, end) {
+        var t = {start: null, end: null};
+
+        t.start = this.isoToDateObject(start);
+        t.end = this.isoToDateObject(end);
+
+        return t;
+      },
+
+      adjustTimeInterval: function(t, startOffset, endOffset) {
+        t.start.setTime(t.start.getTime() + startOffset);
+        t.end.setTime(t.end.getTime() + endOffset);
+
+        return t;
+      },
+
+      parseRelativeTime: function(x) {
+        var t = {start: null, end: null};
+        var local = new Date();
+        var T = local.getTime();
+        var s = x;
+        var u = 0, c = 0, d = 0;
+
+        // N.B.: We get local time but always use the getUTC* methods
+
+        t.start = new Date(T);
+        t.end = new Date(T);
+
+        // For convenience we accept today, yesterday, current*, & previous*
+        s = s.replace(/to|current/i, "this");
+        s = s.replace(/yester|previous/i, "last");
+
+        if((/hour$/i).test(s)) {
+          u = 60 * 60 * 1000;
+          c = T % u;
+        }
+        if((/day$/i).test(s)) {
+          u = 24 * 60 * 60 * 1000;
+          c = T % u;
+        }
+        if((/week$/i).test(s)) {
+          d = 24 * 60 * 60 * 1000;
+          u = 7 * 24 * 60 * 60 * 1000;
+          c = local.getUTCDay() * d + T % d;
+        }
+        if((/month$/i).test(s)) {
+          d = 24 * 60 * 60 * 1000;
+          u = 31 * 24 * 60 * 60 * 1000;
+          c = (local.getUTCDate() - 1) * d + T % d;
+        }
+        if((/year$/i).test(s)) {
+          d = 24 * 60 * 60 * 1000;
+          u = 366 * 24 * 60 * 60 * 1000;
+          c = (local.getUTCDayOfYear() - 1) * d + T % d;
+        }
+
+        if((/^this/i).test(s)) {
+          this.adjustTimeInterval(t, - c, - c + u - 1);
+        }
+        if((/^last/i).test(s)) {
+          this.adjustTimeInterval(t, - c - u, - c - 1);
+        }
+        if((/^rolling/i).test(s)) {
+          this.adjustTimeInterval(t, - u, - 1);
+        }
+
+        return t;
       },
 
       extractColumn: function(x, n) {
@@ -868,6 +943,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
             + ':' + pad(this.getUTCSeconds())
             + '.' + String((this.getUTCMilliseconds()/1000).toFixed(3)).slice(2, 5)
             + 'Z';
+        };
+      }());
+    }
+    if(!Date.prototype.getUTCDayOfYear) {
+      (function() {
+        Date.prototype.getUTCDayOfYear = function() {
+          var d = new Date(this.getUTCFullYear(), 0, 1);
+
+          return Math.ceil((this.getTime() - d.getTime()) / (24 * 60 * 60 * 1000));
         };
       }());
     }
