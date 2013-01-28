@@ -24,7 +24,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
     OpenLayers.Util.extend(OpenLayers.Lang.en, {
       "SOSGetCapabilitiesErrorMessage": "SOS Get Capabilities failed: ",
       "SOSGetLatestObservationsErrorMessage": "SOS Get Latest Observations failed: ",
-      "SOSGetObservationsErrorMessage": "SOS Get Observations failed: ",
+      "SOSGetObservationsErrorMessage": "SOS Get Observations failed: "
     });
 
     /* This library uses a proxy host.  Change the path accordingly */
@@ -49,8 +49,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           eventTimeFirst: "first",
           resultModel: "om:Measurement",
           responseMode: "inline",
-          forceSort: true,
-        },
+          forceSort: true
+        }
       },
       CLASS_NAME: "SOS",
 
@@ -131,7 +131,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           failure: function() {
             alert(OpenLayers.i18n("SOSGetCapabilitiesErrorMessage") + url);
           },
-          success: this._parseCapabilities,
+          success: this._parseCapabilities
         });
       },
 
@@ -288,7 +288,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           responseMode: this.config.observation.responseMode,
           responseFormat: this.config.observation.responseFormat,
           offering: offering.id,
-          observedProperties: offering.observedProperties,
+          observedProperties: offering.observedProperties
         };
         if(this.foiId) {
           params.foi = {objectId: this.foiId};
@@ -302,7 +302,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
             alert(OpenLayers.i18n("SOSGetLatestObservationsErrorMessage") + url);
           },
           success: this._parseLatestObservations,
-          data: xml,
+          data: xml
         });
       },
 
@@ -382,7 +382,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           responseMode: this.config.observation.responseMode,
           responseFormat: this.config.observation.responseFormat,
           offering: offering.id,
-          observedProperties: offering.observedProperties,
+          observedProperties: offering.observedProperties
         };
         if(this.foiId) {
           params.foi = {objectId: this.foiId};
@@ -397,7 +397,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
             alert(OpenLayers.i18n("SOSGetObservationsErrorMessage") + url);
           },
           success: this._parseObservations,
-          data: xml,
+          data: xml
         });
       },
 
@@ -453,7 +453,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         }
 
         return record;
-      },
+      }
     });
 
     /**
@@ -564,7 +564,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
 
         // Inherited from SOS parent class
         this.getObservationsForOffering(this, start, end);
-      },
+      }
     });
 
     /**
@@ -573,7 +573,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
     SOS.Utils = {
       uomDisplayTitles: {
         "Cel": "&deg;C",
-        "m/s": "m s<sup>-1</sup>",
+        "m/s": "m s<sup>-1</sup>"
       },
 
       isValidObject: function(x) {
@@ -916,7 +916,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         }
 
         return y;
-      },
+      }
     };
 
     /**************************************************************************

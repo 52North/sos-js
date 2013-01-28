@@ -26,7 +26,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
   OpenLayers.Util.extend(OpenLayers.Lang.en, {
     "SOSObservedPropertyString": "Observed Property",
     "SOSTimeString": "Time",
-    "SOSValueString": "Value",
+    "SOSValueString": "Value"
   });
 
   /* Create the SOS.Ui namespace */
@@ -316,12 +316,12 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             color: series.color,
             bars: {
               show: true,
-              barWidth: hist.binWidth,
-            },
-          },
+              barWidth: hist.binWidth
+            }
+          }
         };
         this.config.stats.object = jQuery.plot(sp, this.config.stats.series, this.config.stats.options);
-      },
+      }
     });
   }
 
@@ -354,8 +354,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             selection: {mode: "x"},
             grid: {borderWidth: 1, hoverable: true, clickable: true},
             legend: {show: true, backgroundOpacity: 0.5},
-            series: {lines: {show: true}, points: {show: false}},
-          },
+            series: {lines: {show: true}, points: {show: false}}
+          }
         },
         overview: {
           object: null,
@@ -368,19 +368,19 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             selection: {mode: "x"},
             grid: {borderWidth: 1},
             legend: {show: false},
-            series: {lines: {show: true, lineWidth: 1}, shadowSize: 0},
-          },
+            series: {lines: {show: true, lineWidth: 1}, shadowSize: 0}
+          }
         },
         format: {
           time: {
-            formatter: SOS.Utils.jsTimestampToIso,
+            formatter: SOS.Utils.jsTimestampToIso
           },
           value: {
             sciLimit: 0.1,
             digits: 2,
-            formatter: SOS.Ui.prototype.formatValueFancy,
-          },
-        },
+            formatter: SOS.Ui.prototype.formatValueFancy
+          }
+        }
       },
       CLASS_NAME: "SOS.Plot",
 
@@ -584,7 +584,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               position: "absolute",
               left: x + "px",
               top: y + "px",
-              borderColor: item.series.color,
+              borderColor: item.series.color
             });
             valueBox.show();
           }
@@ -763,7 +763,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       resetOverviewSeries: function() {
         this.config.overview.series = [];
-      },
+      }
     });
   }
 
@@ -792,8 +792,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           series: [],
           options: {
             header: {},
-            scrollable: false,
-          },
+            scrollable: false
+          }
         },
         overview: {
           object: null,
@@ -806,19 +806,19 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             selection: {mode: "x"},
             grid: {borderWidth: 1},
             legend: {show: false},
-            series: {lines: {show: true, lineWidth: 1}, shadowSize: 0},
-          },
+            series: {lines: {show: true, lineWidth: 1}, shadowSize: 0}
+          }
         },
         format: {
           time: {
-            formatter: SOS.Utils.jsTimestampToIso,
+            formatter: SOS.Utils.jsTimestampToIso
           },
           value: {
             sciLimit: 0.1,
             digits: 2,
-            formatter: SOS.Ui.prototype.formatValueFancy,
-          },
-        },
+            formatter: SOS.Ui.prototype.formatValueFancy
+          }
+        }
       },
       CLASS_NAME: "SOS.Table",
 
@@ -1386,7 +1386,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var cell = jQuery(elem);
         this.highlightSelected(cell);
         (cell.index() % 2 == 0) ? this.highlightSelected(cell.next()) : this.highlightSelected(cell.prev());
-      },
+      }
     });
   }
 
@@ -1411,14 +1411,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             centre: new OpenLayers.LonLat(0, 0),
             params: {
               projection: "EPSG:4326",
-              displayProjection: new OpenLayers.Projection("EPSG:4326"),
-            },
-          },
+              displayProjection: new OpenLayers.Projection("EPSG:4326")
+            }
+          }
         },
         overview: {
           options: {
-            show: false,
-          },
+            show: false
+          }
         },
         baseLayer: {
           object: null,
@@ -1427,9 +1427,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             label: "OpenLayers WMS",
             url: "http://vmap0.tiles.osgeo.org/wms/vmap0?",
             params: {
-              layers: "basic",
-            },
-          },
+              layers: "basic"
+            }
+          }
         },
         featureOfInterestLayer: {
           object: null,
@@ -1447,10 +1447,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               "labelAlign": "rb",
               "labelXOffset": -10,
               "labelOutlineColor": "white",
-              "labelOutlineWidth": 3,
-            }),
-          },
-        },
+              "labelOutlineWidth": 3
+            })
+          }
+        }
       },
       CLASS_NAME: "SOS.Map",
 
@@ -1593,7 +1593,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               externalProjection: this.config.map.options.defaultProjection
             },
             url: this.url,
-            fois: this.sos.getFeatureOfInterestIds(),
+            fois: this.sos.getFeatureOfInterestIds()
           }),
           styleMap: styleMap
         });
@@ -1615,7 +1615,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       featureOfInterestSelectHandler: function(feature) {
         var item = {
-          foi: {id: feature.attributes.id, geometry: feature.geometry},
+          foi: {id: feature.attributes.id, geometry: feature.geometry}
         };
 
         // Store each selected item (FOI)
@@ -1694,7 +1694,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         }
 
         return html;
-      },
+      }
     });
   }
 
@@ -1720,21 +1720,21 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             tabs: {
               offerings: {
                 label: "Offerings",
-                prompt: "Please select a Feature Of Interest",
+                prompt: "Please select a Feature Of Interest"
               },
               observedProperties: {
                 label: "Observed Properties",
-                prompt: "Please select an Offering",
+                prompt: "Please select an Offering"
               },
               controls: {
                 label: "Controls",
-                prompt: "Please select an Observed Property",
-              },
+                prompt: "Please select an Observed Property"
+              }
             },
             listBoxes: {
               multiple: false,
               size: 5,
-              useSelectBox: false,
+              useSelectBox: false
             },
             datePickers: {
               // N.B.: This is a 4-digit year
@@ -1742,10 +1742,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               autoSize: true,
               changeYear: true,
               changeMonth: true,
-              onSelect: function(s, ui) {jQuery(this).trigger('change');},
-            },
-          },
-        },
+              onSelect: function(s, ui) {jQuery(this).trigger('change');}
+            }
+          }
+        }
       },
       CLASS_NAME: "SOS.Menu",
 
@@ -2172,7 +2172,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             }
           }
         }
-      },
+      }
     });
   }
 
@@ -2203,23 +2203,23 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             menu: null,
             map: null,
             plot: null,
-            table: null,
+            table: null
           },
           options: {
             tabs: {
               map: {label: "Map"},
               plot: {label: "Plot"},
-              table: {label: "Table"},
+              table: {label: "Table"}
             },
             time: {
               useOfferingTimePeriod: false,
-              ms: 31 * 8.64e7,
+              ms: 31 * 8.64e7
             },
             overview: {
-              show: true,
-            },
-          },
-        },
+              show: true
+            }
+          }
+        }
       },
       CLASS_NAME: "SOS.App",
 
@@ -2287,7 +2287,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var components = this.config.app.components;
         var options = {
           url: this.url,
-          sos: this.sos,
+          sos: this.sos
         };
 
         // Instantiate the components of the app with common options
@@ -2489,7 +2489,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             offeringId: item.offering.id,
             observedProperty: item.observedProperty,
             startDatetime: item.time.startDatetime,
-            endDatetime: item.time.endDatetime,
+            endDatetime: item.time.endDatetime
           });
           this.getObservationData();
         }
@@ -2588,7 +2588,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         jQuery('#' + this.config.app.id + 'TablePanel').html("");
         components.table.offering = this.offering;
         components.table.draw();
-      },
+      }
     });
   }
 }
