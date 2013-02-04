@@ -1743,7 +1743,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               changeYear: true,
               changeMonth: true,
               onSelect: function(s, ui) {jQuery(this).trigger('change');}
-            }
+            },
+            createNewItem: false
           }
         }
       },
@@ -1843,13 +1844,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       constructOfferingsEntries: function() {
         var ids = [], names = [];
         this.config.menu.entries = [];
+        var item = this.getCurrentItem();
 
         /* If an FOI was selected, then only get offerings for that FOI.
            Otherwise we get all offerings */
-        if(this.config.menu.selected && this.config.menu.selected.length > 0) {
-          var foiId = this.config.menu.selected[0].item.foi.id;
+        if(SOS.Utils.isValidObject(item) && SOS.Utils.isValidObject(item.foi)) {
           var offerings = [];
-          offerings = offerings.concat(this.sos.getOfferingsForFeatureOfInterestId(foiId));
+          offerings = offerings.concat(this.sos.getOfferingsForFeatureOfInterestId(item.foi.id));
 
           for(var i = 0, len = offerings.length; i < len; i++) {
             ids.push(offerings[i].id);
@@ -1877,7 +1878,6 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         s.bind("change", {self: this}, function(evt) {
           var self = evt.data.self;
           var vals = [];
-          self.config.menu.selected = [];
 
           /* Ensure vals is array, even if listbox is singular
              (otherwise vals.length is the string length of the entry!) */
@@ -1885,7 +1885,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
           for(var i = 0, len = vals.length; i < len; i++) {
             var item = {offering: {id: vals[i]}};
-            self.config.menu.selected.push({item: item});
+
+            // We can either create a new item per offering, or update existing
+            if(self.config.menu.options.createNewItem) {
+              self.setNewItem(item);
+            } else {
+              self.updateCurrentItem(item);
+            }
           }
           self.displayObservedProperties();
 
@@ -1910,16 +1916,17 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       constructObservedPropertiesEntries: function() {
         var ids = [], names = [];
         this.config.menu.entries = [];
+        var item = this.getCurrentItem();
 
-        for(var i = 0, len = this.config.menu.selected.length; i < len; i++) {
-          var offeringId = this.config.menu.selected[i].item.offering.id;
-          var offering = this.sos.getOffering(offeringId);
+        if(SOS.Utils.isValidObject(item) && SOS.Utils.isValidObject(item.offering)) {
+          var offering = this.sos.getOffering(item.offering.id);
           ids = offering.getObservedPropertyIds();
           names = SOS.Utils.toTitleCase(SOS.Utils.toDisplayName(SOS.Utils.urnToName(offering.getObservedPropertyNames())));
-        }
-        for(var i = 0, len = ids.length; i < len; i++) {
-          var entry = {value: ids[i], text: names[i]};
-          this.config.menu.entries.push(entry);
+
+          for(var i = 0, len = ids.length; i < len; i++) {
+            var entry = {value: ids[i], text: names[i]};
+            this.config.menu.entries.push(entry);
+          }
         }
       },
 
@@ -1934,13 +1941,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         s.bind("change", {self: this}, function(evt) {
           var self = evt.data.self;
           var vals = [];
-          self.config.menu.selected = self.config.menu.selected || [];
           vals = vals.concat(jQuery(this).val());
 
           for(var i = 0, vlen = vals.length; i < vlen; i++) {
-            for(var j = 0, slen = self.config.menu.selected.length; j < slen; j++) {
-              self.config.menu.selected[j].item.observedProperty = vals[i];
-            }
+            var item = {observedProperty: vals[i]};
+            self.updateCurrentItem(item);
           }
           // For external listeners (application-level plumbing)
           self.sos.events.triggerEvent("sosMenuObservedPropertyChange");
@@ -1997,32 +2002,31 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       datepickerChangeHandler: function(evt) {
         var self = evt.data.self;
         var pos = evt.data.pos;
-        self.config.menu.selected = self.config.menu.selected || [];
-        var len = self.config.menu.selected.length;
         var val = jQuery(this).val();
+        var item = {time: {}};
+        var firstItem = self.getFirstItem();
 
-        // N.B.: The pos property identifies whether this is a start/end date
+        /* N.B.: The pos property identifies whether this is a start/end date.
+                 The time axis is always set the same for all selected items */
 
-        // Add date to any existing menu items, or create if none exist
-        if(len > 0) {
-          for(var i = 0; i < len; i++) {
-            self.config.menu.selected[i].item.time = self.config.menu.selected[i].item.time || {};
-            if(pos == "start") {
-              self.config.menu.selected[i].item.time.startDatetime = val;
-            } else if(pos == "end") {
-              self.config.menu.selected[i].item.time.endDatetime = val;
-            }
+        if(pos == "start") {
+          item.time.startDatetime = val;
+
+          if(SOS.Utils.isValidObject(firstItem) && SOS.Utils.isValidObject(firstItem.time)) {
+            item.time.endDatetime = firstItem.time.endDatetime;
           }
-        } else {
-          var item = {time: {}};
+        } else if(pos == "end") {
+          item.time.endDatetime = val;
 
-          if(pos == "start") {
-            item.time = {startDatetime: val};
-          } else if(pos == "end") {
-            item.time = {endDatetime: val};
+          if(SOS.Utils.isValidObject(firstItem) && SOS.Utils.isValidObject(firstItem.time)) {
+            item.time.startDatetime = firstItem.time.startDatetime;
           }
-          self.config.menu.selected.push({item: item});
         }
+
+        // Add date to any existing selected items, or create if none exist
+        self.updateCurrentItem(item);
+        self.updateItemsTimeInterval(item);
+
         // For external listeners (application-level plumbing)
         if(pos == "start") {
           self.sos.events.triggerEvent("sosMenuStartDatetimeChange");
@@ -2169,6 +2173,133 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
             if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
               t.html(options.tabs.controls.prompt);
+            }
+          }
+        }
+      },
+
+      /**
+       * Create a new selected item.  The index is returned
+       */
+      setNewItem: function(item) {
+        this.config.menu.selected = this.config.menu.selected || [];
+        this.config.menu.selected.push({item: item});
+
+        return (this.config.menu.selected.length - 1);
+      },
+
+      /**
+       * Get the selected item corresponding to the given index.  If the
+       * index is < 0, then it is an offset from the end of the array.  The
+       * item is returned or undefined if no such item exists
+       */
+      getItem: function(index) {
+        var item;
+
+        if(SOS.Utils.isValidObject(this.config.menu.selected)) {
+          var len = this.config.menu.selected.length || 0;
+
+          if(len > 0) {
+            if(index < 0) {
+              index = len + index;
+            }
+            if(index >= 0 && index < len) {
+              item = this.config.menu.selected[index].item;
+            }
+          }
+        }
+
+        return item;
+      },
+
+      /**
+       * Set the selected item corresponding to the given index.  If the
+       * index is < 0, then it is an offset from the end of the array.  The
+       * (actual, non-negative) index is returned or -1 if no such item exists
+       */
+      setItem: function(item, index) {
+        var len = 0, retval = -1;
+
+        if(SOS.Utils.isValidObject(this.config.menu.selected)) {
+          len = this.config.menu.selected.length;
+        }
+        if(len > 0) {
+          if(index < 0) {
+            index = len + index;
+          }
+          if(index >= 0 && index < len) {
+            this.config.menu.selected[index].item = item;
+            retval = index;
+          }
+        }
+
+        return retval;
+      },
+
+      /**
+       * Get the current selected item
+       */
+      getCurrentItem: function() {
+        return this.getItem(-1);
+      },
+
+      /**
+       * Set the current selected item or create new if no current item exists
+       */
+      setCurrentItem: function(item) {
+        var index = this.setItem(item, -1);
+
+        if(index < 0) {
+          index = this.setNewItem(item);
+        }
+
+        return index;
+      },
+
+      /**
+       * Update given properties of the current selected item.  If there is
+       * no current item, then one is created
+       */
+      updateCurrentItem: function(properties) {
+        var item = this.getCurrentItem();
+
+        if(SOS.Utils.isValidObject(item)) {
+          jQuery.extend(true, item, properties);
+          this.setCurrentItem(item);
+        } else {
+          this.setNewItem(properties);
+        }
+
+        return item;
+      },
+
+      /**
+       * Get the first selected item
+       */
+      getFirstItem: function() {
+        return this.getItem(0);
+      },
+
+      /**
+       * Update any existing selected items with the given item's time interval
+       */
+      updateItemsTimeInterval: function(item) {
+        if(SOS.Utils.isValidObject(item.time)) {
+          if(SOS.Utils.isValidObject(this.config.menu.selected)) {
+            var len = this.config.menu.selected.length;
+
+            // Update time interval for any existing selected items
+            for(var i = 0; i < len; i++) {
+              if(SOS.Utils.isValidObject(this.config.menu.selected[i].item)) {
+                this.config.menu.selected[i].item.time = this.config.menu.selected[i].item.time || {};
+
+                if(SOS.Utils.isValidObject(item.time.startDatetime)) {
+                  this.config.menu.selected[i].item.time.startDatetime = item.time.startDatetime;
+                }
+                if(SOS.Utils.isValidObject(item.time.endDatetime)) {
+                  this.config.menu.selected[i].item.time.endDatetime = item.time.endDatetime;
+                }
+              }
             }
           }
         }
@@ -2479,7 +2610,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var item;
 
         if(components.menu.config.menu.selected) {
-          item = components.menu.config.menu.selected[0].item;
+          item = components.menu.getCurrentItem();
           item.time = this.getObservationQueryTimeParameters(item);
         }
 
