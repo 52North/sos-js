@@ -121,7 +121,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
 
         // Optionally the caller can register a callback for the caps request
         if(arguments.length > 0) {
-          this.registerUserCallback({event: "capsavailable", scope: this, callback: callback});
+          this.registerUserCallback({event: "sosCapsAvailable", scope: this, callback: callback});
         }
 
         OpenLayers.Request.GET({
@@ -141,7 +141,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
       _parseCapabilities: function(response) {
         this.SOSCapabilities = this.capsFormatter.read(response.responseXML || response.responseText);
         this.setObservationResponseFormatFromTypeSuggestion(this.config.observation.responseFormatType);
-        this.events.triggerEvent("capsavailable", {response: response});
+        this.events.triggerEvent("sosCapsAvailable", {response: response});
       },
 
       /**
@@ -315,7 +315,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         if(this.config.observation.forceSort) {
           this.SOSObservations.measurements.sort(this._sortObservations);
         }
-        this.events.triggerEvent("latestobsavailable", {response: response});
+        this.events.triggerEvent("sosLatestObsAvailable", {response: response});
       },
 
       /**
@@ -410,7 +410,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         if(this.config.observation.forceSort) {
           this.SOSObservations.measurements.sort(this._sortObservations);
         }
-        this.events.triggerEvent("obsavailable", {response: response});
+        this.events.triggerEvent("sosObsAvailable", {response: response});
       },
 
       /**
@@ -545,7 +545,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
       getLatestObservations: function(callback) {
         // Optionally the caller can register a callback for the obs request
         if(arguments.length > 0) {
-          this.registerUserCallback({event: "latestobsavailable", scope: this, callback: callback});
+          this.registerUserCallback({event: "sosLatestObsAvailable", scope: this, callback: callback});
         }
 
         // Inherited from SOS parent class
@@ -559,7 +559,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
       getObservations: function(start, end, callback) {
         // Optionally the caller can register a callback for the obs request
         if(arguments.length > 2) {
-          this.registerUserCallback({event: "obsavailable", scope: this, callback: callback});
+          this.registerUserCallback({event: "sosObsAvailable", scope: this, callback: callback});
         }
 
         // Inherited from SOS parent class

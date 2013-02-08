@@ -100,7 +100,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           if(!this.sos.haveValidCapabilitiesObject()) {
             // Optionally the caller can register a callback for caps request
             if(arguments.length > 0) {
-              this.sos.registerUserCallback({event: "capsavailable", scope: this, callback: callback});
+              this.sos.registerUserCallback({event: "sosCapsAvailable", scope: this, callback: callback});
             }
             this.sos.getCapabilities();
           }
@@ -476,7 +476,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             this.offering.filterObservedProperties(this.observedProperty);
           }
           this.determineObservationQueryTimeParameters();
-          this.offering.registerUserCallback({event: "obsavailable", scope: this, callback: this.draw});
+          this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.draw});
           this.offering.getObservations(this.startDatetime, this.endDatetime);
         }
       },
@@ -485,8 +485,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Plot the given observation data
        */
       draw: function() {
-        // Avoid infinite loop as addData() also listens for obsavailable
-        this.offering.unregisterUserCallback({event: "obsavailable", scope: this, callback: this.draw});
+        // Avoid infinite loop as addData() also listens for sosObsAvailable
+        this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.draw});
 
         // Construct the data series
         var table = this.constructDataTable(this.offering);
@@ -505,6 +505,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Manage the plot's interactive behaviour
         this.setupBehaviour();
+
+        // Optionally manage the plot overview behaviour
+        if(this.config.overview.options.show) {
+          this.setupOverviewBehaviour();
+        }
 
         // Now we have the base plot, plot any additional data
         if(SOS.Utils.isValidObject(this.additional)) {
@@ -620,30 +625,35 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             }
           }
         });
+      },
 
-        // Optionally manage the plot overview behaviour
-        if(this.config.overview.options.show) {
-          var o = jQuery('#' + this.config.overview.id);
-          var plot = this.config.plot;
-          var overview = this.config.overview;
+      /**
+       * Setup event handlers to manage the plot overview's behaviour
+       */
+      setupOverviewBehaviour: function() {
+        var p = jQuery('#' + this.config.plot.id);
+        var o = jQuery('#' + this.config.overview.id);
+        var plot = this.config.plot;
+        var overview = this.config.overview;
 
-          // Connect the overview to the plot
-          p.bind("plotselected", function(evt, ranges) {
-            // Manage zooming
-            plot.object = jQuery.plot(p, plot.series, jQuery.extend(true, {}, plot.options, {xaxis: {min: ranges.xaxis.from, max: ranges.xaxis.to}}));
+        // These handlers connect the overview & the plot
 
-            // Don't fire event on the overview to prevent eternal loop
-            overview.object.setSelection(ranges, true);
-          });
+        // Subset the plot from plot selection.  Overview can reinstate
+        p.bind("plotselected", function(evt, ranges) {
+          plot.object = jQuery.plot(p, plot.series, jQuery.extend(true, {}, plot.options, {xaxis: {min: ranges.xaxis.from, max: ranges.xaxis.to}}));
+
+          // Don't fire event on the overview to prevent eternal loop
+          overview.object.setSelection(ranges, true);
+        });
     
-          o.bind("plotselected", function(evt, ranges) {
-            plot.object.setSelection(ranges);
-          });
+        // Subset the plot from overview selection.  Overview can reinstate
+        o.bind("plotselected", function(evt, ranges) {
+          plot.object.setSelection(ranges);
+        });
 
-          o.bind("plotunselected", function() {
-            plot.object = jQuery.plot(p, plot.series, plot.options);
-          });
-        }
+        o.bind("plotunselected", function() {
+          plot.object = jQuery.plot(p, plot.series, plot.options);
+        });
       },
 
       /**
@@ -676,7 +686,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 this.offering.filterObservedProperties(this.observedProperty);
               }
               this.determineObservationQueryTimeParameters();
-              this.offering.registerUserCallback({event: "obsavailable", scope: this, callback: this.drawAdditionalData});
+              this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawAdditionalData});
               this.offering.getObservations(this.startDatetime, this.endDatetime);
             }
           }
@@ -687,8 +697,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Add the given observation data to an existing plot
        */
       drawAdditionalData: function() {
-        // Avoid infinite loop as each additional listens for obsavailable
-        this.offering.unregisterUserCallback({event: "obsavailable", scope: this, callback: this.drawAdditionalData});
+        // Avoid infinite loop as each additional listens for sosObsAvailable
+        this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawAdditionalData});
 
         // Construct the data series
         var table = this.constructDataTable(this.offering);
@@ -892,7 +902,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             this.offering.filterObservedProperties(this.observedProperty);
           }
           this.determineObservationQueryTimeParameters();
-          this.offering.registerUserCallback({event: "obsavailable", scope: this, callback: this.draw});
+          this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.draw});
           this.offering.getObservations(this.startDatetime, this.endDatetime);
         }
       },
@@ -901,8 +911,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Display the given observation data
        */
       draw: function() {
-        // Avoid infinite loop as addData() also listens for obsavailable
-        this.offering.unregisterUserCallback({event: "obsavailable", scope: this, callback: this.draw});
+        // Avoid infinite loop as addData() also listens for sosObsAvailable
+        this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.draw});
 
         // Construct the data series
         var table = this.constructDataTable(this.offering);
@@ -921,6 +931,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Manage the table's interactive behaviour
         this.setupBehaviour();
+
+        // Optionally manage the table overview behaviour
+        if(this.config.overview.options.show) {
+          this.setupOverviewBehaviour();
+        }
 
         // Now we have the base table, add any additional data
         if(SOS.Utils.isValidObject(this.additional)) {
@@ -1003,53 +1018,51 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             }
           }
         });
+      },
 
-        // Optionally manage the plot overview behaviour
-        if(this.config.overview.options.show) {
-          var o = jQuery('#' + this.config.overview.id);
-          var overview = this.config.overview;
+      /**
+       * Setup event handlers to manage the table overview's behaviour
+       */
+      setupOverviewBehaviour: function() {
+        var t = jQuery('#' + this.config.table.id);
+        var o = jQuery('#' + this.config.overview.id);
+        var overview = this.config.overview;
 
-          // Connect the overview to the table
-          o.bind("plotselected", {self: this}, function(evt, ranges) {
-            // Manage zooming
-            evt.data.self.subset(ranges.xaxis.from, ranges.xaxis.to);
+        // These handlers connect the overview & the table
 
-            // Don't fire event on the overview to prevent eternal loop
-            overview.object.setSelection(ranges, true);
-          });
+        // Subset the table from overview selection.  Overview can reinstate
+        o.bind("plotselected", {self: this}, function(evt, ranges) {
+          evt.data.self.subset(ranges.xaxis.from, ranges.xaxis.to);
 
-          // Drag selection handlers for table
-          t.delegate("td", "tableselecting", {self: this}, function(evt) {
-            evt.data.self.config.table.selecting = true;
-            evt.data.self.highlightSelectedCellGroup(evt.target);
-          });
+          // Don't fire event on the overview to prevent eternal loop
+          overview.object.setSelection(ranges, true);
+        });
 
-          // Subset the table based on the selection.  Overview can reinstate
-          t.delegate("td", "tableselected", {self: this}, function(evt, selection) {
-            var self = evt.data.self;
-            delete self.config.table.selecting;
+        // Drag selection handlers for table
+        t.delegate("td", "tableselecting", {self: this}, function(evt) {
+          evt.data.self.config.table.selecting = true;
+          evt.data.self.highlightSelectedCellGroup(evt.target);
+        });
 
-            if(selection) {
-              self.config.table.selected = selection.items;
+        // Subset the table from table selection.  Overview can reinstate
+        t.delegate("td", "tableselected", {self: this}, function(evt, selection) {
+          var self = evt.data.self;
+          delete self.config.table.selecting;
 
-              if(self.config.table.selected.length > 1) {
-                var from = self.config.table.selected[0].item.datapoint[0];
-                var to = self.config.table.selected[1].item.datapoint[0];
-                self.subset(from, to);
-                overview.object.setSelection({xaxis: {from: from, to: to}}, true);
+          if(selection) {
+            var ranges = self.selectionToRanges(selection);
 
-                // Clear selection
-                self.unhighlightSelected();
-                self.unhighlight();
-                delete self.config.table.selected;
-              }
+            if(selection.items.length > 1) {
+              self.subset(ranges.xaxis.from, ranges.xaxis.to);
+              overview.object.setSelection(ranges, true);
+              self.clearSelectionHighlighting();
             }
-          });
+          }
+        });
 
-          o.bind("plotunselected", {self: this}, function(evt) {
-            evt.data.self.update();
-          });
-        }
+        o.bind("plotunselected", {self: this}, function(evt) {
+          evt.data.self.update();
+        });
       },
 
       /**
@@ -1119,7 +1132,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 this.offering.filterObservedProperties(this.observedProperty);
               }
               this.determineObservationQueryTimeParameters();
-              this.offering.registerUserCallback({event: "obsavailable", scope: this, callback: this.drawAdditionalData});
+              this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawAdditionalData});
               this.offering.getObservations(this.startDatetime, this.endDatetime);
             }
           }
@@ -1130,8 +1143,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Add the given observation data to an existing table
        */
       drawAdditionalData: function() {
-        // Avoid infinite loop as each additional listens for obsavailable
-        this.offering.unregisterUserCallback({event: "obsavailable", scope: this, callback: this.drawAdditionalData});
+        // Avoid infinite loop as each additional listens for sosObsAvailable
+        this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawAdditionalData});
 
         // Construct the data series
         var table = this.constructDataTable(this.offering);
@@ -1323,6 +1336,23 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Convert a selection object to a flot-ranges-like object
+       */
+      selectionToRanges: function(selection) {
+        var ranges;
+
+        if(selection && selection.items) {
+          if(selection.items.length > 1) {
+            var from = selection.items[0].item.datapoint[0];
+            var to = selection.items[1].item.datapoint[0];
+            ranges = {xaxis: {from: from, to: to}};
+          }
+        }
+
+        return ranges;
+      },
+
+      /**
        * Highlight a given cell in the table
        */
       highlight: function(elem) {
@@ -1386,6 +1416,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var cell = jQuery(elem);
         this.highlightSelected(cell);
         (cell.index() % 2 == 0) ? this.highlightSelected(cell.next()) : this.highlightSelected(cell.prev());
+      },
+
+      /**
+       * Clear all highlighting from all selected cells in the table
+       */
+      clearSelectionHighlighting: function() {
+        this.unhighlightSelected();
+        this.unhighlight();
       }
     });
   }
@@ -1623,7 +1661,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.config.map.selected.push({item: item});
 
         // Show this FOI's latest observation values in a popup
-        this.sos.registerUserCallback({event: "latestobsavailable", scope: this, callback: this.displayLatestObservations});
+        this.sos.registerUserCallback({event: "sosLatestObsAvailable", scope: this, callback: this.displayLatestObservations});
         this.sos.getLatestObservationsForFeatureOfInterestId(item.foi.id);
 
         // For external listeners (application-level plumbing)
@@ -2345,10 +2383,21 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             time: {
               useOfferingTimePeriod: false,
               ms: 31 * 8.64e7
-            },
-            overview: {
-              show: true
             }
+          }
+        },
+        overview: {
+          object: null,
+          id: "sosAppOverview",
+          series: [],
+          options: {
+            show: true,
+            xaxis: {ticks: [], mode: "time"},
+            yaxis: {ticks: [], autoscaleMargin: 0.1},
+            selection: {mode: "x"},
+            grid: {borderWidth: 1},
+            legend: {show: false},
+            series: {lines: {show: true, lineWidth: 1}, shadowSize: 0}
           }
         }
       },
@@ -2376,6 +2425,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       setAppOptions: function(options) {
         jQuery.extend(true, this.config.app.options, options);
+      },
+
+      /**
+       * Set options for the app overview
+       */
+      setOverviewOptions: function(options) {
+        jQuery.extend(true, this.config.overview.options, options);
       },
 
       /**
@@ -2436,14 +2492,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         // Set any component-specific initial options
         components.menu.setInitialViewBlank();
         components.table.setTableOptions({scrollable: true});
-        components.map.setOverviewOptions({show: true});
 
-        // Optionally show a data overview (shared by plot, table etc.)
-        if(this.config.app.options.overview.show) {
+        /* Optionally show data overview.  Using an application-level overview
+           allows the selections made on the components (plot, table) to talk
+           to one another.  See drawOverview() etc. */
+        if(this.config.overview.options.show) {
+          components.map.setOverviewOptions({show: true});
           components.plot.config.overview.id = this.config.app.id + "Overview";
           components.table.config.overview.id = this.config.app.id + "Overview";
-          components.plot.setOverviewOptions({show: true});
-          components.table.setOverviewOptions({show: true});
         }
       },
  
@@ -2462,7 +2518,90 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         this.sos.registerUserCallback({event: "sosMenuEndDatetimeChange", scope: this, callback: this.sosMenuChangeHandler});
       },
+
+      /**
+       * Plot the given observation data as an overview plot
+       */
+      drawOverview: function() {
+        var components = this.config.app.components;
+        var o = jQuery('#' + this.config.overview.id);
+
+        // If overview div doesn't exist (the norm), create one on the fly
+        if(o.length < 1) {
+          var a = jQuery('#' + this.config.app.id + 'Container');
+          o = jQuery('<div id="sosAppOverview" class="sos-plot-overview"/>');
+          a.after(o);
+        }
+
+        this.config.overview.series = (components.plot.config.plot.series.length > 0 ? components.plot.config.plot.series : components.table.config.table.series);
+        this.config.overview.object = jQuery.plot(o, this.config.overview.series, this.config.overview.options);
+      },
+
+      /**
+       * Setup event handlers to manage the app overview's behaviour
+       */
+      setupOverviewBehaviour: function() {
+        var components = this.config.app.components;
+        var p = jQuery('#' + components.plot.config.plot.id);
+        var t = jQuery('#' + components.table.config.table.id);
+        var o = jQuery('#' + this.config.overview.id);
+        var overview = this.config.overview;
+
+        // These handlers connect the overview, the plot, & the table
+
+        // Subset the plot & table from plot selection.  Overview can reinstate
+        p.bind("plotselected", {self: this}, function(evt, ranges) {
+          var components = evt.data.self.config.app.components;
+
+          components.plot.config.plot.object = jQuery.plot(p, components.plot.config.plot.series, jQuery.extend(true, {}, components.plot.config.plot.options, {xaxis: {min: ranges.xaxis.from, max: ranges.xaxis.to}}));
+
+          // Pass on plot selection to table
+          components.table.subset(ranges.xaxis.from, ranges.xaxis.to);
+
+          // Don't fire event on the overview to prevent eternal loop
+          overview.object.setSelection(ranges, true);
+        });
  
+        // Drag selection handlers for table
+        t.delegate("td", "tableselecting", {self: this}, function(evt) {
+          var components = evt.data.self.config.app.components;
+          components.table.config.table.selecting = true;
+          components.table.highlightSelectedCellGroup(evt.target);
+        });
+
+        // Subset the table & plot from table selection.  Overview can reinstate
+        t.delegate("td", "tableselected", {self: this}, function(evt, selection) {
+          var components = evt.data.self.config.app.components;
+          delete components.table.config.table.selecting;
+
+          if(selection) {
+            var ranges = components.table.selectionToRanges(selection);
+
+            if(selection.items.length > 1) {
+              components.table.subset(ranges.xaxis.from, ranges.xaxis.to);
+              overview.object.setSelection(ranges, true);
+              components.table.clearSelectionHighlighting();
+
+              // Pass on table selection to plot
+              var e = jQuery.Event('plotselected');
+              e.data = {self: evt.data.self};
+              p.trigger(e, [ranges]);
+            }
+          }
+        });
+
+        o.bind("plotselected", {self: this}, function(evt, ranges) {
+          var components = evt.data.self.config.app.components;
+          components.plot.config.plot.object.setSelection(ranges);
+        });
+
+        o.bind("plotunselected", {self: this}, function(evt) {
+          var components = evt.data.self.config.app.components;
+          components.plot.config.plot.object = jQuery.plot(p, components.plot.config.plot.series, components.plot.config.plot.options);
+          components.table.update();
+        });
+      },
+
       /**
        * Display the app according to this object's properties
        */
@@ -2554,7 +2693,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         }
 
         // Optionally show a data overview (for plot, table etc.)
-        if(this.config.app.options.overview.show) {
+        if(this.config.overview.options.show) {
           divId = this.config.app.id + "Overview";
           div = jQuery('<div id="' + divId + '" class="sos-plot-overview"/>');
           container.append(div);
@@ -2692,7 +2831,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             this.offering.filterObservedProperties(this.observedProperty);
           }
           this.determineObservationQueryTimeParameters();
-          this.offering.registerUserCallback({event: "obsavailable", scope: this, callback: this.drawObservationData});
+          this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawObservationData});
           this.offering.getObservations(this.startDatetime, this.endDatetime);
         }
       },
@@ -2702,7 +2841,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       drawObservationData: function() {
         // Avoid cumulative calls to this function
-        this.offering.unregisterUserCallback({event: "obsavailable", scope: this, callback: this.drawObservationData});
+        this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawObservationData});
 
         var components = this.config.app.components;
 
@@ -2719,6 +2858,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         jQuery('#' + this.config.app.id + 'TablePanel').html("");
         components.table.offering = this.offering;
         components.table.draw();
+
+        // The plot & table share an overview, so that they talk to one another
+        if(this.config.overview.options.show) {
+          this.drawOverview();
+          components.table.config.overview.object = components.plot.config.overview.object = this.config.overview.object;
+          this.setupOverviewBehaviour();
+        }
       }
     });
   }
