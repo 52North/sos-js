@@ -380,7 +380,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             digits: 2,
             formatter: SOS.Ui.prototype.formatValueFancy
           }
-        }
+        },
+        mode: {append: false}
       },
       CLASS_NAME: "SOS.Plot",
 
@@ -469,6 +470,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * properties, & then draw the plot
        */
       _display: function() {
+        // Avoid incremental calls to this function on subsequent event trigger
+        this.sos.unregisterUserCallback({event: "sosCapsAvailable", scope: this, callback: this._display});
+
         this._getOffering();
 
         if(this.haveValidOfferingObject()) {
@@ -485,12 +489,18 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Plot the given observation data
        */
       draw: function() {
-        // Avoid infinite loop as addData() also listens for sosObsAvailable
+        // Avoid incremental calls to this function on subsequent event trigger
         this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.draw});
 
         // Construct the data series
         var table = this.constructDataTable(this.offering);
-        this.config.plot.series.push(table);
+
+        // We can add to an existing base plot or overwrite, dependent on mode
+        if(this.config.mode.append) {
+          this.config.plot.series.push(table);
+        } else {
+          this.config.plot.series = [table];
+        }
 
         // Set any last minute defaults if not already set
         this.applyDefaults();
@@ -828,7 +838,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             digits: 2,
             formatter: SOS.Ui.prototype.formatValueFancy
           }
-        }
+        },
+        mode: {append: false}
       },
       CLASS_NAME: "SOS.Table",
 
@@ -895,6 +906,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * properties, & then draw the table
        */
       _display: function() {
+        // Avoid incremental calls to this function on subsequent event trigger
+        this.sos.unregisterUserCallback({event: "sosCapsAvailable", scope: this, callback: this._display});
+
         this._getOffering();
 
         if(this.haveValidOfferingObject()) {
@@ -911,18 +925,26 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Display the given observation data
        */
       draw: function() {
-        // Avoid infinite loop as addData() also listens for sosObsAvailable
+        // Avoid incremental calls to this function on subsequent event trigger
         this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.draw});
 
         // Construct the data series
         var table = this.constructDataTable(this.offering);
-        this.config.table.series.push(table);
+
+        // We can add to an existing base table or overwrite, dependent on mode
+        if(this.config.mode.append) {
+          this.config.table.series.push(table);
+        } else {
+          this.config.table.series = [table];
+        }
 
         // Set any last minute defaults if not already set
         this.applyDefaults();
 
         // Generate the table
-        this.config.table.object = this.generateTable(jQuery('#' + this.config.table.id), this.config.table.series, this.config.table.options);
+        var t = jQuery('#' + this.config.table.id);
+        this.clearTable(t);
+        this.config.table.object = this.generateTable(t, this.config.table.series, this.config.table.options);
 
         // Optionally generate the table overview
         if(this.config.overview.options.show) {
@@ -1177,7 +1199,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
-       * Reset an existing plot (& overview)
+       * Reset an existing table (& overview)
        */
       reset: function() {
         this.resetSeries();
@@ -1231,6 +1253,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           this.config.table.object.html("");
           this.generateTable(jQuery('#' + this.config.table.id), subset, this.config.table.options);
         }
+      },
+
+      /**
+       * Clear down the placeholder element for the table
+       */
+      clearTable: function(t) {
+        t.html("");
       },
 
       /**
