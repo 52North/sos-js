@@ -574,8 +574,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       setupBehaviour: function() {
         var p = jQuery('#' + this.config.plot.id);
         var valueBox = jQuery("#sosPlotValueBox");
-        var xlimit = ((p.offset().left + p.outerWidth()) - 220);
-        var ylimit = ((p.offset().top + p.outerHeight()) - 100);
+        var xoffset = p.offset().left;
+        var yoffset = p.offset().top;
 
         // If valueBox div doesn't exist (the norm), create one on the fly
         if(valueBox.length < 1) {
@@ -588,10 +588,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           if(item) {
             var ft = evt.data.self.config.format.time;
             var fv = evt.data.self.config.format.value;
-            // Ensure the value box stays within the plot boundaries.  The
-            // small offsets avoid flickering when box is under mouse
-            var x = Math.min(item.pageX, xlimit) + 10;
-            var y = Math.min(item.pageY, ylimit) + 10;
+            // The small offsets avoid flickering when box is under mouse
+            var x = item.pageX - xoffset + 20;
+            var y = item.pageY - yoffset + 20;
             var html = jQuery('<p><span class="sos-control-title">Time:</span> <span>' + ft.formatter(pos.x) + '</span><br/><span class="sos-control-title">Value:</span> <span>' + fv.formatter(pos.y, fv.sciLimit, fv.digits) + ' ' + item.series.uom + '</span></p>');
 
             valueBox.html(html);
