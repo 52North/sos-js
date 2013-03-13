@@ -748,10 +748,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.resetSeries();
         this.resetOverviewSeries();
         this.resetBehaviour();
-
-        if(SOS.Utils.isValidObject(this.config.plot.options.yaxis.axisLabel)) {
-          this.config.plot.options.yaxis.axisLabel = null;
-        }
+        this.resetAxesLabels();
       },
 
       /**
@@ -783,6 +780,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       resetOverviewSeries: function() {
         this.config.overview.series = [];
+      },
+
+      /**
+       * Reset axes labels of an existing plot
+       */
+      resetAxesLabels: function() {
+        if(SOS.Utils.isValidObject(this.config.plot.options.yaxis.axisLabel)) {
+          this.config.plot.options.yaxis.axisLabel = null;
+        }
       }
     });
   }
@@ -1205,10 +1211,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.resetSeries();
         this.resetOverviewSeries();
         this.resetBehaviour();
-
-        if(SOS.Utils.isValidObject(this.config.table.options.header.headerLabel)) {
-          this.config.table.options.header.headerLabel = null;
-        }
+        this.resetHeaderLabels();
       },
 
       /**
@@ -1241,6 +1244,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       resetOverviewSeries: function() {
         this.config.overview.series = [];
+      },
+
+      /**
+       * Reset header labels of an existing table
+       */
+      resetHeaderLabels: function() {
+        if(SOS.Utils.isValidObject(this.config.table.options.header.headerLabel)) {
+          this.config.table.options.header.headerLabel = null;
+        }
       },
 
       /**
@@ -2049,6 +2061,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var ed = jQuery('<input type="text" id="' + this.config.menu.id + 'ControlsEndDatetime"/>');
         ed.datepicker(this.config.menu.options.datePickers);
         csc.append('<br/>', ed);
+
+        // Add-to-existing
+        var add = jQuery('<input type="checkbox" id="' + this.config.menu.id + 'ControlsAddToExisting"><span class="sos-control-title">Add To Existing</span></input>');
+        csc.append('<br/>', add);
       },
 
       /**
@@ -2057,10 +2073,12 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       setupControlsBehaviour: function() {
         var sd = jQuery('#' + this.config.menu.id + 'ControlsStartDatetime');
         var ed = jQuery('#' + this.config.menu.id + 'ControlsEndDatetime');
+        var add = jQuery('#' + this.config.menu.id + 'ControlsAddToExisting');
 
         // Add the start/end date to any selected items
         sd.bind("change", {self: this, pos: "start"}, this.datepickerChangeHandler);
         ed.bind("change", {self: this, pos: "end"}, this.datepickerChangeHandler);
+        add.bind("change", {self: this}, this.addToExistingChangeHandler);
       },
 
       /**
@@ -2100,6 +2118,21 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         } else if(pos == "end") {
           self.sos.events.triggerEvent("sosMenuEndDatetimeChange");
         }
+      },
+
+      /**
+       * Event handler for add-to-existing checkbox change
+       */
+      addToExistingChangeHandler: function(evt) {
+        var self = evt.data.self;
+        var flag = jQuery(this).is(':checked');
+
+        // Add flag to current selected item, or create if it doesn't exist
+        var item = {options: {addToExisting: flag}};
+        self.updateCurrentItem(item);
+
+        // For external listeners (application-level plumbing)
+        self.sos.events.triggerEvent("sosMenuAddToExistingChange");
       },
 
       /**
@@ -2790,6 +2823,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             startDatetime: item.time.startDatetime,
             endDatetime: item.time.endDatetime
           });
+
+          // Optionally add to existing base plot/table.  Otherwise overwrite
+          if(SOS.Utils.isValidObject(item.options)) {
+            components.plot.config.mode.append = item.options.addToExisting;
+            components.table.config.mode.append = item.options.addToExisting;
+          }
+
           this.getObservationData();
         }
       },
@@ -2874,9 +2914,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         var components = this.config.app.components;
 
-        // Ensure we create a new plot & table
-        components.plot.reset();
-        components.table.reset();
+        // Ensure we reset plot & table
+        components.plot.resetBehaviour();
+        components.plot.resetAxesLabels();
+        components.table.resetBehaviour();
+        components.table.resetHeaderLabels();
 
         // Make the plot tab the active tab, then draw the plot & table
         jQuery('#' + this.config.app.id + 'PlotPanel').html("");
