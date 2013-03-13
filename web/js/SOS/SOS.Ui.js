@@ -502,6 +502,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           this.config.plot.series = [table];
         }
 
+        // Reset plot/overview if we've already set them up before
+        this.resetBehaviour();
+        this.resetAxesLabels();
+
         // Set any last minute defaults if not already set
         this.applyDefaults();
 
@@ -542,6 +546,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           options.xaxis.axisLabel = null;
           options.yaxis.axisLabel = null;
         } else {
+          if(SOS.Utils.isValidObject(options.yaxis.customAxisLabel)) {
+            options.yaxis.axisLabel = options.yaxis.customAxisLabel;
+          }
+
           if(!SOS.Utils.isValidObject(options.yaxis.axisLabel)) {
             if(series.length > 0) {
               options.yaxis.axisLabel = series[0].name;
@@ -943,6 +951,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           this.config.table.series = [table];
         }
 
+        // Reset table/overview if we've already set them up before
+        this.resetBehaviour();
+        this.resetHeaderLabels();
+
         // Set any last minute defaults if not already set
         this.applyDefaults();
 
@@ -977,6 +989,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       applyDefaults: function() {
         var options = this.config.table.options;
         var series = this.config.table.series;
+
+        if(SOS.Utils.isValidObject(options.header.customHeaderLabel)) {
+          options.header.headerLabel = options.header.customHeaderLabel;
+        }
 
         if(!SOS.Utils.isValidObject(options.header.headerLabel)) {
           if(series.length > 0) {
@@ -2912,12 +2928,6 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawObservationData});
 
         var components = this.config.app.components;
-
-        // Ensure we reset plot & table
-        components.plot.resetBehaviour();
-        components.plot.resetAxesLabels();
-        components.table.resetBehaviour();
-        components.table.resetHeaderLabels();
 
         // Make the plot tab the active tab, then draw the plot & table
         jQuery('#' + this.config.app.id + 'PlotPanel').html("");
