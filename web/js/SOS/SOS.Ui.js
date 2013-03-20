@@ -273,7 +273,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         ];
 
         var dialog = panel.dialog({position: ['center', 'center'], buttons: buttons, title: series.label, width: 540, zIndex: 1010, stack: false});
-        dialog.bind('dialogclose', function() {jQuery(this).dialog("destroy");});
+        dialog.bind('dialogclose', function() {jQuery(this).remove(); jQuery(this).dialog("destroy");});
       },
 
       /**
