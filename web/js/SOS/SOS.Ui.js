@@ -656,20 +656,27 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         // These handlers connect the overview & the plot
 
         // Subset the plot from plot selection.  Overview can reinstate
-        p.bind("plotselected", function(evt, ranges) {
-          plot.object = jQuery.plot(p, plot.series, jQuery.extend(true, {}, plot.options, {xaxis: {min: ranges.xaxis.from, max: ranges.xaxis.to}}));
+        p.bind("plotselected", {self: this}, function(evt, ranges) {
+          var self = evt.data.self;
+          var plotOpts = plot.object.getOptions();
+          jQuery.extend(plotOpts.xaxes[0], {min: ranges.xaxis.from, max: ranges.xaxis.to});
+          self.update();
+          plot.object.clearSelection(ranges);
 
           // Don't fire event on the overview to prevent eternal loop
           overview.object.setSelection(ranges, true);
         });
     
         // Subset the plot from overview selection.  Overview can reinstate
-        o.bind("plotselected", function(evt, ranges) {
+        o.bind("plotselected", {self: this}, function(evt, ranges) {
           plot.object.setSelection(ranges);
         });
 
-        o.bind("plotunselected", function() {
-          plot.object = jQuery.plot(p, plot.series, plot.options);
+        o.bind("plotunselected", {self: this}, function(evt) {
+          var self = evt.data.self;
+          var plotOpts = plot.object.getOptions();
+          jQuery.extend(plotOpts.xaxes[0], {min: null, max: null});
+          self.update();
         });
       },
 
@@ -2629,8 +2636,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         // Subset the plot & table from plot selection.  Overview can reinstate
         p.bind("plotselected", {self: this}, function(evt, ranges) {
           var components = evt.data.self.config.app.components;
-
-          components.plot.config.plot.object = jQuery.plot(p, components.plot.config.plot.series, jQuery.extend(true, {}, components.plot.config.plot.options, {xaxis: {min: ranges.xaxis.from, max: ranges.xaxis.to}}));
+          var plotOpts = components.plot.config.plot.object.getOptions();
+          jQuery.extend(plotOpts.xaxes[0], {min: ranges.xaxis.from, max: ranges.xaxis.to});
+          components.plot.update();
+          components.plot.config.plot.object.clearSelection(ranges);
 
           // Pass on plot selection to table
           components.table.subset(ranges.xaxis.from, ranges.xaxis.to);
@@ -2674,7 +2683,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         o.bind("plotunselected", {self: this}, function(evt) {
           var components = evt.data.self.config.app.components;
-          components.plot.config.plot.object = jQuery.plot(p, components.plot.config.plot.series, components.plot.config.plot.options);
+          var plotOpts = components.plot.config.plot.object.getOptions();
+          jQuery.extend(plotOpts.xaxes[0], {min: null, max: null});
+          components.plot.update();
+
           components.table.update();
         });
       },
