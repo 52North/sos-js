@@ -1094,6 +1094,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           evt.data.self.highlightSelectedCellGroup(evt.target);
         });
 
+        t.delegate("td", "tableshiftclickselecting", {self: this}, function(evt) {
+          evt.data.self.highlightSelectedCellGroup(evt.target);
+        });
+
         // Subset the table from table selection.  Overview can reinstate
         t.delegate("td", "tableselected", {self: this}, function(evt, selection) {
           var self = evt.data.self;
@@ -1121,18 +1125,19 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       setupTableEventTriggers: function(t, selectors) {
         var selection = {active: false, start: null, end: null};
 
-        // Determine between a click or a dragged selection
-        t.delegate(selectors, "mousedown mouseup", {self: this}, function(evt) {
+        /* Determine between a click or a dragged selection.  A shift-click
+           at two distinct locations is the same as a dragged selection */
+        t.delegate(selectors, "mousedown mouseup click", {self: this}, function(evt) {
           var self = evt.data.self;
           var elem = jQuery(evt.target);
 
-          if(evt.type == "mousedown") {
+          if(evt.type == "mousedown" && !evt.shiftKey) {
             selection.active = true;
             selection.start = evt;
             evt.preventDefault();
             elem.trigger("tableselecting");
           }
-          if(evt.type == "mouseup") {
+          if(evt.type == "mouseup" && !evt.shiftKey) {
             selection.active = false;
             selection.end = evt;
 
@@ -1149,6 +1154,28 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               elem.trigger("tableselected", {items: items});
             }
           }
+          if(evt.type == "click" && evt.shiftKey) {
+            if(!selection.active) {
+              selection.active = true;
+              selection.start = evt;
+              evt.preventDefault();
+              elem.trigger("tableshiftclickselecting");
+            } else {
+              selection.active = false;
+              selection.end = evt;
+
+              var items = [];
+              items.push({item: self.eventToItem(selection.start)});
+              items.push({item: self.eventToItem(selection.end)});
+
+              if(items[1].item.dataIndex < items[0].item.dataIndex) {
+                items.reverse();
+              }
+              elem.trigger("tableselected", {items: items});
+            }
+          }
+
+          return false;
         });
       },
 
@@ -2652,6 +2679,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         t.delegate("td", "tableselecting", {self: this}, function(evt) {
           var components = evt.data.self.config.app.components;
           components.table.config.table.selecting = true;
+          components.table.highlightSelectedCellGroup(evt.target);
+        });
+
+        t.delegate("td", "tableshiftclickselecting", {self: this}, function(evt) {
+          var components = evt.data.self.config.app.components;
           components.table.highlightSelectedCellGroup(evt.target);
         });
 
