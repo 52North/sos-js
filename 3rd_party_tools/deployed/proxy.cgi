@@ -16,6 +16,7 @@ import sys, os
 # Designed to prevent Open Proxy type stuff.
 
 allowedHosts = ['localhost.nerc-bas.ac.uk:8080', 'localhost:8080',
+                'sosmet.nerc-bas.ac.uk:8080', 'sosmet:8080', 'bslsosmet.nerc-bas.ac.uk:8080', 'bslsosmet:8080',
                 'pdcdev.nerc-bas.ac.uk:8080', 'pdcdev:8080']
 
 method = os.environ["REQUEST_METHOD"]
