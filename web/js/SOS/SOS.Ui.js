@@ -1576,7 +1576,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               "labelXOffset": -10,
               "labelOutlineColor": "white",
               "labelOutlineWidth": 3
-            })
+            }),
+            displayLatestObservations: false
           }
         }
       },
@@ -1750,9 +1751,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.config.map.selected = [];
         this.config.map.selected.push({item: item});
 
-        // Show this FOI's latest observation values in a popup
-        this.sos.registerUserCallback({event: "sosLatestObsAvailable", scope: this, callback: this.displayLatestObservations});
-        this.sos.getLatestObservationsForFeatureOfInterestId(item.foi.id);
+        // Optionally show this FOI's latest observation values in a popup
+        if(this.config.featureOfInterestLayer.options.displayLatestObservations) {
+          this.sos.registerUserCallback({event: "sosLatestObsAvailable", scope: this, callback: this.displayLatestObservations});
+          this.sos.getLatestObservationsForFeatureOfInterestId(item.foi.id);
+        }
 
         // For external listeners (application-level plumbing)
         this.sos.events.triggerEvent("sosMapFeatureOfInterestSelect");
