@@ -709,13 +709,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           var ms = t[2].replace(/^\d+\./, "");
           t[2] = t[2].replace(/\.\d+$/, "");
 
-          y = new Date(parseInt(d[0], 10),
+          y = new Date(Date.UTC(parseInt(d[0], 10),
                        parseInt(d[1]-1, 10),
                        parseInt(d[2], 10),
                        parseInt(t[0], 10),
                        parseInt(t[1], 10),
                        parseInt(t[2], 10),
-                       parseInt(ms, 10));
+                       parseInt(ms, 10)));
         } else if(this.isArray(x)) {
           y = [];
 
