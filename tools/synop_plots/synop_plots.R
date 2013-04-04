@@ -13,7 +13,7 @@ library(sos4R);
 ###############################################################################
 # Defines
 ###############################################################################
-SOS_URL <- "http://pdcdev:8080/52nSOSv3.5.0/sos";
+SOS_URL <- "http://sosmet.nerc-bas.ac.uk:8080/sosmet/sos";
 SOS_UOM_UNHANDLED_TYPES <- list("mbar"=sosConvertDouble);
 SOS_METADATA_UOM_TEXT <- "unit of measurement";
 SOS_PHEN_URNS <- list(wind_speed="urn:ogc:def:phenomenon:OGC:1.0.30:wind_speed", wind_direction="urn:ogc:def:phenomenon:OGC:1.0.30:wind_direction");
