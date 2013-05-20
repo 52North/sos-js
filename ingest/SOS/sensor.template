@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<sml:SensorML
+   xsi:schemaLocation="http://www.opengis.net/sensorML/1.0.1 http://schemas.opengis.net/sensorML/1.0.1/sensorML.xsd"
+   version="1.0.1" xmlns="http://www.opengis.net/sensorML/1.0.1"
+   xmlns:swe="http://www.opengis.net/swe/1.0.1" xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:sml="http://www.opengis.net/sensorML/1.0.1"
+   xmlns:gml="http://www.opengis.net/gml">
+   <sml:member>
+      <sml:System xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+         <!--sml:identification element must contain the ID of the sensor -->
+         <sml:identification>
+            <sml:IdentifierList>
+               <sml:identifier>
+                  <sml:Term definition="urn:ogc:def:identifier:OGC:uniqueID">
+                     <sml:value>
+                         <TMPL_VAR NAME="sensor_id">
+                     </sml:value>
+                  </sml:Term>
+               </sml:identifier>
+            </sml:IdentifierList>
+         </sml:identification>
+
+         <sml:capabilities>
+            <swe:SimpleDataRecord>
+               <swe:field name="FeatureOfInterestID">
+                  <swe:Text definition="FeatureOfInterest identifier">
+                     <swe:value><TMPL_VAR NAME="site_id"></swe:value>
+                  </swe:Text>
+               </swe:field>
+            </swe:SimpleDataRecord>
+         </sml:capabilities>
+
+         <!-- last measured position of sensor -->
+         <sml:position name="sensorPosition">
+            <swe:Position referenceFrame="urn:ogc:def:crs:EPSG::4326">
+               <swe:location>
+                  <swe:Vector gml:id="STATION_LOCATION">
+                     <swe:coordinate name="easting">
+                        <swe:Quantity axisID="x">
+                           <swe:uom code="degree" />
+                           <swe:value><TMPL_VAR NAME="site_longitude"></swe:value>
+                        </swe:Quantity>
+                     </swe:coordinate>
+                     <swe:coordinate name="northing">
+                        <swe:Quantity axisID="y">
+                           <swe:uom code="degree" />
+                           <swe:value><TMPL_VAR NAME="site_latitude"></swe:value>
+                        </swe:Quantity>
+                     </swe:coordinate>
+                     <swe:coordinate name="altitude">
+                        <swe:Quantity axisID="z">
+                           <swe:uom code="m" />
+                           <swe:value><TMPL_VAR NAME="site_elevation"></swe:value>
+                        </swe:Quantity>
+                     </swe:coordinate>
+                  </swe:Vector>
+               </swe:location>
+            </swe:Position>
+         </sml:position>
+
+         <!-- list containing the input phenomena for this sensor system -->
+         <sml:inputs>
+            <sml:InputList><TMPL_LOOP NAME="input_list">
+               <sml:input name="<TMPL_VAR NAME="input_name">">
+                  <swe:ObservableProperty definition="<TMPL_VAR NAME="input_def">" />
+               </sml:input></TMPL_LOOP>
+            </sml:InputList>
+         </sml:inputs>
+
+         <!-- list containing the output phenomena of this sensor system; ATTENTION: 
+              these phenomena are parsed and inserted into the database; they have to contain 
+              offering elements to determine the correct offering for the sensors and measured 
+              phenomena -->
+         <sml:outputs>
+            <sml:OutputList><TMPL_LOOP NAME="output_list">
+               <sml:output name="<TMPL_VAR NAME="output_name">">
+                  <swe:Quantity definition="<TMPL_VAR NAME="output_def">">
+                     <gml:metaDataProperty><TMPL_LOOP NAME="output_offerings">
+                        <offering>
+                           <id><TMPL_VAR NAME="offer_id"></id>
+                           <name><TMPL_VAR NAME="offer_name"></name>
+                        </offering></TMPL_LOOP>
+                     </gml:metaDataProperty>
+                     <swe:uom code="<TMPL_VAR NAME="uom">"/>
+                  </swe:Quantity>
+               </sml:output></TMPL_LOOP>
+            </sml:OutputList>
+         </sml:outputs>
+
+         <!-- description of components of this sensor system; these are currently 
+              not used by the 52N SOS -->
+         <sml:components>
+            <sml:ComponentList><TMPL_LOOP NAME="component_list">
+               <sml:component name="<TMPL_VAR NAME="comp_name">">
+                  <sml:Component>
+                     <sml:identification>
+                        <sml:IdentifierList>
+                           <sml:identifier>
+                              <sml:Term definition="urn:ogc:def:identifier:OGC:uniqueID">
+                                 <sml:value><TMPL_VAR NAME="comp_val"></sml:value>
+                              </sml:Term>
+                           </sml:identifier><TMPL_LOOP NAME="sensor_list">
+                           <sml:identifier name="<TMPL_VAR NAME="sensor_keyword">">
+                              <sml:Term>
+                                 <sml:value><TMPL_VAR NAME="sensor_value"></sml:value>
+                              </sml:Term>
+                           </sml:identifier></TMPL_LOOP>
+                        </sml:IdentifierList>
+                     </sml:identification>
+                     <sml:inputs>
+                        <sml:InputList><TMPL_LOOP NAME="comp_input_list">
+                           <sml:input name="<TMPL_VAR NAME="input_name">">
+                              <swe:ObservableProperty definition="<TMPL_VAR NAME="input_def">"/>
+                           </sml:input></TMPL_LOOP>
+                        </sml:InputList>
+                     </sml:inputs>
+                     <sml:outputs>
+                        <sml:OutputList><TMPL_LOOP NAME="comp_output_list">
+                           <sml:output name="<TMPL_VAR NAME="output_name">">
+                              <swe:Quantity definition="<TMPL_VAR NAME="output_def">">
+                                 <swe:uom code="<TMPL_VAR NAME="uom">"/>
+                              </swe:Quantity>
+                           </sml:output></TMPL_LOOP>
+                        </sml:OutputList>
+                     </sml:outputs>
+                  </sml:Component>
+               </sml:component></TMPL_LOOP>
+            </sml:ComponentList>
+         </sml:components>
+      </sml:System>
+   </sml:member>
+</sml:SensorML>
