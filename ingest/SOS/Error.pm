@@ -120,5 +120,73 @@ sub get_message # Gets message and type from list
     return $msg;
 }
 ########################################################################################
+END { }
+1;
+########################################################################################
 # DOCUMENTATION
 ########################################################################################
+
+=head1 NAME
+
+SOS::Error - Function library containing the error and warning messages and subroutines. This
+produces similar error/warning messages in similar formats across the entire set of modules and
+scripts.
+
+=head1 SYNOPSIS
+
+use SOS::Error;
+
+=head1 SUBROUTINES
+
+=head2 error(I<error_number>, I<file>, I<line_number>, I<variables>)
+
+Displays an error message, then quits. I<error_number> is usually referenced by a constant (e.g. E_CONNFAIL). This 
+error number then refers to the message which is displayed. See the L</"CONSTANTS"> section for a list of which constant
+matches which error message. I<file> is the file at which the error was called, which is usually referenced by the Perl 
+constant B<__FILE__>. I<line_number> is the line number within I<file> where the error was called, usually referenced by
+the Perl constant B<__LINE__>. I<variables> is an array of variables which will fill the placeholders in the message.
+
+=head2 warning(I<error_number>, I<file>, I<line_number>, I<variables>)
+
+Like B<error()> above, but displays a warning message and does not exit.  
+
+=head1 CONSTANTS
+
+Below is the list of constants and the error/warning messages they produce if used:
+
+ E_NOHASH        = "No %s hash has been set!"
+ E_NOOBSELEMENT  = "Cannot find '%s' element in observation hash!"
+ E_NODBELEMENT   = "Cannot find '%s' element in database hash!"
+ E_NOFOIELEMENT  = "Cannot find '%s' element in feature of interest hash!"
+ E_NOSENELEMENT  = "Cannot find '%s' element in sensor hash!"
+ E_NOCONFELEMENT = "Cannot find '%s' element in config file '%s'!"
+ E_IDFAIL        = "Cannot create %s. %s not specified!"
+ E_NAMEFAIL      = "Cannot get %s. %s not specified!"
+ E_NOSENSOR      = "Cannot recreate sensorML file - no sensor hash found!"
+ E_UNSPECTEMP    = "No template file specifed!"        
+ E_NOCOLDELIM    = "No column delimiter found. Using ',' instead"
+ E_BADCOLTYPE    = "Cannot determine column type for '%s' (type is '%s')! Skipping. . ."
+ E_BADNUMBER     = "Expected a numeric value for '%s' but instead found '%s'. Skipping. . ."
+ E_BADDATETIME   = "Unable to determine date/time for '%s'!"
+ E_CONNFAIL      = "Cannot connect to SOS database '%s' on host '%s' with user '%s'! (%s)" 
+ E_DISCONNFAIL   = "Cannot disconnect from SOS database '%s'! (%s)"
+ E_NOTCONN       = "Not connected to database!"
+ E_PARSEFAIL     = "Error in parsing query! (SQL: %s)"
+ E_EXECFAIL      = "Error in executing query! (SQL: %s)"     
+ E_COMMFAIL      = "Error in committing transaction!"
+ E_NOFILE        = "No %s file specified!"
+ E_FILENOTEXIST  = "%s file '%s' does not exist!"
+ E_NOFILEWRITE   = "Cannot open '%s' for writing!"
+ E_NOFILEWRITE   = "Cannot open '%s' for reading!"
+
+=head1 AUTHOR
+
+PSD Admin, E<lt>psdadmin@psddata.nerc-bas.ac.ukE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2013 by PSD Admin
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.8.6 or,
+at your option, any later version of Perl 5 you may have available.

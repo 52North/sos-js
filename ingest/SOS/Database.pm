@@ -22,7 +22,7 @@ use DBI::Const::GetInfoType;
 our (@ISA, @EXPORT);
 @ISA = qw(Exporter);
 
-@EXPORT = qw(&connect_to_db &disconnect_from_db &run_query &run_multiple_queries &commit_changes);
+@EXPORT = qw(&connect_to_db &disconnect_from_db &run_query &commit_changes);
 ########################################################################################
 # FUNCTIONS
 ########################################################################################
@@ -96,31 +96,13 @@ sub run_query # Runs a DB query
     return $parse;
 }
 ########################################################################################
-sub run_multiple_queries # Runs queries in a single transaction, then commits. Use only for INSERT. UPDATE or DELETE queries
-{
-    my ($conn, $qref, $vref) = @_;
-    if (!$conn) { error(E_NOTCONN, __FILE__, __LINE__); }
-
-    for (my $i=0; $i<scalar(@$qref); $i++)
-    {
-        my ($this_query, $these_vars) = (${$qref}[$i], ${$vref}[$i]);
-        run_query($this_query, $these_vars, 0);
-    }
-
-    my $commit = $conn->commit();
-    if (!$commit)
-    {
-       $conn->rollback();
-       error(E_COMMFAIL, __FILE__, __LINE__, $conn->errstr());
-    }
-}
-########################################################################################
 sub commit_changes # Commits changes to database, or rollsback on failure
 {
     my ($conn) = @_;
+    my $dry    = defined($SOS::Main::dry_run) ? $SOS::Main::dry_run : 0;
 
     # Rollback if dry-run flag is set. Otherwise, commit
-    if ((defined($SOS::Main::dry_run)) || ($SOS::Main::dry_run)) 
+    if ($dry) 
     { 
        print_message(MSG_DRYROLLBACK);
        $conn->rollback();
@@ -143,7 +125,54 @@ sub dump_bind_vars
     return $dump_str;
 }
 ########################################################################################
-# DOCUMENTATION
-########################################################################################
 END { }
 1;
+########################################################################################
+# DOCUMENTATION
+########################################################################################
+
+=head1 NAME
+
+SOS::Database - Function library containing all of the database related functions
+
+=head1 SYNOPSIS
+
+use SOS::Database;
+
+=head1 SUBROUTINES
+
+=head2 connect_to_db(I<db_hash>)
+
+Connects to an SOS database and returns a database connection handle. I<db_hash> must contain  B<type> (usually Pg for 
+Postgres), B<host> (the hostname of the machine running the database instance), B<name> (the database name), B<user> 
+(the database user) and B<pass> (the password). If any required elements are missing, an error will be generated. 
+
+=head2 disconnect_from_db(I<handle>)
+
+Commits or rolls back changes, then disconnects from the database connected to in I<handle>. The commit/rollback logic is
+explained further in the B<commit_changes()> subroutine explanation.
+
+=head2 run_query(I<handle>, I<query>, I<vars>, I<commit>)
+
+Runs a query and returns a statement handle object. This object can then be used to extract information for SELECT queries.
+I<handle> is the database connection handle upon which the query will be run. I<query> is the SQL query to execute, with bind
+variable placeholders being used, if required. I<vars> is an array of bind variables wihch match up with the placeholders in
+I<query>. I<commit> is a flag which will commit the current transaction if set to 1. If not specified, I<commit> is set to 0, 
+which means that transaction will not commit. 
+
+=head2 commit_changes(I<handle>)
+ 
+Commits changes to the database, unless the B<$SOS::Main::dry_run> variable is set to 1, in which case, the transaction will be
+rolled back.
+
+=head1 AUTHOR
+
+PSD Admin, E<lt>psdadmin@psddata.nerc-bas.ac.ukE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2013 by PSD Admin
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.8.6 or,
+at your option, any later version of Perl 5 you may have available.
