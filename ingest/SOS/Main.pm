@@ -106,8 +106,8 @@ sub update_sos # Updates the SOS DB with content from a passed hash
     if (obs_exist(%data)) 
     {
        print_message(MSG_OBSEXISTS);
-       recreate_sensorML(\%data, \%sensor);
-       disconnect_from_db($data{'db'}); 
+       if ($force_sml)      { recreate_sensorML(\%data, \%sensor); }
+       if ($connected_here) { disconnect_from_db($data{'db'}); }
        print_delimiter();
        return; 
     }  
@@ -226,7 +226,7 @@ sub decode_file # Goes through a file and creates an observation and sensor hash
            else  { warning(E_BADCOLTYPE, __FILE__, __LINE__, $this_name, $this_type); next; } 
 
            # If we are expecting a numeric value, but we get a text value, skip this observation
-           if (($this_type eq "numeric") && ($this_val !~ m/(\-?)(\d*)(\.?)(\d*)/)) 
+           if (($this_type eq "numeric") && ($this_val !~ m/^(\-?)(\d*)(\.?)(\d*)$/)) 
            { 
               warning(E_BADNUMBER, __FILE__, __LINE__, $this_name, $this_val);
               next;
@@ -287,7 +287,6 @@ sub decode_file # Goes through a file and creates an observation and sensor hash
 
           update_sos($this_obs, \%sensor_hash);
        }
-       last;
     }
         
     # Close the data file
