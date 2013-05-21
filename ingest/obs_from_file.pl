@@ -18,11 +18,7 @@ use Getopt::Long;
 use Data::Dumper;
 
 # Initialise main variables
-my $CONFIG_FILE     = "config.xml";     # Default config file to use
-my $SITE            = "Halley";         # Default site name to use
-my $FOI_LAT         = -75.583;          # Default latitude to use
-my $FOI_LON         = -26.65;           # Default longitude to use
-my $FOI_ELEV        = 33;               # Default elevation to use (in metres)
+my $CONFIG_FILE = "config.xml";     # Default config file to use
 
 # Set up database connection constants
 use constant DB_TYPE => "Pg";        # Database Interface
@@ -48,11 +44,8 @@ my %conn_hash = ("type" => DB_TYPE, "host" => DB_HOST, "name" => DB_NAME, "user"
 my $conn      = connect_to_db(\%conn_hash);
 my %db        = ("conn" => $conn);
 
-# Create the site hash
-my %site = ("name" => $SITE, "latitude" => $FOI_LAT, "longitude" => $FOI_LON, "elevation" => $FOI_ELEV); 
-
 # Decode the file
-decode_file($file, $conf, \%db, \%site, $dry_run, $verbose, $force_sml);
+decode_file($file, $conf, \%db, $dry_run, $verbose, $force_sml);
 
 # Disconnect from database
 disconnect_from_db($conn);
@@ -110,34 +103,46 @@ This will force a recreation of the sensor ML file.
 The config file contains all of the information about the individual data file and the data set as a whole. Below is a description 
 of the tags which can be used in the config file:
 
-B<E<lt>configE<gt>>
+=head2 E<lt>configE<gt>
 
 The configuration should be enclosed within B<E<lt>configE<gt>> tags.
 
-B<E<lt>offeringE<gt>>
+=head2 E<lt>offeringE<gt>
 
 The content of the B<E<lt>offeringE<gt>> tag should be the name of the offering. The script will generate an offering ID based on the
 offering name.
 
-B<E<lt>procedureE<gt>>
+=head2 E<lt>procedureE<gt>
 
 The content of the B<E<lt>procedureE<gt>> tag should be the name of the procedure. The script will generate a procedure ID and procedure
 file name based on the procedure name.
 
-B<E<lt>templateE<gt>>
+=head2 E<lt>templateE<gt>
 
 The content of the B<E<lt>templateE<gt>> tag should be a template file suitable for use with the HTML::Template module. If this tag is not 
 present, the default template file will be used. This default template file can be found in the SOS modules directory, and is called 
 "sensor.template".
 
-B<E<lt>columnsE<gt>>
+=head2 E<lt>siteE<gt>
+
+Contains information about the site. The content of the B<E<lt>siteE<gt>> tag are the following tags:
+
+* B<E<lt>nameE<gt>> - The name of the site
+
+* B<E<lt>latitudeE<gt>> - Latitude in degrees, where positive values are North
+
+* B<E<lt>longitudeE<gt>> - Longitude in degrees, where positive values are East
+
+* B<E<lt>elevationE<gt>> - Elevation in metres
+
+=head2 E<lt>columnsE<gt>
 
 The content of the B<E<lt>columnsE<gt>> tag is a number of B<E<lt>columnE<gt>> tags; one for each column in the data file. Uses the following
 attributes: 
 
 * B<delimiter> (I<string>) - The delimiter used to separate columns in the data file. If not set, uses a comma.
 
-B<E<lt>columnE<gt>>
+=head2 E<lt>columnE<gt>
 
 The content of a B<E<lt>columnE<gt>> tag is the phenomenon description. The script will generate an phenomenon ID based on the phenomenon name.
 The tag uses the following attributes:
@@ -155,11 +160,11 @@ must be set if the B<include> attribute is set to 1.
 
 * B<sensor> (I<string>) - The ID of the sensor from which this measurement is made. See the B<E<lt>sensorE<gt>> tag section for more information.
 
-B<E<lt>sensorsE<gt>>
+=head2 E<lt>sensorsE<gt>
 
 The content of the B<E<lt>sensorsE<gt>> tag is a number of B<E<lt>sensorE<gt>> tags.
 
-B<E<lt>sensorE<gt>>
+=head2 E<lt>sensorE<gt>
 
 The content of a B<E<lt>sensorE<gt>> tag is a series of tags whose names are keywords for this sensor. The content of these tags is the value associated
 with that keyword. The tag uses the following attributes:
@@ -168,7 +173,7 @@ with that keyword. The tag uses the following attributes:
 
 =head1 SEE ALSO
 
-For more information on how the individual subroutines work, should you need to use them, read the documentation for the SOS::Main module.
+See also the man pages for the SOS modules.
 
 =head1 AUTHOR
 

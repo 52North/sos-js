@@ -38,7 +38,8 @@ use constant SENSOR_TEMPLATE   => "SOS/sensor.template"; # Default sensor templa
 
 our (@ISA, @EXPORT);
 @ISA    = qw(Exporter);
-@EXPORT = qw(&decode_file &update_sos &create_sensor_xml
+@EXPORT = qw(&decode_file &update_sos &create_sensor_xml &parse_config_file
+             &phenomenon_id &procedure_id
              $verbose $dry_run $force_sml);
 
 our ($verbose, $dry_run, $force_sml);
@@ -52,9 +53,9 @@ sub update_sos # Updates the SOS DB with content from a passed hash
     my %sensor  = (defined($_[1])) ? %{$_[1]} : ();
 
     # Get the dry run and verbose variables from the hash. If they don't exist, set them to 0
-    $verbose   = ($data{'verbose'})   ? $data{'verbose'}   : 0;
-    $dry_run   = ($data{'dry_run'})   ? $data{'dry_run'}   : 0;
-    $force_sml = ($data{'force_sml'}) ? $data{'force_sml'} : 0;
+    $verbose   = (defined($verbose))   ? $verbose   : (defined($data{'verbose'})   ? $data{'verbose'}   : 0);
+    $dry_run   = (defined($dry_run))   ? $dry_run   : (defined($data{'dry_run'})   ? $data{'dry_run'}   : 0);
+    $force_sml = (defined($force_sml)) ? $force_sml : (defined($data{'force_sml'}) ? $data{'force_sml'} : 0);
 
     if (!defined($data{'db'}))                                                 { error(E_NOOBSELEMENT, __FILE__, __LINE__, "db");                  }
     if ((!defined($data{'procedure'}))  && (!defined($data{'procedure_id'})))  { error(E_NOOBSELEMENT, __FILE__, __LINE__, "procedure");           }
@@ -119,12 +120,12 @@ sub update_sos # Updates the SOS DB with content from a passed hash
     my $new_foi  = add_foi(\%data);
     my $new_proc = add_procedure(\%data);
 
-    # Recreate sensor ML, if required
-    if (($new_phen) || ($new_off) || ($new_foi) || ($new_proc)) { recreate_sensorML(\%data, \%sensor); }
-
     # Check the links between tables in SOS DB
     print_message(MSG_CHECKLINKS);
     check_links(\%data);
+
+    # Recreate sensor ML, if required
+    if (($new_phen) || ($new_off) || ($new_foi) || ($new_proc)) { recreate_sensorML(\%data, \%sensor); } 
 
     # Create the observation SQL. Then add them to the array
     print_message(MSG_OBSQUERY);
@@ -144,10 +145,9 @@ sub decode_file # Goes through a file and creates an observation and sensor hash
     my $data_file = (defined($_[0])) ? $_[0] : "";
     my $conf_file = (defined($_[1])) ? $_[1] : "";
     my $db_hash   = (defined($_[2])) ? $_[2] : {};
-    my $site_hash = (defined($_[3])) ? $_[3] : {};
-       $dry_run   = (defined($_[4])) ? $_[4] : 0;
-       $verbose   = (defined($_[5])) ? $_[5] : 0;
-       $force_sml = (defined($_[6])) ? $_[6] : 0;
+       $dry_run   = (defined($_[3])) ? $_[3] : 0;
+       $verbose   = (defined($_[4])) ? $_[4] : 0;
+       $force_sml = (defined($_[5])) ? $_[5] : 0;
 
     # Prepare output hash
     my %queries = ("queries" => [], "vars" => []);
@@ -165,6 +165,7 @@ sub decode_file # Goes through a file and creates an observation and sensor hash
 
     # If the database and site information was passed in the config file, use those instead of anything 
     # passed into the function call
+    my $site_hash = {};
     if (defined($config{'database'})) { $db_hash   = $config{'database'}; }
     if (defined($config{'site'}))     { $site_hash = $config{'site'};     }
 
@@ -402,10 +403,8 @@ sub recreate_sensorML
     ${$sensor}{'sensor_file'} = ${$data}{'procedure_file'};
     ${$sensor}{'sensor_id'}   = ${$data}{'procedure_id'};
 
-    print_message(MSG_NEWSML, ${$sensor}{'sensor_file'}); 
     if    ((defined($SOS::Main::force_sml)) && ($SOS::Main::force_sml)) { create_sensor_xml(${$data}{'db'}{'conn'}, $sensor); }
-    elsif ((defined($SOS::Main::dry_run))   && ($SOS::Main::dry_run))   { create_sensor_xml(${$data}{'db'}{'conn'}, $sensor); }
-    print_message(MSG_SMLCOMPLETE, ${$sensor}{'sensor_file'});
+    elsif ((!defined($SOS::Main::dry_run))  ||  (!$SOS::Main::dry_run)) { create_sensor_xml(${$data}{'db'}{'conn'}, $sensor); }
 }
 ########################################################################################
 sub create_sensor_xml # Creates a sensor XML file
@@ -420,9 +419,13 @@ sub create_sensor_xml # Creates a sensor XML file
     my $sensor_xml = HTML::Template->new(filename => $sensor{'template'});
 
     # Check required variables exist in the hash
-    if (!defined($sensor{'sensor_id'}))  { error(E_NOSENELEMENT, __FILE__, __LINE__,  "sensor ID"); }
-    if (!defined($sensor{'site'}))       { error(E_NOSENELEMENT, __FILE__, __LINE__,       "site"); }
-    if (!defined($sensor{'components'})) { error(E_NOSENELEMENT, __FILE__, __LINE__, "components"); }
+    if (!defined($sensor{'sensor_id'}))   { error(E_NOSENELEMENT, __FILE__, __LINE__,   "sensor ID"); }
+    if (!defined($sensor{'site'}))        { error(E_NOSENELEMENT, __FILE__, __LINE__,        "site"); }
+    if (!defined($sensor{'components'}))  { error(E_NOSENELEMENT, __FILE__, __LINE__,  "components"); }
+    if (!defined($sensor{'sensor_file'})) { error(E_NOSENELEMENT, __FILE__, __LINE__, "sensor file"); }
+
+    # Print intro message
+    print_message(MSG_NEWSML, $sensor{'sensor_file'}); 
 
     # Initialise parameter hash
     my %params = ();
@@ -531,13 +534,16 @@ sub create_sensor_xml # Creates a sensor XML file
     while (my($key, $val) = each(%params)) { $sensor_xml->param($key => $val); }
 
     # Open the output file
-    open(OUTPUT, ">", $sensor{'procedure_file'}) or error(E_NOFILEWRITE, __FILE__, __LINE__, $sensor{'procedure_file'});
+    open(OUTPUT, ">", $sensor{'sensor_file'}) or error(E_NOFILEWRITE, __FILE__, __LINE__, $sensor{'sensor_file'});
 
     # Print output
     print OUTPUT $sensor_xml->output;
 
     # Close the output file
     close(OUTPUT);
+
+    # Print completion message
+    print_message(MSG_SMLCOMPLETE, $sensor{'sensor_file'});
 }
 ########################################################################################
 # SUBROUTINES TO CHECK IF ELEMENTS EXIST AND TO CREATE QUERIES
@@ -929,7 +935,7 @@ Updates the database with a single observation. The information about the observ
 See the L</"DATA OBJECT FORMAT"> and L</"SENSOR OBJECT FORMAT"> sections for information on these objects. I<data_object> and I<sensor_object>
 should be passed as references.
 
-=head2 decode_file(I<data_file>, I<config_file>, I<db_object>, I<site_object>, I<dry_run>, I<verbose>, I<force_sml>)
+=head2 decode_file(I<data_file>, I<config_file>, I<db_object>, I<dry_run>, I<verbose>, I<force_sml>)
 
 Decodes I<data_file>, using the configuration in I<config_file>, and inserts the information into the database. This is used mainly in 
 the B<obs_from_file.pl> script. For more information on this subroutine, check the man page that script.
@@ -940,6 +946,18 @@ Recreates the sensor ML file. I<db_handle> is a handle to an open connection to 
 create the sensor ML file. See the L</"SENSOR OBJECT FORMAT"> section for information about I<sensor_object>. This subroutine will output the
 sensor ML file to the same directory as the script that calls it. In order for it to be used by SOS, you will have to place this file in the 
 correct location on the SOS server.
+
+=head2 parse_config_file(I<config_file>)
+
+Parses a I<config_file> and returns a config hash. I<config_file> should be one that contains information about the data file format.
+
+=head2 phenomenon_id(I<phenomenon_name>)
+
+Converts I<phenomenon_name> to a phenomenon ID and returns it.
+
+=head2 procedure_id(I<procedure_name>)
+
+Converts I<procedure_name> to a procedure ID and returns it.
 
 =head1 VARIABLES
 
@@ -1069,6 +1087,10 @@ following elements:
 =head2 sensor_id
 
 The ID of the sensor. This is usually the name of the sensor ML file, without the ".xml" extension. If this is not specified, an error will occur.
+
+=head2 sensor_file
+
+The name of the sensor ML file.
 
 =head2 site
 
