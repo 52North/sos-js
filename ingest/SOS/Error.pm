@@ -30,6 +30,7 @@ use constant E_NOCOLDELIM    => 11; # No column delimiter specified
 use constant E_BADCOLTYPE    => 12; # Cannot determine column type 
 use constant E_BADNUMBER     => 13; # Value is an invalid number 
 use constant E_BADDATETIME   => 14; # Unable to determine date/time
+use constant E_FLAGCLASH     => 15; # Force-sml and no-sml flags clash
 
 # Database error codes (1xx)
 use constant E_CONNFAIL    => 100; # Failed to connect to DB
@@ -50,7 +51,7 @@ our (@ISA, @EXPORT);
 
 @EXPORT = qw(&error &warning
              E_NOHASH E_NOOBSELEMENT E_NODBELEMENT E_NOFOIELEMENT E_NOSENELEMENT E_NOCONFELEMENT E_IDFAIL E_NAMEFAIL E_NOSENSOR E_UNSPECTEMP 
-             E_NOCOLDELIM E_BADCOLTYPE E_BADNUMBER E_BADDATETIME
+             E_NOCOLDELIM E_BADCOLTYPE E_BADNUMBER E_BADDATETIME E_FLAGCLASH
              E_CONNFAIL E_DISCONNFAIL E_NOTCONN E_PARSEFAIL E_EXECFAIL E_COMMFAIL
              E_NOFILE E_FILENOTEXIST E_NOFILEWRITE E_NOFILEREAD
              );
@@ -99,6 +100,7 @@ sub get_message # Gets message and type from list
                 &E_BADCOLTYPE    => "Cannot determine column type for '%s' (type is '%s')! Skipping. . .",
                 &E_BADNUMBER     => "Expected a numeric value for '%s', but instead found '%s'. Skipping. . .",
                 &E_BADDATETIME   => "Unable to determine date/time for '%s'!",
+                &E_FLAGCLASH     => "The 'force-sml' and 'no-sml' flags have both been set! Ignoring both flags. . .",
 
                 &E_CONNFAIL     => "Cannot connect to SOS database '%s' on host '%s' with user '%s'! (%s)", 
                 &E_DISCONNFAIL  => "Cannot disconnect from SOS database '%s'! (%s)",
@@ -110,7 +112,7 @@ sub get_message # Gets message and type from list
                 &E_NOFILE       => "No %s file specified!",
                 &E_FILENOTEXIST => "%s file '%s' does not exist!",
                 &E_NOFILEWRITE  => "Cannot open '%s' for writing!",
-                &E_NOFILEWRITE  => "Cannot open '%s' for reading!"
+                &E_NOFILEREAD   => "Cannot open '%s' for reading!"
                );
 
     # Get message
@@ -168,6 +170,7 @@ Below is the list of constants and the error/warning messages they produce if us
  E_BADCOLTYPE    = "Cannot determine column type for '%s' (type is '%s')! Skipping. . ."
  E_BADNUMBER     = "Expected a numeric value for '%s' but instead found '%s'. Skipping. . ."
  E_BADDATETIME   = "Unable to determine date/time for '%s'!"
+ E_FLAGCLASH     = "The 'force-sml' and 'no-sml' flags have both been set! Ignoring both flags. . ."
  E_CONNFAIL      = "Cannot connect to SOS database '%s' on host '%s' with user '%s'! (%s)" 
  E_DISCONNFAIL   = "Cannot disconnect from SOS database '%s'! (%s)"
  E_NOTCONN       = "Not connected to database!"
@@ -177,7 +180,7 @@ Below is the list of constants and the error/warning messages they produce if us
  E_NOFILE        = "No %s file specified!"
  E_FILENOTEXIST  = "%s file '%s' does not exist!"
  E_NOFILEWRITE   = "Cannot open '%s' for writing!"
- E_NOFILEWRITE   = "Cannot open '%s' for reading!"
+ E_NOFILEREAD    = "Cannot open '%s' for reading!"
 
 =head1 AUTHOR
 

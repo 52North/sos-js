@@ -40,9 +40,13 @@ our (@ISA, @EXPORT);
 @ISA    = qw(Exporter);
 @EXPORT = qw(&decode_file &update_sos &create_sensor_xml &parse_config_file
              &phenomenon_id &procedure_id
-             $verbose $dry_run $force_sml);
+             $verbose $dry_run $force_sml $no_insert $no_sml);
 
-our ($verbose, $dry_run, $force_sml);
+our $verbose   = 0;
+our $dry_run   = 0;
+our $force_sml = 0;
+our $no_insert = 0;
+our $no_sml    = 0;
 ########################################################################################
 # SUBROUTINES
 ########################################################################################
@@ -56,7 +60,17 @@ sub update_sos # Updates the SOS DB with content from a passed hash
     $verbose   = (defined($verbose))   ? $verbose   : (defined($data{'verbose'})   ? $data{'verbose'}   : 0);
     $dry_run   = (defined($dry_run))   ? $dry_run   : (defined($data{'dry_run'})   ? $data{'dry_run'}   : 0);
     $force_sml = (defined($force_sml)) ? $force_sml : (defined($data{'force_sml'}) ? $data{'force_sml'} : 0);
+    $no_insert = (defined($no_insert)) ? $no_insert : (defined($data{'no_insert'}) ? $data{'no_insert'} : 0);   
+    $no_sml    = (defined($no_sml))    ? $no_sml    : (defined($data{'no_sml'})    ? $data{'no_sml'}    : 0);   
 
+    # If we are not doing inserts, then end the subroutine now
+    if ($no_insert)
+    {
+       print_message(MSG_NOINSERT);
+       return;
+    }
+
+    # Check the required data hash elements are set
     if (!defined($data{'db'}))                                                 { error(E_NOOBSELEMENT, __FILE__, __LINE__, "db");                  }
     if ((!defined($data{'procedure'}))  && (!defined($data{'procedure_id'})))  { error(E_NOOBSELEMENT, __FILE__, __LINE__, "procedure");           }
     if ((!defined($data{'offering'}))   && (!defined($data{'offering_id'})))   { error(E_NOOBSELEMENT, __FILE__, __LINE__, "offering");            }
@@ -86,8 +100,15 @@ sub update_sos # Updates the SOS DB with content from a passed hash
 
     # Print introductory messages
     print_message(MSG_START, $data{'phenomenon'}, $data{'foi'}{'id'}, $data{'offering_id'}, $data{'obs_time'});
-    if ($dry_run)   { print_message(MSG_DRYRUN); }
+    if ($dry_run)   { print_message(MSG_DRYRUN);   }
     if ($force_sml) { print_message(MSG_FORCESML); }
+    if ($no_sml)    { print_message(MSG_NOSML);    }
+    if (($force_sml) && ($no_sml)) 
+    {
+       warning(E_FLAGCLASH, __FILE__, __LINE__);
+       $force_sml = 0;
+       $no_sml    = 0;
+    }
 
     # Create query and var arrays
     my $queries = {};
@@ -149,12 +170,13 @@ sub decode_file # Goes through a file and creates an observation and sensor hash
        $verbose   = (defined($_[4])) ? $_[4] : 0;
        $force_sml = (defined($_[5])) ? $_[5] : 0;
 
-    # Prepare output hash
-    my %queries = ("queries" => [], "vars" => []);
-    
-    # Check if data file exists
-    if (!$data_file)     { error(E_NOFILE, __FILE__, __LINE__, "Data");                   }
-    if (! -e $data_file) { error(E_FILENOTEXIST, __FILE__, __LINE__, "Data", $data_file); } 
+    # Check if data files exist
+    my @file_list = glob($data_file);
+    if (!$data_file) { error(E_NOFILE, __FILE__, __LINE__, "Data"); } 
+    if ((scalar(@file_list) == 0)) { error(E_FILENOTEXIST, __FILE__, __LINE__, "Data", $data_file); }
+
+#    if (!$data_file)                              { error(E_NOFILE,       __FILE__, __LINE__, "Data");             }
+#    if ((! -e $data_file) && ($data_file ne "-")) { error(E_FILENOTEXIST, __FILE__, __LINE__, "Data", $data_file); } 
 
     # Check if config file exists/
     if (!$conf_file)     { error(E_NOFILE, __FILE__, __LINE__, "Config");                   }
@@ -181,117 +203,135 @@ sub decode_file # Goes through a file and creates an observation and sensor hash
        $config{'col_delimiter'} = DEFAULT_COL_DELIM;
     }
 
-    # Open the data file for reading
-    open(FILE, $data_file) or error(E_NOFILEREAD, __FILE__, __LINE__, $data_file);
-    
-    # Loop through the contents of the data file and insert information into SOS
-    while (my $line = <FILE>)
+    # Create the sensor hash
+    my %sensor_hash = ();
+    $sensor_hash{'template'}   = $config{'sensor_template'};
+    $sensor_hash{'site'}       = $site_hash;
+    $sensor_hash{'components'} = $config{'sensors'};
+   
+    # If we do not want to do any insert queries at all, just regenerate the sensor ML file if required, then return
+    if ($no_insert)
     {
-       chomp $line;
-
-       # Split the line up
-       my @lineparts = split($config{'col_delimiter'}, $line);
-
-       # Initialise date hash and observation array
-       my %datetime     = ();
-       my @observations = ();
-
-       # Loop through the line parts and find the information we need
-       for (my $i=0; $i<scalar(@lineparts); $i++)
-       {
-           # Get information on this particular column
-           my $this_col  = $config{'columns'}[$i];
-           my $this_val  = $lineparts[$i];
-           my $this_name = ${$this_col}{'name'};
-           my $this_type = ${$this_col}{'type'};
-           my $this_unit = ${$this_col}{'unit'};
-
-           # If we do not need to include this column, ignore it
-           if (!${$this_col}{'include'}) { next; }
-
-           # If this column is date/time related, obtain the information
-           if ($this_name eq "observation_time") { $datetime{'obs_time'}  = $this_val; next; }
-	   if ($this_name eq        "timestamp") { $datetime{'timestamp'} = $this_val; next; } 
-           if ($this_name eq             "year") { $datetime{'year'}      = $this_val; next; } 
-           if ($this_name eq            "month") { $datetime{'month'}     = $this_val; next; } 
-           if ($this_name eq         "monthday") { $datetime{'monthday'}  = $this_val; next; } 
-           if ($this_name eq          "yearday") { $datetime{'yearday'}   = $this_val; next; } 
-           if ($this_name eq             "hour") { $datetime{'hour'}      = $this_val; next; } 
-           if ($this_name eq           "minute") { $datetime{'minute'}    = $this_val; next; } 
-           if ($this_name eq           "second") { $datetime{'second'}    = $this_val; next; } 
-
-           # Determine which type of column this is
-           my ($value_col, $value_type) = ("", "");
-           if    ($this_type eq "numeric") { $value_col = "numeric_value"; $value_type = "numericType"; } 
-           elsif ($this_type eq    "text") { $value_col =    "text_value"; $value_type = "textType";    }
-           else  { warning(E_BADCOLTYPE, __FILE__, __LINE__, $this_name, $this_type); next; } 
-
-           # If we are expecting a numeric value, but we get a text value, skip this observation
-           if (($this_type eq "numeric") && ($this_val !~ m/^(\-?)(\d*)(\.?)(\d*)$/)) 
-           { 
-              warning(E_BADNUMBER, __FILE__, __LINE__, $this_name, $this_val);
-              next;
-           }
-
-           # Create the observation hash
-           my %obs_hash = ();
-           $obs_hash{'db'}         = $db_hash;
-           $obs_hash{'procedure'}  = $config{'procedure'};
-           $obs_hash{'offering'}   = $config{'offering'};
-           $obs_hash{'foi'}        = $site_hash;
-           $obs_hash{'phenomenon'} = $this_name;
-           $obs_hash{'unit'}       = $this_unit;
-           $obs_hash{'value_type'} = $value_type;
-           $obs_hash{'value_col'}  = $value_col; 
-           $obs_hash{'value'}      = $this_val;
-           $obs_hash{'verbose'}    = $verbose;
-           $obs_hash{'dry_run'}    = $dry_run;
-           $obs_hash{'force_sml'}  = $force_sml;
-
-           # Add observation to the observations array
-           push(@observations, \%obs_hash);
+       print_message(MSG_NOINSERT);
+       if ((defined($SOS::Main::force_sml)) && ($SOS::Main::force_sml)) 
+       { 
+          print_message(MSG_FORCESML);
+          $sensor_hash{'sensor_file'} = sprintf("%s.xml", $config{'procedure'});
+          $sensor_hash{'sensor_id'}   = procedure_id($config{'procedure'});
+          create_sensor_xml(${$db_hash}{'conn'}, \%sensor_hash); 
        }
-
-       # Determine the observation time from the datetime hash components
-       my ($obs_time, $time_stamp) = ("-1", -1);
-       if    (defined($datetime{'obs_time'}))  { $obs_time   = $datetime{'obs_time'};  }
-       elsif (defined($datetime{'timestamp'})) { $time_stamp = $datetime{'timestamp'}; }
-       else
-       {
-          my $y = (defined($datetime{'year'}))     ? $datetime{'year'} - 1900 : 0;
-          my $m = (defined($datetime{'month'}))    ? $datetime{'month'} - 1   : 0;
-          my $d = (defined($datetime{'monthday'})) ? $datetime{'monthday'}    : 0;
-          my $h = (defined($datetime{'hour'}))     ? $datetime{'hour'}        : 0;
-          my $i = (defined($datetime{'minute'}))   ? $datetime{'minute'}      : 0;
-          my $s = (defined($datetime{'second'}))   ? $datetime{'second'}      : 0;
-          my $j = (defined($datetime{'yearday'}))  ? $datetime{'yearday'} - 1 : -1;
-
-          $time_stamp = strftime("%s", $s, $i, $h, $d, $m, $y, -1, $j);
-       }
-
-       # Create the sensor hash
-       my %sensor_hash = ();
-       $sensor_hash{'template'}   = $config{'sensor_template'};
-       $sensor_hash{'site'}       = $site_hash;
-       $sensor_hash{'components'} = $config{'sensors'};
-
-       # Add the date/time information to each observation, then insert the observation
-       foreach my $this_obs (@observations)
-       {
-          if ($obs_time ne "-1")
-          { 
-             $obs_time =~ s/\"//g;
-             ${$this_obs}{'obs_time'} = $obs_time; 
-          }
-          elsif ($time_stamp ne -1) { ${$this_obs}{'time_stamp'} = $time_stamp; }
-          else { error(E_BADDATETIME, __FILE__, __LINE__, ${$this_obs}{'phenomenon'}); }
-
-          update_sos($this_obs, \%sensor_hash);
-       }
+       return;
     }
-        
-    # Close the data file
-    close(FILE);
+
+    # Loop through the data files and process them
+    foreach my $this_file (@file_list)
+    {
+       # Open the data file for reading
+       open(FILE, $this_file) or error(E_NOFILEREAD, __FILE__, __LINE__, $this_file);
+       
+       # Loop through the contents of the data file and insert information into SOS
+       while (my $line = <FILE>)
+       {
+          chomp $line;
+   
+          # Split the line up
+          my @lineparts = split($config{'col_delimiter'}, $line);
+   
+          # Initialise date hash and observation array
+          my %datetime     = ();
+          my @observations = ();
+   
+          # Loop through the line parts and find the information we need
+          for (my $i=0; $i<scalar(@lineparts); $i++)
+          {
+              # Get information on this particular column
+              my $this_col  = $config{'columns'}[$i];
+              my $this_val  = $lineparts[$i];
+              my $this_name = ${$this_col}{'name'};
+              my $this_type = ${$this_col}{'type'};
+              my $this_unit = ${$this_col}{'unit'};
+   
+              # If we do not need to include this column, ignore it
+              if (!${$this_col}{'include'}) { next; }
+   
+              # If this column is date/time related, obtain the information
+              if ($this_name eq "observation_time") { $datetime{'obs_time'}  = $this_val; next; }
+              if ($this_name eq        "timestamp") { $datetime{'timestamp'} = $this_val; next; } 
+              if ($this_name eq             "year") { $datetime{'year'}      = $this_val; next; } 
+              if ($this_name eq            "month") { $datetime{'month'}     = $this_val; next; } 
+              if ($this_name eq         "monthday") { $datetime{'monthday'}  = $this_val; next; } 
+              if ($this_name eq          "yearday") { $datetime{'yearday'}   = $this_val; next; } 
+              if ($this_name eq             "hour") { $datetime{'hour'}      = $this_val; next; } 
+              if ($this_name eq           "minute") { $datetime{'minute'}    = $this_val; next; } 
+              if ($this_name eq           "second") { $datetime{'second'}    = $this_val; next; } 
+   
+              # Determine which type of column this is
+              my ($value_col, $value_type) = ("", "");
+              if    ($this_type eq "numeric") { $value_col = "numeric_value"; $value_type = "numericType"; } 
+              elsif ($this_type eq    "text") { $value_col =    "text_value"; $value_type = "textType";    }
+              else  { warning(E_BADCOLTYPE, __FILE__, __LINE__, $this_name, $this_type); next; } 
+   
+              # If we are expecting a numeric value, but we get a text value, skip this observation
+              if (($this_type eq "numeric") && ($this_val !~ m/^(\-?)(\d*)(\.?)(\d*)$/)) 
+              { 
+                 warning(E_BADNUMBER, __FILE__, __LINE__, $this_name, $this_val);
+                 next;
+              }
+   
+              # Create the observation hash
+              my %obs_hash = ();
+              $obs_hash{'db'}         = $db_hash;
+              $obs_hash{'procedure'}  = $config{'procedure'};
+              $obs_hash{'offering'}   = $config{'offering'};
+              $obs_hash{'foi'}        = $site_hash;
+              $obs_hash{'phenomenon'} = $this_name;
+              $obs_hash{'unit'}       = $this_unit;
+              $obs_hash{'value_type'} = $value_type;
+              $obs_hash{'value_col'}  = $value_col; 
+              $obs_hash{'value'}      = $this_val;
+              $obs_hash{'verbose'}    = $verbose;
+              $obs_hash{'dry_run'}    = $dry_run;
+              $obs_hash{'force_sml'}  = $force_sml;
+   
+              # Add observation to the observations array
+              push(@observations, \%obs_hash);
+          }
+   
+          # Determine the observation time from the datetime hash components
+          my ($obs_time, $time_stamp) = ("-1", -1);
+          if    (defined($datetime{'obs_time'}))  { $obs_time   = $datetime{'obs_time'};  }
+          elsif (defined($datetime{'timestamp'})) { $time_stamp = $datetime{'timestamp'}; }
+          else
+          {
+             my $y = (defined($datetime{'year'}))     ? $datetime{'year'} - 1900 : 0;
+             my $m = (defined($datetime{'month'}))    ? $datetime{'month'} - 1   : 0;
+             my $d = (defined($datetime{'monthday'})) ? $datetime{'monthday'}    : 0;
+             my $h = (defined($datetime{'hour'}))     ? $datetime{'hour'}        : 0;
+             my $i = (defined($datetime{'minute'}))   ? $datetime{'minute'}      : 0;
+             my $s = (defined($datetime{'second'}))   ? $datetime{'second'}      : 0;
+             my $j = (defined($datetime{'yearday'}))  ? $datetime{'yearday'} - 1 : -1;
+   
+             $time_stamp = strftime("%s", $s, $i, $h, $d, $m, $y, -1, $j);
+          }
+   
+          # Add the date/time information to each observation, then insert the observation
+          foreach my $this_obs (@observations)
+          {
+             if ($obs_time ne "-1")
+             { 
+                $obs_time =~ s/\"//g;
+                ${$this_obs}{'obs_time'} = $obs_time; 
+             }
+             elsif ($time_stamp ne -1) { ${$this_obs}{'time_stamp'} = $time_stamp; }
+             else { error(E_BADDATETIME, __FILE__, __LINE__, ${$this_obs}{'phenomenon'}); }
+   
+             update_sos($this_obs, \%sensor_hash);
+          }
+       }
+           
+       # Close the data file
+       close(FILE);
+    }
 }
 ########################################################################################
 sub parse_config_file
@@ -394,6 +434,9 @@ sub parse_config_file
 sub recreate_sensorML
 {
     my ($data, $sensor) = @_;
+
+    # If "no_sml" flag is set, return
+    if ((defined($SOS::Main::no_sml)) && ($SOS::Main::no_sml)) { return; }
 
     # Check if a sensor hash exists and is not empty. If so, continue. If not, display error message
     if (!$sensor) { error(E_NOSENSOR, __FILE__, __LINE__); }

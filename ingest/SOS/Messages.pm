@@ -19,6 +19,8 @@ use Exporter;
 use constant MSG_START       => "Starting insertion of '%s' data from site '%s' for offering '%s' at '%s'";
 use constant MSG_DRYRUN      => "NOTE: DRY RUN SET. NO UPDATES TO DATABASE WILL TAKE PLACE";
 use constant MSG_FORCESML    => "NOTE: FORCE-SML FLAG SET. SENSOR ML FILE WILL BE RECREATED";
+use constant MSG_NOINSERT    => "NOTE: NO-INSERT FLAG SET. NO DATABASE INSERTS WILL TAKE PLACE";
+use constant MSG_NOSML       => "NOTE: NO-SML FLAG SET. SENSOR ML FILE WILL NOT BE UPDATED";    
 use constant MSG_DBCONN      => "Connecting to SOS database '%s' on host '%s' with user '%s'";
 use constant MSG_DBDISCONN   => "Disconnecting from SOS database '%s' with user '%s'";
 use constant MSG_COMMIT      => "Committing changes to database";
@@ -28,7 +30,7 @@ use constant MSG_NONEW       => "No new phenomena, offering, feature of interest
 use constant MSG_NEWITEM     => "A new %s '%s' was found!";
 use constant MSG_CHECKLINKS  => "Checking for links between SOS DB tables";
 use constant MSG_CHECKOBS    => "Checking if observation exists";
-use constant MSG_OBSEXISTS   => "An observation already exists! Ending. . .";
+use constant MSG_OBSEXISTS   => "This observation already exists! Ending. . .";
 use constant MSG_OBSQUERY    => "Running observation query";
 use constant MSG_END         => "Completed insertion of '%s' data from site '%s' for offering '%s' at '%s'";
 use constant MSG_NEWSML      => "Recreating sensor ML file '%s'";
@@ -38,8 +40,8 @@ our (@ISA, @EXPORT);
 @ISA = qw(Exporter);
 
 @EXPORT = qw(&print_message &print_delimiter
-             MSG_START MSG_DRYRUN MSG_FORCESML MSG_DBCONN MSG_DBDISCONN MSG_COMMIT MSG_DRYROLLBACK MSG_CHECKEXIST MSG_NONEW MSG_NEWITEM 
-             MSG_CHECKLINKS MSG_CHECKOBS MSG_OBSEXISTS MSG_OBSQUERY MSG_END MSG_NEWSML MSG_SMLCOMPLETE
+             MSG_START MSG_DRYRUN MSG_FORCESML MSG_NOINSERT MSG_NOSML MSG_DBCONN MSG_DBDISCONN MSG_COMMIT MSG_DRYROLLBACK MSG_CHECKEXIST MSG_NONEW 
+             MSG_NEWITEM MSG_CHECKLINKS MSG_CHECKOBS MSG_OBSEXISTS MSG_OBSQUERY MSG_END MSG_NEWSML MSG_SMLCOMPLETE
             );
 #@EXPORT = qw(&print_message
 #             MSG_START MSG_CHECK MSG_PARSECONFIG MSG_PARSEDATA MSG_FINDINFO MSG_FINDFOI MSG_GETPROC MSG_DBCONN MSG_CHECKEXIST MSG_NONEW MSG_NEWSENSOR
@@ -97,6 +99,8 @@ Below is the list of constants and the output messages they produce if used:
  MSG_START       => "Starting insertion of '%s' data from site '%s' for offering '%s' at '%s'"
  MSG_DRYRUN      => "NOTE: DRY RUN SET. NO UPDATES TO DATABASE WILL TAKE PLACE"
  MSG_FORCESML    => "NOTE: FORCE-SML FLAG SET. SENSOR ML FILE WILL BE RECREATED"
+ MSG_FORCESML    => "NOTE: FORCE-SML FLAG SET. SENSOR ML FILE WILL BE RECREATED"
+ MSG_NOINSERT    => "NOTE: NO-INSERT FLAG SET. NO DATABASE INSERTS WILL TAKE PLACE"
  MSG_DBCONN      => "Connecting to SOS database '%s' on host '%s' with user '%s'"
  MSG_DBDISCONN   => "Disconnecting from SOS database '%s' with user '%s'"
  MSG_COMMIT      => "Committing changes to database"
@@ -106,7 +110,7 @@ Below is the list of constants and the output messages they produce if used:
  MSG_NEWITEM     => "A new %s '%s' was found!"
  MSG_CHECKLINKS  => "Checking for links between SOS DB tables"
  MSG_CHECKOBS    => "Checking if observation exists"
- MSG_OBSEXISTS   => "An observation already exists! Ending. . ."
+ MSG_OBSEXISTS   => "This observation already exists! Ending. . ."
  MSG_OBSQUERY    => "Running observation query"
  MSG_END         => "Completed insertion of '%s' data from site '%s' for offering '%s' at '%s'"
  MSG_NEWSML      => "Recreating sensor ML file '%s'"

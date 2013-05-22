@@ -31,13 +31,16 @@ use constant DB_PASS => "";          # Database password
 ################################################################################
 
 # Parse the command line arguments
-my ($file, $conf, $force_sml, $dry_run, $verbose) = ("", $CONFIG_FILE, 0, 0, 0);
-GetOptions("file|f=s" => \$file, "config|c=s" => \$conf, "force-sml|s" => \$force_sml, "dry-run|d" => \$dry_run, "verbose|v" => \$verbose);
+my ($file, $conf, $force_sml, $dry_run, $no_insert, $no_sml, $verbose) = ("", $CONFIG_FILE, 0, 0, 0, 0, 0);
+GetOptions("file|f=s" => \$file, "config|c=s" => \$conf, "force-sml|s" => \$force_sml, "dry-run|d" => \$dry_run, "no-insert|i" => \$no_insert,
+           "no-sml|n" => \$no_sml, "verbose|v" => \$verbose);
 
 # Set SOS::Main variables
 $SOS::Main::force_sml = $force_sml;
 $SOS::Main::dry_run   = $dry_run;
 $SOS::Main::verbose   = $verbose;
+$SOS::Main::no_insert = $no_insert;
+$SOS::Main::no_sml    = $no_sml;   
 
 # Connect to database and setup the database hash
 my %conn_hash = ("type" => DB_TYPE, "host" => DB_HOST, "name" => DB_NAME, "user" => DB_USER, "pass" => DB_PASS);
@@ -62,7 +65,8 @@ obs_from_file - Simple script which will parse a flat file and update the SOS wi
 
 =head1 SYNOPSIS
 
-B<obs_from_file.pl> B<--file>=I<data_file> [B<--config>=I<config_file>] [B<--verbose>] [B<--dry-run>] [B<--force-sml>]
+B<obs_from_file.pl> B<--file>=I<data_file> [B<--config>=I<config_file>] [B<--verbose>] [B<--dry-run>] [B<--force-sml>] 
+[B<--no-insert>] [B<--no-sml>]
 
 =head1 DESCRIPTION
 
@@ -79,7 +83,9 @@ familiarity with SOS terminology will be useful.
 
 B<--file>=I<data_file> | B<-f> I<data_file>
 
-Specifies the data file containing the data you wish to insert into SOS. Obviously, this is required!
+Specifies the data file(s) containing the data you wish to insert into SOS. Obviously, this is required! Specifiying "-" will read from standard 
+input. If you specify a glob with a wildcard, you will have to enclose I<data_file> in quotes, otherwise the script will only find the first
+matching file.
 
 B<--config>=I<config_file> | B<-c> I<config_file>
 
@@ -96,7 +102,17 @@ the "force-sml" switch was set.
 
 B<--force-sml> | B<-s>
 
-This will force a recreation of the sensor ML file. 
+This will force a recreation of the sensor ML file. If used with the B<--no-sml> switch, the effect is cancelled out, and the sensor ML file will only
+be generated if it needs to be.
+
+B<--no-insert> | B<-i>
+
+If this switch is set, the script will not perform any inserts at all, even if the script finds new data.
+
+B<--no-sml> | B<-n>
+
+If this switch is set, the script will not regenerate the sensor ML file at all, even if it would normally do so. If used with the B<--force-sml> switch,
+the effect is cancelled out, and the sensor ML file will only be generated if it needs to be.
 
 =head1 CONFIG FILE
 
