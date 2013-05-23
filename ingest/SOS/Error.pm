@@ -66,7 +66,7 @@ sub error # Displays error message and quits script
     my $error = sprintf("SOS ERROR %d: $msg ($file:$line)\n", $errnum, @e);
 
     print STDERR strftime("%Y-%m-%d %H:%M:%S", localtime(time())) . " ($0) $error";
-    if ($SOS::Database::conn) { $SOS::Database::conn->disconnect }
+    if ($SOS::Main::conn) { SOS::Database::disconnect_from_db($SOS::Main::conn, 0); } 
 
     exit $errnum;
 }

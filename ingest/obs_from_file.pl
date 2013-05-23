@@ -48,10 +48,11 @@ my $conn      = connect_to_db(\%conn_hash);
 my %db        = ("conn" => $conn);
 
 # Decode the file
+$SOS::Main::conn = $conn;
 decode_file($file, $conf, \%db, $dry_run, $verbose, $force_sml);
 
 # Disconnect from database
-disconnect_from_db($conn);
+disconnect_from_db($conn, 1);
 
 # Print delimiter
 print_delimiter();
@@ -175,6 +176,13 @@ http://unitsofmeasure.org.
 must be set if the B<include> attribute is set to 1.
 
 * B<sensor> (I<string>) - The ID of the sensor from which this measurement is made. See the B<E<lt>sensorE<gt>> tag section for more information.
+
+Date and time formats are handled differently. If a column contains date/time information in the ISO format (%Y-%m-%d %H:%M:%S), then the name of that column
+must be B<observation_time>. If a column contains date/time information in UNIX timestamp (seconds since 1970-01-01), then the name of that column must be
+B<timestamp>. Additionally, there are special "reserved" phenomenon names you can use to construct the observation date/time. This is particularly useful if 
+the date/time components of an observation are in separate columns. These reserved names are B<year>, B<month>, B<monthday>, B<yearday>, B<hour>, B<minute> 
+and B<second>. If you use any of these special names, in lieu of either B<observation_time> or B<timestamp>, the script will attempt to calculate the timestamp 
+based on the date/time components it finds.
 
 =head2 E<lt>sensorsE<gt>
 

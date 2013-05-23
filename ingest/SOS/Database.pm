@@ -55,12 +55,14 @@ sub connect_to_db # Connects to SOS DB
 ########################################################################################
 sub disconnect_from_db # Disconnects from SOS DB
 {
-    my ($conn) = @_;
+    my $conn   = defined($_[0]) ? $_[0] : "";
+    my $commit = defined($_[1]) ? $_[1] : 0;
+ 
     my $name = $conn->get_info($GetInfoType{'SQL_DATABASE_NAME'});
     my $user = $conn->get_info($GetInfoType{'SQL_USER_NAME'});
 
     # Commit any changes
-    commit_changes($conn);
+    commit_changes($conn, $commit);
 
     # Print message
     print_message(MSG_DBDISCONN, $name, $user);
@@ -98,13 +100,14 @@ sub run_query # Runs a DB query
 ########################################################################################
 sub commit_changes # Commits changes to database, or rollsback on failure
 {
-    my ($conn) = @_;
+    my $conn   = defined($_[0]) ? $_[0] : "";
+    my $commit = defined($_[1]) ? $_[1] : 0;
     my $dry    = defined($SOS::Main::dry_run) ? $SOS::Main::dry_run : 0;
 
     # Rollback if dry-run flag is set. Otherwise, commit
-    if ($dry) 
+    if (($dry) || (!$commit))
     { 
-       print_message(MSG_DRYROLLBACK);
+       print_message(MSG_ROLLBACK);
        $conn->rollback();
     }
     else
@@ -147,10 +150,10 @@ Connects to an SOS database and returns a database connection handle. I<db_hash>
 Postgres), B<host> (the hostname of the machine running the database instance), B<name> (the database name), B<user> 
 (the database user) and B<pass> (the password). If any required elements are missing, an error will be generated. 
 
-=head2 disconnect_from_db(I<handle>)
+=head2 disconnect_from_db(I<handle>, I<commit>)
 
 Commits or rolls back changes, then disconnects from the database connected to in I<handle>. The commit/rollback logic is
-explained further in the B<commit_changes()> subroutine explanation.
+determined by the I<commit> flag (0 will rollback, 1 will commit).
 
 =head2 run_query(I<handle>, I<query>, I<vars>, I<commit>)
 
@@ -160,10 +163,10 @@ variable placeholders being used, if required. I<vars> is an array of bind varia
 I<query>. I<commit> is a flag which will commit the current transaction if set to 1. If not specified, I<commit> is set to 0, 
 which means that transaction will not commit. 
 
-=head2 commit_changes(I<handle>)
+=head2 commit_changes(I<handle>, I<commit>)
  
-Commits changes to the database, unless the B<$SOS::Main::dry_run> variable is set to 1, in which case, the transaction will be
-rolled back.
+Commits or rolls back changes, depending on value of I<commit>. 0 will rollback, 1 will commit. If the dry_run flag is set, it 
+will override I<commit> and rollback.
 
 =head1 AUTHOR
 

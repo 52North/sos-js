@@ -40,13 +40,14 @@ our (@ISA, @EXPORT);
 @ISA    = qw(Exporter);
 @EXPORT = qw(&decode_file &update_sos &create_sensor_xml &parse_config_file
              &phenomenon_id &procedure_id
-             $verbose $dry_run $force_sml $no_insert $no_sml);
+             $verbose $dry_run $force_sml $no_insert $no_sml $conn);
 
 our $verbose   = 0;
 our $dry_run   = 0;
 our $force_sml = 0;
 our $no_insert = 0;
 our $no_sml    = 0;
+our $conn;
 ########################################################################################
 # SUBROUTINES
 ########################################################################################
@@ -122,6 +123,7 @@ sub update_sos # Updates the SOS DB with content from a passed hash
        $data{'db'}{'conn'} = connect_to_db($data{'db'});
        $connected_here = 1;
     }
+    $conn = $data{'db'}{'conn'};
 
     # Check if an observation exists. If so, exit subroutine, since we do not need to insert anything
     print_message(MSG_CHECKOBS);
@@ -129,7 +131,7 @@ sub update_sos # Updates the SOS DB with content from a passed hash
     {
        print_message(MSG_OBSEXISTS);
        if ($force_sml)      { recreate_sensorML(\%data, \%sensor); }
-       if ($connected_here) { disconnect_from_db($data{'db'}); }
+       if ($connected_here) { disconnect_from_db($data{'db'}, 1);  } 
        print_delimiter();
        return; 
     }  
@@ -153,7 +155,7 @@ sub update_sos # Updates the SOS DB with content from a passed hash
     add_observation(\%data);
 
     # Disconnect from the SOS database, if we connected in this subroutine
-    if ($connected_here) { disconnect_from_db($data{'db'}{'conn'}); }
+    if ($connected_here) { disconnect_from_db($data{'db'}{'conn'}, 1); }
 
     # Print delimiter
     print_message(MSG_END, $data{'phenomenon'}, $data{'foi'}{'id'}, $data{'offering_id'}, $data{'obs_time'});

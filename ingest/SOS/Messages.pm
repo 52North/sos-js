@@ -24,7 +24,7 @@ use constant MSG_NOSML       => "NOTE: NO-SML FLAG SET. SENSOR ML FILE WILL NOT 
 use constant MSG_DBCONN      => "Connecting to SOS database '%s' on host '%s' with user '%s'";
 use constant MSG_DBDISCONN   => "Disconnecting from SOS database '%s' with user '%s'";
 use constant MSG_COMMIT      => "Committing changes to database";
-use constant MSG_DRYROLLBACK => "Rolling back, due to dry-run flag being set";
+use constant MSG_ROLLBACK    => "Rolling back database changes";
 use constant MSG_CHECKEXIST  => "Checking to see if phenomena, offering, feature of interest and procedure exists in DB";
 use constant MSG_NONEW       => "No new phenomena, offering, feature of interest or procedure found";
 use constant MSG_NEWITEM     => "A new %s '%s' was found!";
@@ -40,7 +40,7 @@ our (@ISA, @EXPORT);
 @ISA = qw(Exporter);
 
 @EXPORT = qw(&print_message &print_delimiter
-             MSG_START MSG_DRYRUN MSG_FORCESML MSG_NOINSERT MSG_NOSML MSG_DBCONN MSG_DBDISCONN MSG_COMMIT MSG_DRYROLLBACK MSG_CHECKEXIST MSG_NONEW 
+             MSG_START MSG_DRYRUN MSG_FORCESML MSG_NOINSERT MSG_NOSML MSG_DBCONN MSG_DBDISCONN MSG_COMMIT MSG_ROLLBACK MSG_CHECKEXIST MSG_NONEW 
              MSG_NEWITEM MSG_CHECKLINKS MSG_CHECKOBS MSG_OBSEXISTS MSG_OBSQUERY MSG_END MSG_NEWSML MSG_SMLCOMPLETE
             );
 #@EXPORT = qw(&print_message
@@ -104,7 +104,7 @@ Below is the list of constants and the output messages they produce if used:
  MSG_DBCONN      => "Connecting to SOS database '%s' on host '%s' with user '%s'"
  MSG_DBDISCONN   => "Disconnecting from SOS database '%s' with user '%s'"
  MSG_COMMIT      => "Committing changes to database"
- MSG_DRYROLLBACK => "Rolling back, due to dry-run flag being set"
+ MSG_ROLLBACK    => "Rolling back database changes"
  MSG_CHECKEXIST  => "Checking to see if phenomena, offering, feature of interest and procedure exists in DB"
  MSG_NONEW       => "No new phenomena, offering, feature of interest or procedure found"
  MSG_NEWITEM     => "A new %s '%s' was found!"
