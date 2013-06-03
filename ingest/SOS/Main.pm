@@ -84,17 +84,17 @@ sub update_sos # Updates the SOS DB with content from a passed hash
     if (!defined($data{'value'}))                                              { error(E_NOOBSELEMENT, __FILE__, __LINE__, "value");               }
 
     # Add any inferred values to the data hash (i.e. IDs if they aren't present)
-    if (!defined($data{'procedure'}))        { $data{'procedure'}        = get_name_from_id($data{'procedure_id'});                   }
-    if (!defined($data{'procedure_id'}))     { $data{'procedure_id'}     = procedure_id($data{'procedure'});                          }
-    if (!defined($data{'procedure_file'}))   { $data{'procedure_file'}   = sprintf("%s.xml", $data{'procedure'});                     }    
-    if (!defined($data{'offering'}))         { $data{'offering'}         = $data{'offering_id'};                                      }
-    if (!defined($data{'offering_id'}))      { $data{'offering_id'}      = $data{'offering'};                                         }
-    if (!defined($data{'phenomenon'}))       { $data{'phenomenon'}       = get_name_from_id($data{'phenomenon_id'});                  }
-    if (!defined($data{'phenomenon_id'}))    { $data{'phenomenon_id'}    = phenomenon_id($data{'phenomenon'});                        }
-    if (!defined($data{'foi'}{'name'}))      { $data{'foi'}{'name'}      = $data{'foi'}{'id'};                                        }
-    if (!defined($data{'foi'}{'id'}))        { $data{'foi'}{'id'}        = $data{'foi'}{'name'};                                      }
-    if (!defined($data{'foi'}{'elevation'})) { $data{'foi'}{'elevation'} = 0;                                                         }
-    if (!defined($data{'obs_time'}))         { $data{'obs_time'}         = sprintf("%Y-%m-%d %H:%M:%S", gmtime($data{'time_stamp'})); }
+    if (!defined($data{'procedure'}))        { $data{'procedure'}        = get_name_from_id($data{'procedure_id'});                    }
+    if (!defined($data{'procedure_id'}))     { $data{'procedure_id'}     = procedure_id($data{'procedure'});                           }
+    if (!defined($data{'procedure_file'}))   { $data{'procedure_file'}   = sprintf("%s.xml", $data{'procedure'});                      }    
+    if (!defined($data{'offering'}))         { $data{'offering'}         = $data{'offering_id'};                                       }
+    if (!defined($data{'offering_id'}))      { $data{'offering_id'}      = $data{'offering'};                                          }
+    if (!defined($data{'phenomenon'}))       { $data{'phenomenon'}       = get_name_from_id($data{'phenomenon_id'});                   }
+    if (!defined($data{'phenomenon_id'}))    { $data{'phenomenon_id'}    = phenomenon_id($data{'phenomenon'});                         }
+    if (!defined($data{'foi'}{'name'}))      { $data{'foi'}{'name'}      = $data{'foi'}{'id'};                                         }
+    if (!defined($data{'foi'}{'id'}))        { $data{'foi'}{'id'}        = $data{'foi'}{'name'};                                       }
+    if (!defined($data{'foi'}{'elevation'})) { $data{'foi'}{'elevation'} = 0;                                                          }
+    if (!defined($data{'obs_time'}))         { $data{'obs_time'}         = strftime("%Y-%m-%d %H:%M:%S", gmtime($data{'time_stamp'})); }
 
     # Add information to sensor hash
     if (!defined($sensor{'procedure_file'})) { $sensor{'procedure_file'} = $data{'procedure_file'}; }
@@ -753,19 +753,23 @@ sub add_foi # Checks if feature of interest exists in the DB and prepares querie
     
     # Check required values are in the FOI hash. If not, display error
     if ((!defined(${$foi}{'name'})) && (!defined(${$foi}{'id'}))) { error(E_NOFOIELEMENT, __FILE__, __LINE__, "name or ID"); }
-    if (!defined(${$foi}{'latitude'}))                            { error(E_NOFOIELEMENT, __FILE__, __LINE__,   "latitude"); }
-    if (!defined(${$foi}{'longitude'}))                           { error(E_NOFOIELEMENT, __FILE__, __LINE__,  "longitude"); }
 
-    # Get feature of interest ID and coordinates
+    # Get feature of interest ID 
     my $foi_id   = ${$foi}{'id'};
-    my $foi_name = ${$foi}{'name'}; 
-    my $lat      = ${$foi}{'latitude'};
-    my $lon      = ${$foi}{'longitude'};
 
     # Check if feature of interest exists. If not, create the query
     my $new = 0;
     if (!item_exist(${$data}{'db'}{'conn'}, "feature_of_interest", "feature_of_interest_id", $foi_id))
     {
+       # Check required values are in the FOI hash. If not, display error
+       if (!defined(${$foi}{'latitude'}))  { error(E_NOFOIELEMENT, __FILE__, __LINE__,   "latitude"); }
+       if (!defined(${$foi}{'longitude'})) { error(E_NOFOIELEMENT, __FILE__, __LINE__,  "longitude"); }
+
+       # Get required information from FOI hash
+       my $foi_name = ${$foi}{'name'}; 
+       my $lat      = ${$foi}{'latitude'};
+       my $lon      = ${$foi}{'longitude'};
+
        print_message(MSG_NEWITEM, "feature of interest", $foi_id);   
 
        my %info = ( "feature_of_interest_id"          => $foi_id,
