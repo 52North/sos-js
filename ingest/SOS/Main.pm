@@ -480,8 +480,8 @@ sub create_sensor_xml # Creates a sensor XML file
 
     # Add site information to parameter hash
     $params{'site_id'}        = (defined($sensor{'site'}{'id'})) ? $sensor{'site'}{'id'} : $sensor{'site'}{'name'};;
-    $params{'site_latitude'}  = $sensor{'site'}{'lat'};
-    $params{'site_longitude'} = $sensor{'site'}{'lon'};
+    $params{'site_latitude'}  = $sensor{'site'}{'latitude'};
+    $params{'site_longitude'} = $sensor{'site'}{'longitude'};
     $params{'site_elevation'} = (defined($sensor{'site'}{'elevation'})) ? $sensor{'site'}{'elevation'} : 0;
 
     # Get the list of offerings for this procedure

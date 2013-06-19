@@ -1,9 +1,9 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/perl -w
 
 ################################################################################
-# obs_from_file.pl
+# create_sensor_xml.pl
 #
-# Simple script which will recreate the sensor ML file
+# Simple script which will recreate the sensor ML file from the database
 #
 # TDBA 2013-05-20
 ################################################################################
@@ -65,7 +65,7 @@ print_delimiter();
 
 =head1 NAME
 
-create_sensor_xml.pl - Recreates a sensor ML file from a given config file.
+create_sensor_xml.pl - Recreates a sensor ML file using the settings in the config file and the values set in the database
 
 =head1 SYNOPSIS
 
@@ -74,7 +74,8 @@ B<create_sensor_xml.pl> B<--config>=I<config_file> [B<--verbose>]
 =head1 DESCRIPTION
 
 This script will take a configuration file, containing information about a dataset, parses it and recreate the associated sensor ML file.
-Essentially, it acts as a wrapper to the SOS::Main::create_sensor_xml() subroutine.
+Essentially, it acts as a wrapper to the SOS::Main::create_sensor_xml() subroutine. You need to have data in the database for this procedure
+in order for this script to work. 
 
 =head1 REQUIREMENTS
 
