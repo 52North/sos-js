@@ -170,7 +170,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * suitable for displaying
        */
       constructDataTable: function(res) {
-        var table = {label: "", name: "", uom: "", data: []};
+        var table = {label: "", headerLabel: "", name: "", uom: "", data: []};
 
         // Construct the data table
         for(var i = 0, len = res.getCountOfObservations(); i < len; i++) {
@@ -185,14 +185,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           table.data.push([SOS.Utils.isoToJsTimestamp(ob.time), ob.result.value]);
         }
 
+        /* Construct label as Offering + Observed Property,
+           & headerLabel as Offering + Observed Property + UOM */
         if(res.name) {
           table.label = res.name;
         } else if(res.id) {
           table.label = res.id;
-        } else {
-          table.label = table.name;
-          table.label += (table.uom.length > 0 ? " / " + table.uom : "");
         }
+        if(table.label.length > 0) table.label += " ";
+        table.label += table.name;
+        table.headerLabel = table.label + (table.uom.length > 0 ? " / " + table.uom : "");
 
         return table;
       },
@@ -204,11 +206,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var subset = [], n = 0;
 
         for(var i = 0, slen = series.length; i < slen; i++) {
-          subset[i] = {label: "", name: "", uom: "", data: []};
+          subset[i] = {label: "", headerLabel: "", name: "", uom: "", data: []};
           n = 0;
 
           // Copy all metadata
-          for(var key in {label: "", name: "", uom: ""}) {
+          for(var key in {label: "", headerLabel: "", name: "", uom: ""}) {
             subset[i][key] = series[i][key];
           }
 
@@ -351,6 +353,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           options: {
             xaxis: {mode: "time", axisLabel: "Time"},
             yaxis: {},
+            xaxes: [],
+            yaxes: [],
+            haveCustomAxes: false,
             selection: {mode: "x"},
             grid: {borderWidth: 1, hoverable: true, clickable: true},
             legend: {show: true, backgroundOpacity: 0.5},
@@ -504,7 +509,6 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Reset plot/overview if we've already set them up before
         this.resetBehaviour();
-        this.resetAxesLabels();
 
         // Set any last minute defaults if not already set
         this.applyDefaults();
@@ -540,20 +544,21 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var series = this.config.plot.series;
 
         options.grid = options.grid || {};
-        options.yaxis = options.yaxis || {};
 
         if(options.grid.show === false) {
           options.xaxis.axisLabel = null;
           options.yaxis.axisLabel = null;
         } else {
-          if(SOS.Utils.isValidObject(options.yaxis.customAxisLabel)) {
-            options.yaxis.axisLabel = options.yaxis.customAxisLabel;
-          }
+          // We normally setup labels for y axes unless told otherwise
+          if(!options.haveCustomAxes) {
+            options.yaxes = options.yaxes || [];
 
-          if(!SOS.Utils.isValidObject(options.yaxis.axisLabel)) {
-            if(series.length > 0) {
-              options.yaxis.axisLabel = series[0].name;
-              options.yaxis.axisLabel += (series[0].uom.length > 0 ? " / " + series[0].uom : "");
+            for(var i = 0, len = series.length; i < len; i++) {
+              options.yaxes[i] = {};
+              series[i].yaxis = (i + 1);
+
+              options.yaxes[i].axisLabel = series[i].name;
+              options.yaxes[i].axisLabel += (series[i].uom.length > 0 ? " / " + series[i].uom : "");
             }
           }
         }
@@ -599,7 +604,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             // The small offsets avoid flickering when box is under mouse
             var x = item.pageX - xoffset + 20;
             var y = item.pageY - yoffset + 20;
-            var html = jQuery('<p><span class="sos-control-title">Time:</span> <span>' + ft.formatter(pos.x) + '</span><br/><span class="sos-control-title">Value:</span> <span>' + fv.formatter(pos.y, fv.sciLimit, fv.digits) + ' ' + item.series.uom + '</span></p>');
+            var datum = item.datapoint[1];
+            var html = jQuery('<p><span class="sos-control-title">Time:</span> <span>' + ft.formatter(pos.x) + '</span><br/><span class="sos-control-title">Value:</span> <span>' + fv.formatter(datum, fv.sciLimit, fv.digits) + ' ' + item.series.uom + '</span></p>');
 
             valueBox.html(html);
             valueBox.css({
@@ -762,7 +768,6 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.resetSeries();
         this.resetOverviewSeries();
         this.resetBehaviour();
-        this.resetAxesLabels();
       },
 
       /**
@@ -800,9 +805,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Reset axes labels of an existing plot
        */
       resetAxesLabels: function() {
-        if(SOS.Utils.isValidObject(this.config.plot.options.yaxis.axisLabel)) {
-          this.config.plot.options.yaxis.axisLabel = null;
-        }
+        this.config.plot.options.xaxes = [];
+        this.config.plot.options.yaxes = [];
       }
     });
   }
@@ -960,7 +964,6 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Reset table/overview if we've already set them up before
         this.resetBehaviour();
-        this.resetHeaderLabels();
 
         // Set any last minute defaults if not already set
         this.applyDefaults();
@@ -996,17 +999,6 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       applyDefaults: function() {
         var options = this.config.table.options;
         var series = this.config.table.series;
-
-        if(SOS.Utils.isValidObject(options.header.customHeaderLabel)) {
-          options.header.headerLabel = options.header.customHeaderLabel;
-        }
-
-        if(!SOS.Utils.isValidObject(options.header.headerLabel)) {
-          if(series.length > 0) {
-            options.header.headerLabel = series[0].name;
-            options.header.headerLabel += (series[0].uom.length > 0 ? " / " + series[0].uom : "");
-          }
-        }
       },
 
       /**
@@ -1260,7 +1252,6 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.resetSeries();
         this.resetOverviewSeries();
         this.resetBehaviour();
-        this.resetHeaderLabels();
       },
 
       /**
@@ -1299,8 +1290,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Reset header labels of an existing table
        */
       resetHeaderLabels: function() {
-        if(SOS.Utils.isValidObject(this.config.table.options.header.headerLabel)) {
-          this.config.table.options.header.headerLabel = null;
+        var series = this.config.table.series || [];
+
+        if(SOS.Utils.isValidObject(this.config.table.options.header.title)) {
+          this.config.table.options.header.title = null;
+        }
+
+        for(var i = 0, len = series.length; i < len; i++) {
+          series[i].headerLabel = null;
         }
       },
 
@@ -1340,9 +1337,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         tcontent += '<thead class="sos-table">';
         tcontent += '<tr class="sos-table">';
 
-        // Series label
+        // Series header label
         for(var i = 0, len = series.length; i < len; i++) {
-          tcontent += '<th id="sl' + i + '" class="sos-table" colspan="2">' + series[i].label + '</th>';
+          tcontent += '<th id="sl' + i + '" class="sos-table" colspan="2">' + series[i].headerLabel + '</th>';
         }
         tcontent += '</tr>';
         tcontent += '<tr class="sos-table">';
@@ -1384,7 +1381,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         tcontent += '</tbody>';
 
         var tableText = '<table class="sos-table">';
-        tableText += (SOS.Utils.isValidObject(options.header.headerLabel) ? '<caption class="sos-table">' + options.header.headerLabel + '</caption>' : '');
+        tableText += (SOS.Utils.isValidObject(options.header.title) ? '<caption class="sos-table">' + options.header.title + '</caption>' : '');
         tableText += tcontent;
         tableText += '</table>';
         var table = jQuery(tableText);
