@@ -585,7 +585,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         // If overview div doesn't exist (the norm), create one on the fly
         if(o.length < 1) {
           var p = jQuery('#' + this.config.plot.id);
-          o = jQuery('<div id="sosPlotOverview" class="sos-plot-overview"/>');
+          o = jQuery('<div id="' + this.config.overview.id + '" class="sos-plot-overview"/>');
           p.after(o);
         }
 
@@ -598,13 +598,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       setupBehaviour: function() {
         var p = jQuery('#' + this.config.plot.id);
-        var valueBox = jQuery("#sosPlotValueBox");
-        var xoffset = p.offset().left;
-        var yoffset = p.offset().top;
+        var valueBox = jQuery('#' + this.config.plot.id + "ValueBox");
 
         // If valueBox div doesn't exist (the norm), create one on the fly
         if(valueBox.length < 1) {
-          valueBox = jQuery('<div id="sosPlotValueBox" class="sos-plot-valuebox" style="display:none"/>');
+          valueBox = jQuery('<div id="#' + this.config.plot.id + 'ValueBox" class="sos-plot-valuebox" style="display:none"/>');
           p.after(valueBox);
         }
 
@@ -614,8 +612,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             var ft = evt.data.self.config.format.time;
             var fv = evt.data.self.config.format.value;
             // The small offsets avoid flickering when box is under mouse
-            var x = item.pageX - xoffset + 20;
-            var y = item.pageY - yoffset + 20;
+            var x = item.pageX + 20;
+            var y = item.pageY + 20;
             var datum = item.datapoint[1];
             var html = jQuery('<p><span class="sos-control-title">Time:</span> <span>' + ft.formatter(pos.x) + '</span><br/><span class="sos-control-title">Value:</span> <span>' + fv.formatter(datum, fv.sciLimit, fv.digits) + ' ' + item.series.uom + '</span></p>');
 
@@ -1031,7 +1029,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         // If overview div doesn't exist (the norm), create one on the fly
         if(o.length < 1) {
           var t = jQuery('#' + this.config.table.id);
-          o = jQuery('<div id="sosTableOverview" class="sos-plot-overview"/>');
+          o = jQuery('<div id="' + this.config.overview.id + '" class="sos-plot-overview"/>');
           t.after(o);
         }
 
