@@ -35,23 +35,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
      */
     var SOS = OpenLayers.Class({
       url: null,
-      events: new OpenLayers.Events(this),
-      capsFormatter: new OpenLayers.Format.SOSCapabilities(),
-      obsFormatter: new OpenLayers.Format.SOSGetObservation(),
-      config: {
-        /* N.B.: Our SOS instance (52n) fails unless version is 1.0.0 */
-        version: "1.0.0",
-        async: true,
-        observation: {
-          responseFormatType: "text/xml",
-          responseFormat: "text/xml;subtype=\"om/1.0.0\"",
-          eventTimeLatest: "latest",
-          eventTimeFirst: "first",
-          resultModel: "om:Measurement",
-          responseMode: "inline",
-          forceSort: true
-        }
-      },
+      events: null,
+      capsFormatter: null,
+      obsFormatter: null,
+      config: null,
       CLASS_NAME: "SOS",
 
       /**
@@ -60,6 +47,24 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
        * @constructor
        */
       initialize: function(options) {
+        this.url = null;
+        this.events = new OpenLayers.Events(this);
+        this.capsFormatter = new OpenLayers.Format.SOSCapabilities();
+        this.obsFormatter = new OpenLayers.Format.SOSGetObservation();
+        this.config = {
+          /* N.B.: Our SOS instance (52n) fails unless version is 1.0.0 */
+          version: "1.0.0",
+          async: true,
+          observation: {
+            responseFormatType: "text/xml",
+            responseFormat: "text/xml;subtype=\"om/1.0.0\"",
+            eventTimeLatest: "latest",
+            eventTimeFirst: "first",
+            resultModel: "om:Measurement",
+            responseMode: "inline",
+            forceSort: true
+          }
+        };
         OpenLayers.Util.extend(this, options);
       },
 
@@ -463,6 +468,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
      *  - <SOS>
      */
     SOS.Offering = OpenLayers.Class(SOS, {
+      url: null,
+      events: null,
+      capsFormatter: null,
+      obsFormatter: null,
+      config: null,
       CLASS_NAME: "SOS.Offering",
 
       /**
@@ -471,6 +481,24 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
        * @constructor
        */
       initialize: function(options) {
+        this.url = null;
+        this.events = new OpenLayers.Events(this);
+        this.capsFormatter = new OpenLayers.Format.SOSCapabilities();
+        this.obsFormatter = new OpenLayers.Format.SOSGetObservation();
+        this.config = {
+          /* N.B.: Our SOS instance (52n) fails unless version is 1.0.0 */
+          version: "1.0.0",
+          async: true,
+          observation: {
+            responseFormatType: "text/xml",
+            responseFormat: "text/xml;subtype=\"om/1.0.0\"",
+            eventTimeLatest: "latest",
+            eventTimeFirst: "first",
+            resultModel: "om:Measurement",
+            responseMode: "inline",
+            forceSort: true
+          }
+        };
         OpenLayers.Util.extend(this, options);
       },
 

@@ -48,6 +48,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * @constructor
        */
       initialize: function(options) {
+        this.url = null;
+        this.sos = null;
+        this.offering = null;
         jQuery.extend(true, this, options);
       },
 
@@ -344,50 +347,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       observedProperty: null,
       startDatetime: null,
       endDatetime: null,
-      relativeTime: "today",
-      config: {
-        plot: {
-          object: null,
-          id: "sosPlot",
-          series: [],
-          options: {
-            xaxis: {mode: "time", axisLabel: "Time"},
-            yaxis: {},
-            xaxes: [],
-            yaxes: [],
-            haveCustomAxes: false,
-            selection: {mode: "x"},
-            grid: {borderWidth: 1, hoverable: true, clickable: true},
-            legend: {show: true, backgroundOpacity: 0.5},
-            series: {lines: {show: true}, points: {show: false}}
-          }
-        },
-        overview: {
-          object: null,
-          id: "sosPlotOverview",
-          series: [],
-          options: {
-            show: false,
-            xaxis: {ticks: [], mode: "time"},
-            yaxis: {ticks: [], autoscaleMargin: 0.1},
-            selection: {mode: "x"},
-            grid: {borderWidth: 1},
-            legend: {show: false},
-            series: {lines: {show: true, lineWidth: 1}, shadowSize: 0}
-          }
-        },
-        format: {
-          time: {
-            formatter: SOS.Utils.jsTimestampToIso
-          },
-          value: {
-            sciLimit: 0.1,
-            digits: 2,
-            formatter: SOS.Ui.prototype.formatValueFancy
-          }
-        },
-        mode: {append: false}
-      },
+      relativeTime: null,
+      config: null,
       CLASS_NAME: "SOS.Plot",
 
       /**
@@ -396,6 +357,57 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * @constructor
        */
       initialize: function(options) {
+        this.url = null;
+        this.sos = null;
+        this.offering = null;
+        this.offeringId = null;
+        this.observedProperty = null;
+        this.startDatetime = null;
+        this.endDatetime = null;
+        this.relativeTime = "today";
+        this.config = {
+          plot: {
+            object: null,
+            id: "sosPlot",
+            series: [],
+            options: {
+              xaxis: {mode: "time", axisLabel: "Time"},
+              yaxis: {},
+              xaxes: [],
+              yaxes: [],
+              haveCustomAxes: false,
+              selection: {mode: "x"},
+              grid: {borderWidth: 1, hoverable: true, clickable: true},
+              legend: {show: true, backgroundOpacity: 0.5},
+              series: {lines: {show: true}, points: {show: false}}
+            }
+          },
+          overview: {
+            object: null,
+            id: "sosPlotOverview",
+            series: [],
+            options: {
+              show: false,
+              xaxis: {ticks: [], mode: "time"},
+              yaxis: {ticks: [], autoscaleMargin: 0.1},
+              selection: {mode: "x"},
+              grid: {borderWidth: 1},
+              legend: {show: false},
+              series: {lines: {show: true, lineWidth: 1}, shadowSize: 0}
+            }
+          },
+          format: {
+            time: {
+              formatter: SOS.Utils.jsTimestampToIso
+            },
+            value: {
+              sciLimit: 0.1,
+              digits: 2,
+              formatter: SOS.Ui.prototype.formatValueFancy
+            }
+          },
+          mode: {append: false}
+        };
         jQuery.extend(true, this, options);
       },
 
@@ -828,43 +840,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       observedProperty: null,
       startDatetime: null,
       endDatetime: null,
-      relativeTime: "today",
-      config: {
-        table: {
-          object: null,
-          id: "sosTable",
-          series: [],
-          options: {
-            header: {},
-            scrollable: false
-          }
-        },
-        overview: {
-          object: null,
-          id: "sosTableOverview",
-          series: [],
-          options: {
-            show: false,
-            xaxis: {ticks: [], mode: "time"},
-            yaxis: {ticks: [], autoscaleMargin: 0.1},
-            selection: {mode: "x"},
-            grid: {borderWidth: 1},
-            legend: {show: false},
-            series: {lines: {show: true, lineWidth: 1}, shadowSize: 0}
-          }
-        },
-        format: {
-          time: {
-            formatter: SOS.Utils.jsTimestampToIso
-          },
-          value: {
-            sciLimit: 0.1,
-            digits: 2,
-            formatter: SOS.Ui.prototype.formatValueFancy
-          }
-        },
-        mode: {append: false}
-      },
+      relativeTime: null,
+      config: null,
       CLASS_NAME: "SOS.Table",
 
       /**
@@ -873,6 +850,50 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * @constructor
        */
       initialize: function(options) {
+        this.url = null;
+        this.sos = null;
+        this.offering = null;
+        this.offeringId = null;
+        this.observedProperty = null;
+        this.startDatetime = null;
+        this.endDatetime = null;
+        this.relativeTime = "today";
+        this.config = {
+          table: {
+            object: null,
+            id: "sosTable",
+            series: [],
+            options: {
+              header: {},
+              scrollable: false
+            }
+          },
+          overview: {
+            object: null,
+            id: "sosTableOverview",
+            series: [],
+            options: {
+              show: false,
+              xaxis: {ticks: [], mode: "time"},
+              yaxis: {ticks: [], autoscaleMargin: 0.1},
+              selection: {mode: "x"},
+              grid: {borderWidth: 1},
+              legend: {show: false},
+              series: {lines: {show: true, lineWidth: 1}, shadowSize: 0}
+            }
+          },
+          format: {
+            time: {
+              formatter: SOS.Utils.jsTimestampToIso
+            },
+            value: {
+              sciLimit: 0.1,
+              digits: 2,
+              formatter: SOS.Ui.prototype.formatValueFancy
+            }
+          },
+          mode: {append: false}
+        };
         jQuery.extend(true, this, options);
       },
 
@@ -1527,57 +1548,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
     SOS.Map = OpenLayers.Class(SOS.Ui, {
       url: null,
       sos: null,
-      config: {
-        map: {
-          object: null,
-          id: "sosMap",
-          options: {
-            defaultProjection: new OpenLayers.Projection("EPSG:4326"),
-            centre: new OpenLayers.LonLat(0, 0),
-            params: {
-              projection: "EPSG:4326",
-              displayProjection: new OpenLayers.Projection("EPSG:4326")
-            }
-          }
-        },
-        overview: {
-          options: {
-            show: false
-          }
-        },
-        baseLayer: {
-          object: null,
-          id: "sosMapBaseLayer",
-          options: {
-            label: "OpenLayers WMS",
-            url: "http://vmap0.tiles.osgeo.org/wms/vmap0?",
-            params: {
-              layers: "basic"
-            }
-          }
-        },
-        featureOfInterestLayer: {
-          object: null,
-          id: "sosMapFeatureOfInterestLayer",
-          options: {
-            label: "Feature Of Interest",
-            pointStyle: new OpenLayers.Style({
-              "pointRadius": 5,
-              "fillColor": "#F80000",
-              "strokeWidth": 1,
-              "label": "${name}",
-              "fontSize": "12px",
-              "fontFamily": "Courier New, monospace",
-              "fontWeight": "bold",
-              "labelAlign": "rb",
-              "labelXOffset": -10,
-              "labelOutlineColor": "white",
-              "labelOutlineWidth": 3
-            }),
-            displayLatestObservations: false
-          }
-        }
-      },
+      config: null,
       CLASS_NAME: "SOS.Map",
 
       /**
@@ -1586,6 +1557,59 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * @constructor
        */
       initialize: function(options) {
+        this.url = null;
+        this.sos = null;
+        this.config = {
+          map: {
+            object: null,
+            id: "sosMap",
+            options: {
+              defaultProjection: new OpenLayers.Projection("EPSG:4326"),
+              centre: new OpenLayers.LonLat(0, 0),
+              params: {
+                projection: "EPSG:4326",
+                displayProjection: new OpenLayers.Projection("EPSG:4326")
+              }
+            }
+          },
+          overview: {
+            options: {
+              show: false
+            }
+          },
+          baseLayer: {
+            object: null,
+            id: "sosMapBaseLayer",
+            options: {
+              label: "OpenLayers WMS",
+              url: "http://vmap0.tiles.osgeo.org/wms/vmap0?",
+              params: {
+                layers: "basic"
+              }
+            }
+          },
+          featureOfInterestLayer: {
+            object: null,
+            id: "sosMapFeatureOfInterestLayer",
+            options: {
+              label: "Feature Of Interest",
+              pointStyle: new OpenLayers.Style({
+                "pointRadius": 5,
+                "fillColor": "#F80000",
+                "strokeWidth": 1,
+                "label": "${name}",
+                "fontSize": "12px",
+                "fontFamily": "Courier New, monospace",
+                "fontWeight": "bold",
+                "labelAlign": "rb",
+                "labelXOffset": -10,
+                "labelOutlineColor": "white",
+                "labelOutlineWidth": 3
+              }),
+              displayLatestObservations: false
+            }
+          }
+        };
         jQuery.extend(true, this, options);
       },
 
@@ -1838,44 +1862,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
     SOS.Menu = OpenLayers.Class(SOS.Ui, {
       url: null,
       sos: null,
-      config: {
-        menu: {
-          object: null,
-          id: "sosMenu",
-          entries: [],
-          step: 0,
-          options: {
-            tabs: {
-              offerings: {
-                label: "Offerings",
-                prompt: "Please select a Feature Of Interest"
-              },
-              observedProperties: {
-                label: "Observed Properties",
-                prompt: "Please select an Offering"
-              },
-              controls: {
-                label: "Controls",
-                prompt: "Please select an Observed Property"
-              }
-            },
-            listBoxes: {
-              multiple: false,
-              size: 5,
-              useSelectBox: false
-            },
-            datePickers: {
-              // N.B.: This is a 4-digit year
-              dateFormat: "yy-mm-dd",
-              autoSize: true,
-              changeYear: true,
-              changeMonth: true,
-              onSelect: function(s, ui) {jQuery(this).trigger('change');}
-            },
-            createNewItem: false
-          }
-        }
-      },
+      config: null,
       CLASS_NAME: "SOS.Menu",
 
       /**
@@ -1884,6 +1871,46 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * @constructor
        */
       initialize: function(options) {
+        this.url = null;
+        this.sos = null;
+        this.config = {
+          menu: {
+            object: null,
+            id: "sosMenu",
+            entries: [],
+            step: 0,
+            options: {
+              tabs: {
+                offerings: {
+                  label: "Offerings",
+                  prompt: "Please select a Feature Of Interest"
+                },
+                observedProperties: {
+                  label: "Observed Properties",
+                  prompt: "Please select an Offering"
+                },
+                controls: {
+                  label: "Controls",
+                  prompt: "Please select an Observed Property"
+                }
+              },
+              listBoxes: {
+                multiple: false,
+                size: 5,
+                useSelectBox: false
+              },
+              datePickers: {
+                // N.B.: This is a 4-digit year
+                dateFormat: "yy-mm-dd",
+                autoSize: true,
+                changeYear: true,
+                changeMonth: true,
+                onSelect: function(s, ui) {jQuery(this).trigger('change');}
+              },
+              createNewItem: false
+            }
+          }
+        };
         jQuery.extend(true, this, options);
       },
 
@@ -2474,44 +2501,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       startDatetime: null,
       endDatetime: null,
       relativeTime: null,
-      config: {
-        app: {
-          object: null,
-          id: "sosApp",
-          step: 0,
-          components: {
-            menu: null,
-            map: null,
-            plot: null,
-            table: null
-          },
-          options: {
-            tabs: {
-              map: {label: "Map"},
-              plot: {label: "Plot"},
-              table: {label: "Table"}
-            },
-            time: {
-              useOfferingTimePeriod: false,
-              ms: 31 * 8.64e7
-            }
-          }
-        },
-        overview: {
-          object: null,
-          id: "sosAppOverview",
-          series: [],
-          options: {
-            show: true,
-            xaxis: {ticks: [], mode: "time"},
-            yaxis: {ticks: [], autoscaleMargin: 0.1},
-            selection: {mode: "x"},
-            grid: {borderWidth: 1},
-            legend: {show: false},
-            series: {lines: {show: true, lineWidth: 1}, shadowSize: 0}
-          }
-        }
-      },
+      config: null,
       CLASS_NAME: "SOS.App",
 
       /**
@@ -2520,6 +2510,52 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * @constructor
        */
       initialize: function(options) {
+        this.url = null;
+        this.sos = null;
+        this.offering = null;
+        this.offeringId = null;
+        this.observedProperty = null;
+        this.startDatetime = null;
+        this.endDatetime = null;
+        this.relativeTime = null;
+        this.config = {
+          app: {
+            object: null,
+            id: "sosApp",
+            step: 0,
+            components: {
+              menu: null,
+              map: null,
+              plot: null,
+              table: null
+            },
+            options: {
+              tabs: {
+                map: {label: "Map"},
+                plot: {label: "Plot"},
+                table: {label: "Table"}
+              },
+              time: {
+                useOfferingTimePeriod: false,
+                ms: 31 * 8.64e7
+              }
+            }
+          },
+          overview: {
+            object: null,
+            id: "sosAppOverview",
+            series: [],
+            options: {
+              show: true,
+              xaxis: {ticks: [], mode: "time"},
+              yaxis: {ticks: [], autoscaleMargin: 0.1},
+              selection: {mode: "x"},
+              grid: {borderWidth: 1},
+              legend: {show: false},
+              series: {lines: {show: true, lineWidth: 1}, shadowSize: 0}
+            }
+          }
+        };
         jQuery.extend(true, this, options);
       },
 
