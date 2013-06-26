@@ -5,5 +5,5 @@
   xsi:schemaLocation="http://www.opengis.net/sos/1.0
   http://schemas.opengis.net/sos/1.0.0/sosDescribeSensor.xsd"
   outputFormat="text/xml;subtype=&quot;sensorML/1.0.1&quot;">
-  <procedure>urn:ogc:object:feature:Sensor:BAS:bas-met-halley-synop</procedure>
+  <procedure>urn:ogc:object:feature:Sensor:BAS:bas-met-halley-met</procedure>
 </DescribeSensor>
