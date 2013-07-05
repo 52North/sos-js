@@ -2137,7 +2137,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         csc.append('<br/>', ed);
 
         // Add-to-existing
-        var add = jQuery('<input type="checkbox" id="' + this.config.menu.id + 'ControlsAddToExisting"><span class="sos-control-title">Add To Existing</span></input>');
+        var add = jQuery('<input type="checkbox" id="' + this.config.menu.id + 'ControlsAddToExisting"><span>Add To Existing</span></input>');
         csc.append('<br/>', add);
       },
 
