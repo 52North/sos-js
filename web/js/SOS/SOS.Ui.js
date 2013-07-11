@@ -603,7 +603,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         // If valueBox div doesn't exist (the norm), create one on the fly
         if(valueBox.length < 1) {
           valueBox = jQuery('<div id="#' + this.config.plot.id + 'ValueBox" class="sos-plot-valuebox" style="display:none"/>');
-          p.after(valueBox);
+          jQuery('body').after(valueBox);
         }
 
         // Show data coordinates (time, value) as mouse hovers over plot
@@ -612,10 +612,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             var ft = evt.data.self.config.format.time;
             var fv = evt.data.self.config.format.value;
             // The small offsets avoid flickering when box is under mouse
-            var x = item.pageX + 20;
-            var y = item.pageY + 20;
+            var x = pos.pageX + 20;
+            var y = pos.pageY + 20;
+            var time = item.datapoint[0];
             var datum = item.datapoint[1];
-            var html = jQuery('<p><span class="sos-control-title">Time:</span> <span>' + ft.formatter(pos.x) + '</span><br/><span class="sos-control-title">Value:</span> <span>' + fv.formatter(datum, fv.sciLimit, fv.digits) + ' ' + item.series.uom + '</span></p>');
+            var html = jQuery('<p><span class="sos-control-title">Time:</span> <span>' + ft.formatter(time) + '</span><br/><span class="sos-control-title">Value:</span> <span>' + fv.formatter(datum, fv.sciLimit, fv.digits) + ' ' + item.series.uom + '</span></p>');
 
             valueBox.html(html);
             valueBox.css({
@@ -1905,7 +1906,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 changeMonth: true,
                 onSelect: function(s, ui) {jQuery(this).trigger('change');}
               },
-              createNewItem: false
+              createNewItem: false,
+              promptForSelection: true
             }
           }
         };
@@ -1989,6 +1991,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.constructOfferingsEntries();
         this.initMenu(tab);
         this.setupOfferingsBehaviour();
+
+        // Optionally ensure that offerings tab is auto selected
+        if(this.config.menu.options.promptForSelection) {
+          tab.prev('h3[role="tab"]').trigger('click');
+        }
       },
 
       /**
@@ -2061,6 +2068,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.constructObservedPropertiesEntries();
         this.initMenu(tab);
         this.setupObservedPropertiesBehaviour();
+
+        // Optionally ensure that observed properties tab is auto selected
+        if(this.config.menu.options.promptForSelection) {
+          tab.prev('h3[role="tab"]').trigger('click');
+        }
       },
 
       /**
@@ -2121,24 +2133,25 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         tab.html("");
 
-        // Control section container
-        var csc = jQuery('<p class="sos-control-section"/>');
-        csc.append(jQuery('<span class="sos-control-title">Date Range</span>'));
-        tab.append(csc);
+        // Plot control section container
+        tab.append(jQuery('<span class="sos-control-title">Plot / Table</span>'));
+        var csc1 = jQuery('<div class="sos-control-section sos-control-section-container"/>');
+        tab.append(csc1);
+        csc1.append(jQuery('<span>Date Range</span>'));
 
         // Start datetime
         var sd = jQuery('<input type="text" id="' + this.config.menu.id + 'ControlsStartDatetime"/>');
         sd.datepicker(this.config.menu.options.datePickers);
-        csc.append('<br/>', sd);
+        csc1.append('<br/>', sd);
 
         // End datetime
         var ed = jQuery('<input type="text" id="' + this.config.menu.id + 'ControlsEndDatetime"/>');
         ed.datepicker(this.config.menu.options.datePickers);
-        csc.append('<br/>', ed);
+        csc1.append('<br/>', ed);
 
         // Add-to-existing
         var add = jQuery('<input type="checkbox" id="' + this.config.menu.id + 'ControlsAddToExisting"><span>Add To Existing</span></input>');
-        csc.append('<br/>', add);
+        csc1.append('<br/>', add);
       },
 
       /**

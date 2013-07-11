@@ -39,6 +39,11 @@
   font-size: 0.9em;
 }
 
+.sos-control-section-container {
+  border: thin solid lightgray;
+  padding: 1px;
+}
+
 .sos-selected-interval-stats-table, .sos-embedded-table {
   font-size: 0.75em;
 }
@@ -114,7 +119,7 @@ table.sos-table-scrollable {
 }
 
 .sos-menu-container {
-  height: 250px;
+  height: 300px;
 }
 
 .sos-menu {
