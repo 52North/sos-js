@@ -1966,13 +1966,17 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         } else if(this.config.menu.step == 1) {
           this.config.menu.step = 2;
           this.displayObservedProperties();
-        }
-        else {
+        } else if(this.config.menu.step == 2) {
+          this.config.menu.step = 3;
+          if(SOS.Utils.isValidObject(this.config.menu.options.tabs.controls)) {
+            this.displayControls();
+          }
+        } else {
           this.config.menu.step = 1;
           this.displayOfferings();
         }
         if(SOS.Utils.isValidObject(this.config.menu.options.tabs.controls)) {
-          this.displayControls();
+          this.initControls();
         }
       },
 
@@ -2121,6 +2125,19 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Display the controls
        */
       displayControls: function() {
+        var tab = jQuery('#' + this.config.menu.id + 'ControlsTab');
+        this.initControls();
+
+        // Optionally ensure that controls tab is auto selected
+        if(this.config.menu.options.promptForSelection) {
+          tab.prev('h3[role="tab"]').trigger('click');
+        }
+      },
+
+      /**
+       * Initialise the controls
+       */
+      initControls: function() {
         this.constructControls();
         this.setupControlsBehaviour();
       },
@@ -2250,7 +2267,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Setup menu event handlers
         m.bind('accordionchange', {self: this}, this.changeMenuTabHandler);
-        m.accordion({fillSpace: true});
+
+        // Configure & instantiate the menu
+        var opts = {fillSpace: true};
+
+        if(this.config.menu.step > -1) {
+          opts.active = this.config.menu.step;
+        }
+        m.accordion(opts);
 
         this.config.menu.object = m;
       },
@@ -2533,7 +2557,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           app: {
             object: null,
             id: "sosApp",
-            step: 0,
+            step: -1,
             components: {
               menu: null,
               map: null,
@@ -2648,7 +2672,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         components.table.config.table.id = this.config.app.id + "TablePanel";
 
         // Set any component-specific initial options
-        components.menu.setInitialViewBlank();
+        components.menu.config.menu.step = this.config.app.step;
         components.table.setTableOptions({scrollable: true});
 
         /* Optionally show data overview.  Using an application-level overview
