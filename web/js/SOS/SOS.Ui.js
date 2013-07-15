@@ -1882,7 +1882,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               tabs: {
                 offerings: {
                   label: "Offerings",
-                  prompt: "Please select a Feature Of Interest"
+                  prompt: "Please select a Feature Of Interest from the Map"
                 },
                 observedProperties: {
                   label: "Observed Properties",
@@ -1907,7 +1907,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 onSelect: function(s, ui) {jQuery(this).trigger('change');}
               },
               createNewItem: false,
-              promptForSelection: true
+              promptForSelection: true,
+              showAllOfferings: {
+                active: true,
+                prompt: "or alternatively"
+              }
             }
           }
         };
@@ -1996,6 +2000,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.initMenu(tab);
         this.setupOfferingsBehaviour();
 
+        // Optionally show the "list all offerings" link
+        if(this.config.menu.options.showAllOfferings.active) {
+          tab.append('<p/>', this.constructAllOfferingsLink());
+        }
+
         // Optionally ensure that offerings tab is auto selected
         if(this.config.menu.options.promptForSelection) {
           tab.prev('h3[role="tab"]').trigger('click');
@@ -2062,6 +2071,22 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           // For external listeners (application-level plumbing)
           self.sos.events.triggerEvent("sosMenuOfferingChange");
         });
+      },
+
+      /**
+       * Construct a link (& handler) to list all offerings
+       */
+      constructAllOfferingsLink: function() {
+        var l = jQuery('<a/>', {
+          text: "List all Offerings"
+        }).button();
+        l.bind("click", {self: this}, function(evt) {
+          var self = evt.data.self;
+          self.config.menu.selected = [];
+          self.displayOfferings();
+        });
+
+        return l;
       },
 
       /**
@@ -2335,6 +2360,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
           if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
             t.html(options.tabs.offerings.prompt);
+
+            if(options.showAllOfferings.active) {
+              t.append('<p/>', options.showAllOfferings.prompt, '<p/>', this.constructAllOfferingsLink());
+            }
           }
         }
         if(SOS.Utils.isValidObject(options.tabs.observedProperties)) {
@@ -2366,6 +2395,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
             if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
               t.html(options.tabs.offerings.prompt);
+
+              if(options.showAllOfferings.active) {
+                t.append('<p/>', options.showAllOfferings.prompt, '<p/>', self.constructAllOfferingsLink());
+              }
             }
           }
         }
