@@ -1,8 +1,0 @@
-#!/bin/bash
-
-# Simple wrapper script to run the YUI Compressor
-
-java -jar /usr/local/lib/yuicompressor/yuicompressor-2.4.2.jar "$@"
-
-exit $?
-
