@@ -1,7 +1,0 @@
-			Deployed 3rd party tools directory
-			==================================
-
-This is a directory for collecting together the deployed state of custom builds of 3rd party libraries, tools etc., required by the SOS libraries.
-
-Note that these are here merely as a convenience, in that they can be easily & quickly checked-out & installed directly under a web server document root.  All of these deployed libraries could be built directly from the source (under src) & then all the extraneous files removed for deployment.  Having these here saves having to do this.  However, caution should be exercised in ensuring that these deployed libraries reflect the current state of the custom built libraries.
-
