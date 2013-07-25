@@ -135,6 +135,10 @@ table.sos-table-scrollable {
   width: 140px;
 }
 
+.sos-menu-search-box {
+  width: 132px;
+}
+
 .sos-app-container {
   width: 1024px;
   height: 768px;
@@ -153,13 +157,23 @@ table.sos-table-scrollable {
   font-size: 0.9em;
 }
 
+.sos-watermark {
+  font-style: italic;
+  color: #808080;
+  font-size: 0.9em;
+}
+
 /* flot legend styles */
 div.legend {
   font-size: 0.70em;
 }
 
 /* jquery ui styles */
-div.ui-datepicker{
+div.ui-datepicker {
   font-size: 62.5%;
+}
+
+.ui-autocomplete {
+  font-size: 75%;
 }
 

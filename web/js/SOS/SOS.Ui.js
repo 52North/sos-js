@@ -1881,14 +1881,17 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             options: {
               tabs: {
                 offerings: {
+                  active: true,
                   label: "Offerings",
                   prompt: "Please select a Feature Of Interest from the Map"
                 },
                 observedProperties: {
+                  active: true,
                   label: "Observed Properties",
                   prompt: "Please select an Offering"
                 },
                 controls: {
+                  active: true,
                   label: "Controls",
                   prompt: "Please select an Observed Property"
                 }
@@ -1908,8 +1911,20 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               },
               createNewItem: false,
               promptForSelection: true,
-              showAllOfferings: {
+              plotTableControlsSection: {
                 active: true,
+                sectionLabel: "Plot / Table",
+                dateLabel: "Date Range",
+                addToLabel: "Add To Existing",
+              },
+              searchOfferings: {
+                active: true,
+                label: "Search",
+                prompt: ""
+              },
+              listAllOfferings: {
+                active: true,
+                label: "List all Offerings",
                 prompt: "or alternatively"
               }
             }
@@ -1972,14 +1987,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           this.displayObservedProperties();
         } else if(this.config.menu.step == 2) {
           this.config.menu.step = 3;
-          if(SOS.Utils.isValidObject(this.config.menu.options.tabs.controls)) {
+          if(SOS.Utils.isValidObject(this.config.menu.options.tabs.controls) && this.config.menu.options.tabs.controls.active) {
             this.displayControls();
           }
         } else {
           this.config.menu.step = 1;
           this.displayOfferings();
         }
-        if(SOS.Utils.isValidObject(this.config.menu.options.tabs.controls)) {
+        if(SOS.Utils.isValidObject(this.config.menu.options.tabs.controls) && this.config.menu.options.tabs.controls.active) {
           this.initControls();
         }
       },
@@ -1999,16 +2014,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.constructOfferingsEntries();
         this.initMenu(tab);
         this.setupOfferingsBehaviour();
-
-        // Optionally show the "list all offerings" link
-        if(this.config.menu.options.showAllOfferings.active) {
-          tab.append('<p/>', this.constructAllOfferingsLink());
-        }
-
-        // Optionally ensure that offerings tab is auto selected
-        if(this.config.menu.options.promptForSelection) {
-          tab.prev('h3[role="tab"]').trigger('click');
-        }
+        this.constructOfferingsTabControls();
+        this.promptForSelection(tab);
       },
 
       /**
@@ -2035,7 +2042,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         }
 
         for(var i = 0, len = ids.length; i < len; i++) {
-          var entry = {value: ids[i], text: names[i]};
+          var entry = {value: ids[i], label: names[i]};
           this.config.menu.entries.push(entry);
         }
       },
@@ -2074,11 +2081,92 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Construct the offerings menu tab controls
+       */
+      constructOfferingsTabControls: function(options) {
+        var tab = jQuery('#' + this.config.menu.id + 'OfferingsTab');
+        var options = options || {};
+        var mOpts = this.config.menu.options;
+
+        // Optionally show the "search offerings" input
+        if(mOpts.searchOfferings.active) {
+          if(options.showPrompt) {
+            tab.append('<p/>', mOpts.searchOfferings.prompt);
+          }
+          tab.append('<p/>', this.constructSearchOfferingsInput());
+        }
+
+        // Optionally show the "list all offerings" link
+        if(mOpts.listAllOfferings.active) {
+          if(options.showPrompt) {
+            tab.append('<p/>', mOpts.listAllOfferings.prompt);
+          }
+          tab.append('<p/>', this.constructListAllOfferingsLink());
+        }
+      },
+
+      /**
+       * Construct an input (& handler) to search offerings
+       */
+      constructSearchOfferingsInput: function() {
+        var item = this.getCurrentItem();
+
+        /* A selected FOI acts as a filter on available offerings.  We want to
+           search all offerings, so we remove any existent FOI */
+        if(SOS.Utils.isValidObject(item) && SOS.Utils.isValidObject(item.foi)) {
+          item.foi = null;
+        }
+
+        // Clone the offerings entries as source for the search autocomplete
+        this.constructOfferingsEntries();
+        var src = this.config.menu.entries.slice(0);
+
+        /* Create an autocomplete search box with placeholder text.  Filter
+           offerings based on user selection */
+        var c = jQuery('<input/>', {
+          "class": "sos-watermark sos-menu-search-box",
+          value: this.config.menu.options.searchOfferings.label
+        }).autocomplete({source: src});
+
+        c.bind("focus", function(evt) {
+          var elem = jQuery(this);
+          elem.val("");
+          elem.removeClass("sos-watermark");
+        });
+
+        c.bind("blur", {self: this}, function(evt) {
+          var self = evt.data.self;
+          var elem = jQuery(this);
+          elem.val(self.config.menu.options.searchOfferings.label);
+          elem.addClass("sos-watermark");
+        });
+
+        c.bind("autocompleteselect", {self: this}, function(evt, ui) {
+          var self = evt.data.self;
+
+          if(SOS.Utils.isValidObject(ui) && SOS.Utils.isValidObject(ui.item)) {
+            var tab = jQuery('#' + self.config.menu.id + 'OfferingsTab');
+            self.config.menu.selected = [];
+            self.config.menu.entries = [];
+            self.config.menu.entries.push(ui.item);
+            self.initMenu(tab);
+            self.setupOfferingsBehaviour();
+            self.constructOfferingsTabControls();
+            self.promptForSelection(tab);
+          }
+
+          return false;
+        });
+
+        return c;
+      },
+ 
+      /**
        * Construct a link (& handler) to list all offerings
        */
-      constructAllOfferingsLink: function() {
+      constructListAllOfferingsLink: function() {
         var l = jQuery('<a/>', {
-          text: "List all Offerings"
+          text: this.config.menu.options.listAllOfferings.label
         }).button();
         l.bind("click", {self: this}, function(evt) {
           var self = evt.data.self;
@@ -2097,11 +2185,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.constructObservedPropertiesEntries();
         this.initMenu(tab);
         this.setupObservedPropertiesBehaviour();
-
-        // Optionally ensure that observed properties tab is auto selected
-        if(this.config.menu.options.promptForSelection) {
-          tab.prev('h3[role="tab"]').trigger('click');
-        }
+        this.promptForSelection(tab);
       },
 
       /**
@@ -2118,7 +2202,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           names = SOS.Utils.toTitleCase(SOS.Utils.toDisplayName(SOS.Utils.urnToName(offering.getObservedPropertyNames())));
 
           for(var i = 0, len = ids.length; i < len; i++) {
-            var entry = {value: ids[i], text: names[i]};
+            var entry = {value: ids[i], label: names[i]};
             this.config.menu.entries.push(entry);
           }
         }
@@ -2152,11 +2236,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       displayControls: function() {
         var tab = jQuery('#' + this.config.menu.id + 'ControlsTab');
         this.initControls();
-
-        // Optionally ensure that controls tab is auto selected
-        if(this.config.menu.options.promptForSelection) {
-          tab.prev('h3[role="tab"]').trigger('click');
-        }
+        this.promptForSelection(tab);
       },
 
       /**
@@ -2172,28 +2252,39 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       constructControls: function() {
         var tab = jQuery('#' + this.config.menu.id + 'ControlsTab');
+        var options = this.config.menu.options;
 
         tab.html("");
 
         // Plot control section container
-        tab.append(jQuery('<span class="sos-control-title">Plot / Table</span>'));
-        var csc1 = jQuery('<div class="sos-control-section sos-control-section-container"/>');
-        tab.append(csc1);
-        csc1.append(jQuery('<span>Date Range</span>'));
+        if(options.plotTableControlsSection.active) {
+          tab.append(jQuery('<span></span>', {
+            "class": "sos-control-title",
+            text: options.plotTableControlsSection.sectionLabel
+          }));
+          var csc1 = jQuery('<div class="sos-control-section sos-control-section-container"/>');
+          tab.append(csc1);
+          csc1.append(jQuery('<span></span>', {
+            text: options.plotTableControlsSection.dateLabel
+          }));
 
-        // Start datetime
-        var sd = jQuery('<input type="text" id="' + this.config.menu.id + 'ControlsStartDatetime"/>');
-        sd.datepicker(this.config.menu.options.datePickers);
-        csc1.append('<br/>', sd);
+          // Start datetime
+          var sd = jQuery('<input type="text" id="' + this.config.menu.id + 'ControlsStartDatetime"/>');
+          sd.datepicker(this.config.menu.options.datePickers);
+          csc1.append('<br/>', sd);
 
-        // End datetime
-        var ed = jQuery('<input type="text" id="' + this.config.menu.id + 'ControlsEndDatetime"/>');
-        ed.datepicker(this.config.menu.options.datePickers);
-        csc1.append('<br/>', ed);
+          // End datetime
+          var ed = jQuery('<input type="text" id="' + this.config.menu.id + 'ControlsEndDatetime"/>');
+          ed.datepicker(this.config.menu.options.datePickers);
+          csc1.append('<br/>', ed);
 
-        // Add-to-existing
-        var add = jQuery('<input type="checkbox" id="' + this.config.menu.id + 'ControlsAddToExisting"><span>Add To Existing</span></input>');
-        csc1.append('<br/>', add);
+          // Add-to-existing
+          var add = jQuery('<input type="checkbox" id="' + this.config.menu.id + 'ControlsAddToExisting"></input>');
+          var addLabel = jQuery('<span></span>', {
+            text: options.plotTableControlsSection.addToLabel
+          });
+          csc1.append('<br/>', add, addLabel);
+        }
       },
 
       /**
@@ -2311,13 +2402,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var tabs, text = "";
         var options = this.config.menu.options;
 
-        if(SOS.Utils.isValidObject(options.tabs.offerings)) {
+        if(SOS.Utils.isValidObject(options.tabs.offerings) && options.tabs.offerings.active) {
           text += '<h3><a href="#">' + options.tabs.offerings.label + '</a></h3><div id="' + this.config.menu.id + 'OfferingsTab"></div>';
         }
-        if(SOS.Utils.isValidObject(options.tabs.observedProperties)) {
+        if(SOS.Utils.isValidObject(options.tabs.observedProperties) && options.tabs.observedProperties.active) {
           text += '<h3><a href="#">' + options.tabs.observedProperties.label + '</a></h3><div id="' + this.config.menu.id + 'ObservedPropertiesTab"></div>';
         }
-        if(SOS.Utils.isValidObject(options.tabs.controls)) {
+        if(SOS.Utils.isValidObject(options.tabs.controls) && options.tabs.controls.active) {
           text += '<h3><a href="#">' + options.tabs.controls.label + '</a></h3><div id="' + this.config.menu.id + 'ControlsTab"></div>';
         }
 
@@ -2339,7 +2430,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Initialise the menu entries
         for(var i = 0, len = this.config.menu.entries.length; i < len; i++) {
-          options.push('<option value="' + this.config.menu.entries[i].value + '">' + this.config.menu.entries[i].text + '</option>');
+          options.push('<option value="' + this.config.menu.entries[i].value + '">' + this.config.menu.entries[i].label + '</option>');
         }
         s.html(options.join(''));
 
@@ -2355,25 +2446,22 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       initBlankMenu: function() {
         var options = this.config.menu.options;
 
-        if(SOS.Utils.isValidObject(options.tabs.offerings)) {
+        if(SOS.Utils.isValidObject(options.tabs.offerings) && options.tabs.offerings.active) {
           var t = jQuery('#' + this.config.menu.id + 'OfferingsTab');
 
           if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
             t.html(options.tabs.offerings.prompt);
-
-            if(options.showAllOfferings.active) {
-              t.append('<p/>', options.showAllOfferings.prompt, '<p/>', this.constructAllOfferingsLink());
-            }
+            this.constructOfferingsTabControls({showPrompt: true});
           }
         }
-        if(SOS.Utils.isValidObject(options.tabs.observedProperties)) {
+        if(SOS.Utils.isValidObject(options.tabs.observedProperties) && options.tabs.observedProperties.active) {
           var t = jQuery('#' + this.config.menu.id + 'ObservedPropertiesTab');
 
           if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
             t.html(options.tabs.observedProperties.prompt);
           }
         }
-        if(SOS.Utils.isValidObject(options.tabs.controls)) {
+        if(SOS.Utils.isValidObject(options.tabs.controls) && options.tabs.controls.active) {
           var t = jQuery('#' + this.config.menu.id + 'ControlsTab');
 
           if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
@@ -2389,20 +2477,17 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var self = evt.data.self;
         var options = self.config.menu.options;
 
-        if(SOS.Utils.isValidObject(options.tabs.offerings)) {
+        if(SOS.Utils.isValidObject(options.tabs.offerings) && options.tabs.offerings.active) {
           if(ui.newHeader.text() == options.tabs.offerings.label) {
             var t = jQuery('#' + self.config.menu.id + 'OfferingsTab');
 
             if(typeof t.html() == "undefined" || jQuery.trim(t.html()) == "") {
               t.html(options.tabs.offerings.prompt);
-
-              if(options.showAllOfferings.active) {
-                t.append('<p/>', options.showAllOfferings.prompt, '<p/>', self.constructAllOfferingsLink());
-              }
+              self.constructOfferingsTabControls({showPrompt: true});
             }
           }
         }
-        if(SOS.Utils.isValidObject(options.tabs.observedProperties)) {
+        if(SOS.Utils.isValidObject(options.tabs.observedProperties) && options.tabs.observedProperties.active) {
           if(ui.newHeader.text() == options.tabs.observedProperties.label) {
             var t = jQuery('#' + self.config.menu.id + 'ObservedPropertiesTab');
 
@@ -2411,7 +2496,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             }
           }
         }
-        if(SOS.Utils.isValidObject(options.tabs.controls)) {
+        if(SOS.Utils.isValidObject(options.tabs.controls) && options.tabs.controls.active) {
           if(ui.newHeader.text() == options.tabs.controls.label) {
             var t = jQuery('#' + self.config.menu.id + 'ControlsTab');
 
@@ -2419,6 +2504,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               t.html(options.tabs.controls.prompt);
             }
           }
+        }
+      },
+
+      /**
+       * Optionally auto-select the given tab as a prompt for selection
+       */
+      promptForSelection: function(tab) {
+        if(this.config.menu.options.promptForSelection) {
+          tab.prev('h3[role="tab"]').trigger('click');
         }
       },
 
