@@ -2021,14 +2021,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       /**
        * Construct the offerings menu entries
        */
-      constructOfferingsEntries: function() {
+      constructOfferingsEntries: function(options) {
         var ids = [], names = [];
+        var options = options || {filterOnFOI: true};
         this.config.menu.entries = [];
         var item = this.getCurrentItem();
 
         /* If an FOI was selected, then only get offerings for that FOI.
            Otherwise we get all offerings */
-        if(SOS.Utils.isValidObject(item) && SOS.Utils.isValidObject(item.foi)) {
+        if(options.filterOnFOI && SOS.Utils.isValidObject(item) && SOS.Utils.isValidObject(item.foi)) {
           var offerings = [];
           offerings = offerings.concat(this.sos.getOfferingsForFeatureOfInterestId(item.foi.id));
 
@@ -2111,14 +2112,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       constructSearchOfferingsInput: function() {
         var item = this.getCurrentItem();
 
-        /* A selected FOI acts as a filter on available offerings.  We want to
-           search all offerings, so we remove any existent FOI */
-        if(SOS.Utils.isValidObject(item) && SOS.Utils.isValidObject(item.foi)) {
-          item.foi = null;
-        }
+        /* N.B.: A selected FOI acts as a filter on available offerings.  We
+                 want to search all offerings, hence the filterOnFOI setting */
 
         // Clone the offerings entries as source for the search autocomplete
-        this.constructOfferingsEntries();
+        this.constructOfferingsEntries({filterOnFOI: false});
         var src = this.config.menu.entries.slice(0);
 
         /* Create an autocomplete search box with placeholder text.  Filter
