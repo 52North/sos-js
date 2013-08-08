@@ -30,6 +30,31 @@
   z-index: 1200;
 }
 
+.sos-plot-rose {
+  width: 550px;
+  height: 340px;
+}
+
+.sos-plot-rose-offset {
+  left: 210px;
+}
+
+.sos-plot-rose-annotation-title {
+  position: absolute;
+  left: 22px;
+  top: 333px;
+}
+
+.sos-plot-rose-annotation-box {
+  float: right;
+  margin-top: -20px;
+  margin-right: 5px;
+}
+
+.sos-plot-rose-annotation-mean, .sos-plot-rose-annotation-calm {
+  font-size: 60%;
+}
+
 .sos-control-title {
   font-weight: bold;
 }

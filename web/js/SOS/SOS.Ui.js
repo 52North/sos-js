@@ -371,6 +371,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             id: "sosPlot",
             series: [],
             options: {
+              show: true,
               xaxis: {mode: "time", axisLabel: "Time"},
               yaxis: {},
               xaxes: [],
@@ -379,7 +380,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               selection: {mode: "x"},
               grid: {borderWidth: 1, hoverable: true, clickable: true},
               legend: {show: true, backgroundOpacity: 0.5},
-              series: {lines: {show: true}, points: {show: false}}
+              series: {lines: {show: true}, points: {show: false}, bars: {show: false}}
             }
           },
           overview: {
@@ -393,7 +394,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               selection: {mode: "x"},
               grid: {borderWidth: 1},
               legend: {show: false},
-              series: {lines: {show: true, lineWidth: 1}, shadowSize: 0}
+              series: {lines: {show: true, lineWidth: 1}, points: {show: false}, bars: {show: false}, shadowSize: 0}
             }
           },
           format: {
@@ -494,7 +495,17 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         if(this.haveValidOfferingObject()) {
           if(SOS.Utils.isValidObject(this.observedProperty)) {
-            this.offering.filterObservedProperties(this.observedProperty);
+            // If observed property is an array, fetch each in turn
+            if(SOS.Utils.isArray(this.observedProperty)) {
+              this.config.mode.append = true;
+              var p = this.observedProperty[this.config.plot.series.length];
+
+              if(p) {
+                this.offering.filterObservedProperties(p);
+              }
+            } else {
+              this.offering.filterObservedProperties(this.observedProperty);
+            }
           }
           this.determineObservationQueryTimeParameters();
           this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.draw});
@@ -519,26 +530,36 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           this.config.plot.series = [table];
         }
 
+        // If observed property is an array, fetch each in turn
+        if(SOS.Utils.isArray(this.observedProperty)) {
+          if(this.config.plot.series.length < this.observedProperty.length) {
+            this._display();
+            return this.config.plot.series.length;
+          }
+        }
+
         // Reset plot/overview if we've already set them up before
         this.resetBehaviour();
 
         // Set any last minute defaults if not already set
         this.applyDefaults();
 
-        // Generate the plot
-        this.config.plot.object = jQuery.plot(jQuery('#' + this.config.plot.id), this.config.plot.series, this.config.plot.options);
+        if(this.config.plot.options.show) {
+          // Generate the plot
+          this.config.plot.object = jQuery.plot(jQuery('#' + this.config.plot.id), this.config.plot.series, this.config.plot.options);
 
-        // Optionally generate the plot overview
-        if(this.config.overview.options.show) {
-          this.drawOverview();
-        }
+          // Optionally generate the plot overview
+          if(this.config.overview.options.show) {
+            this.drawOverview();
+          }
 
-        // Manage the plot's interactive behaviour
-        this.setupBehaviour();
+          // Manage the plot's interactive behaviour
+          this.setupBehaviour();
 
-        // Optionally manage the plot overview behaviour
-        if(this.config.overview.options.show) {
-          this.setupOverviewBehaviour();
+          // Optionally manage the plot overview behaviour
+          if(this.config.overview.options.show) {
+            this.setupOverviewBehaviour();
+          }
         }
 
         // Now we have the base plot, plot any additional data
@@ -555,6 +576,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var options = this.config.plot.options;
         var series = this.config.plot.series;
 
+        // Apply the current global series options to the current data series
+        if(series.length > 0) {
+          jQuery.extend(true, series[series.length-1], options.series);
+        }
         options.grid = options.grid || {};
 
         if(options.grid.show === false) {
@@ -745,12 +770,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var table = this.constructDataTable(this.offering);
         this.config.plot.series.push(table);
 
-        this.update();
+        if(this.config.plot.options.show) {
+          this.update();
 
-        // Optionally update the plot overview also
-        if(this.config.overview.options.show) {
-          this.config.overview.series = this.config.plot.series;
-          this.updateOverview();
+          // Optionally update the plot overview also
+          if(this.config.overview.options.show) {
+            this.config.overview.series = this.config.plot.series;
+            this.updateOverview();
+          }
         }
       },
 
@@ -863,6 +890,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             id: "sosTable",
             series: [],
             options: {
+              show: true,
               header: {},
               scrollable: false
             }
@@ -878,7 +906,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               selection: {mode: "x"},
               grid: {borderWidth: 1},
               legend: {show: false},
-              series: {lines: {show: true, lineWidth: 1}, shadowSize: 0}
+              series: {lines: {show: true, lineWidth: 1}, points: {show: false}, bars: {show: false}, shadowSize: 0}
             }
           },
           format: {
@@ -957,7 +985,17 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         if(this.haveValidOfferingObject()) {
           if(SOS.Utils.isValidObject(this.observedProperty)) {
-            this.offering.filterObservedProperties(this.observedProperty);
+            // If observed property is an array, fetch each in turn
+            if(SOS.Utils.isArray(this.observedProperty)) {
+              this.config.mode.append = true;
+              var p = this.observedProperty[this.config.table.series.length];
+
+              if(p) {
+                this.offering.filterObservedProperties(p);
+              }
+            } else {
+              this.offering.filterObservedProperties(this.observedProperty);
+            }
           }
           this.determineObservationQueryTimeParameters();
           this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.draw});
@@ -982,28 +1020,38 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           this.config.table.series = [table];
         }
 
+        // If observed property is an array, fetch each in turn
+        if(SOS.Utils.isArray(this.observedProperty)) {
+          if(this.config.table.series.length < this.observedProperty.length) {
+            this._display();
+            return this.config.table.series.length;
+          }
+        }
+
         // Reset table/overview if we've already set them up before
         this.resetBehaviour();
 
         // Set any last minute defaults if not already set
         this.applyDefaults();
 
-        // Generate the table
-        var t = jQuery('#' + this.config.table.id);
-        this.clearTable(t);
-        this.config.table.object = this.generateTable(t, this.config.table.series, this.config.table.options);
+        if(this.config.table.options.show) {
+          // Generate the table
+          var t = jQuery('#' + this.config.table.id);
+          this.clearTable(t);
+          this.config.table.object = this.generateTable(t, this.config.table.series, this.config.table.options);
 
-        // Optionally generate the table overview
-        if(this.config.overview.options.show) {
-          this.drawOverview();
-        }
+          // Optionally generate the table overview
+          if(this.config.overview.options.show) {
+            this.drawOverview();
+          }
 
-        // Manage the table's interactive behaviour
-        this.setupBehaviour();
+          // Manage the table's interactive behaviour
+          this.setupBehaviour();
 
-        // Optionally manage the table overview behaviour
-        if(this.config.overview.options.show) {
-          this.setupOverviewBehaviour();
+          // Optionally manage the table overview behaviour
+          if(this.config.overview.options.show) {
+            this.setupOverviewBehaviour();
+          }
         }
 
         // Now we have the base table, add any additional data
@@ -1017,8 +1065,23 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * of options is nonsensical
        */
       applyDefaults: function() {
-        var options = this.config.table.options;
+        var options = this.config.overview.options;
         var series = this.config.table.series;
+
+        /* N.B.: Although the table itself has no need for y-axes to be set,
+                 it is required for the table overview plot */
+
+        // Apply the current global series options to the current data series
+        if(series.length > 0) {
+          jQuery.extend(true, series[series.length-1], options.series);
+        }
+        options.yaxes = options.yaxes || [];
+
+        // Specify which yaxis applies to which data series
+        for(var i = 0, len = series.length; i < len; i++) {
+          options.yaxes[i] = {};
+          series[i].yaxis = (i + 1);
+        }
       },
 
       /**
@@ -1239,12 +1302,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var table = this.constructDataTable(this.offering);
         this.config.table.series.push(table);
 
-        this.update();
+        if(this.config.table.options.show) {
+          this.update();
 
-        // Optionally update the plot overview also
-        if(this.config.overview.options.show) {
-          this.config.overview.series = this.config.table.series;
-          this.updateOverview();
+          // Optionally update the plot overview also
+          if(this.config.overview.options.show) {
+            this.config.overview.series = this.config.table.series;
+            this.updateOverview();
+          }
         }
       },
 
@@ -1915,7 +1980,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 active: true,
                 sectionLabel: "Plot / Table",
                 dateLabel: "Date Range",
-                addToLabel: "Add To Existing",
+                addToLabel: "Add To Existing"
               },
               searchOfferings: {
                 active: true,
