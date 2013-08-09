@@ -508,27 +508,20 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             }
           }
           this.determineObservationQueryTimeParameters();
-          this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.draw});
+          this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawObservationData});
           this.offering.getObservations(this.startDatetime, this.endDatetime);
         }
       },
 
       /**
-       * Plot the given observation data
+       * Store and then display the retrieved observation data
        */
-      draw: function() {
+      drawObservationData: function() {
         // Avoid incremental calls to this function on subsequent event trigger
-        this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.draw});
+        this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawObservationData});
 
-        // Construct the data series
-        var table = this.constructDataTable(this.offering);
-
-        // We can add to an existing base plot or overwrite, dependent on mode
-        if(this.config.mode.append) {
-          this.config.plot.series.push(table);
-        } else {
-          this.config.plot.series = [table];
-        }
+        // Add these data to the data series
+        this.storeObservationData();
 
         // If observed property is an array, fetch each in turn
         if(SOS.Utils.isArray(this.observedProperty)) {
@@ -538,6 +531,29 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           }
         }
 
+        // Display the data series
+        this.draw();
+      },
+
+      /**
+       * Store the retrieved observation data
+       */
+      storeObservationData: function() {
+        // Construct the data series
+        var table = this.constructDataTable(this.offering);
+
+        // We can add to an existing base plot or overwrite, dependent on mode
+        if(this.config.mode.append) {
+          this.config.plot.series.push(table);
+        } else {
+          this.config.plot.series = [table];
+        }
+      },
+
+      /**
+       * Plot the given observation data
+       */
+      draw: function() {
         // Reset plot/overview if we've already set them up before
         this.resetBehaviour();
 
@@ -998,27 +1014,20 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             }
           }
           this.determineObservationQueryTimeParameters();
-          this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.draw});
+          this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawObservationData});
           this.offering.getObservations(this.startDatetime, this.endDatetime);
         }
       },
 
       /**
-       * Display the given observation data
+       * Store and then display the retrieved observation data
        */
-      draw: function() {
+      drawObservationData: function() {
         // Avoid incremental calls to this function on subsequent event trigger
-        this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.draw});
+        this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawObservationData});
 
-        // Construct the data series
-        var table = this.constructDataTable(this.offering);
-
-        // We can add to an existing base table or overwrite, dependent on mode
-        if(this.config.mode.append) {
-          this.config.table.series.push(table);
-        } else {
-          this.config.table.series = [table];
-        }
+        // Add these data to the data series
+        this.storeObservationData();
 
         // If observed property is an array, fetch each in turn
         if(SOS.Utils.isArray(this.observedProperty)) {
@@ -1028,6 +1037,29 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           }
         }
 
+        // Display the data series
+        this.draw();
+      },
+
+      /**
+       * Store the retrieved observation data
+       */
+      storeObservationData: function() {
+        // Construct the data series
+        var table = this.constructDataTable(this.offering);
+
+        // We can add to an existing base table or overwrite, dependent on mode
+        if(this.config.mode.append) {
+          this.config.table.series.push(table);
+        } else {
+          this.config.table.series = [table];
+        }
+      },
+
+      /**
+       * Display the given observation data
+       */
+      draw: function() {
         // Reset table/overview if we've already set them up before
         this.resetBehaviour();
 
@@ -3217,7 +3249,19 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         if(this.haveValidOfferingObject()) {
           if(SOS.Utils.isValidObject(this.observedProperty)) {
-            this.offering.filterObservedProperties(this.observedProperty);
+            // If observed property is an array, fetch each in turn
+            if(SOS.Utils.isArray(this.observedProperty)) {
+              var components = this.config.app.components;
+              components.plot.config.mode.append = true;
+              components.table.config.mode.append = true;
+              var p = this.observedProperty[components.plot.config.plot.series.length];
+
+              if(p) {
+                this.offering.filterObservedProperties(p);
+              }
+            } else {
+              this.offering.filterObservedProperties(this.observedProperty);
+            }
           }
           this.determineObservationQueryTimeParameters();
           this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawObservationData});
@@ -3226,22 +3270,58 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
-       * Display the given observation data (plot, table etc.)
+       * Store and then display the retrieved observation data as a plot,
+       * table etc.
        */
       drawObservationData: function() {
-        // Avoid cumulative calls to this function
+        // Avoid incremental calls to this function on subsequent event trigger
         this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawObservationData});
-
         var components = this.config.app.components;
+
+        // Add these data to the data series
+        this.storeObservationData();
+
+        // If observed property is an array, fetch each in turn
+        if(SOS.Utils.isArray(this.observedProperty)) {
+          if(components.plot.config.plot.series.length < this.observedProperty.length) {
+            this.getObservationData();
+            return components.plot.config.plot.series.length;
+          }
+        }
+
+        // Display the data series
+        this.draw();
+      },
+
+      /**
+       * Store the retrieved observation data in the plot, table etc.
+       */
+      storeObservationData: function() {
+        var components = this.config.app.components;
+
+        components.plot.offering = this.offering;
+        components.table.offering = this.offering;
+
+        // Add these data to the data series of the respective components
+        components.plot.storeObservationData();
+        components.table.storeObservationData();
+      },
+
+      /**
+       * Display the given observation data (plot, table etc.)
+       */
+      draw: function() {
+        var components = this.config.app.components;
+
+        components.plot.offering = this.offering;
+        components.table.offering = this.offering;
 
         // Make the plot tab the active tab, then draw the plot & table
         jQuery('#' + this.config.app.id + 'PlotPanel').html("");
         jQuery('#' + this.config.app.id + 'PlotTab a').trigger('click');
-        components.plot.offering = this.offering;
         components.plot.draw();
 
         jQuery('#' + this.config.app.id + 'TablePanel').html("");
-        components.table.offering = this.offering;
         components.table.draw();
 
         // The plot & table share an overview, so that they talk to one another
