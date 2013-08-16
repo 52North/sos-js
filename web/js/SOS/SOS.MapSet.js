@@ -281,15 +281,28 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Event handler for map zoomEnd
        */
       mapZoomEndHandler: function(evt) {
-        var c1, c2, n, dists = [];
-        var autoMode = false;
-
         /* There can be a zoom event on initial load (e.g., by a call to
            zoomToMaxExtent()), but as this isn't a zoom performed by the user,
            we don't want to automatically switch maps */
         if(this.curr.config.isInitLoad) {
           this.curr.config.isInitLoad = false;
+        } else {
+          /* Get the centre lon/lat (accounting for CRS) of current zoomed
+             region, find the map in the mapset that's nearset to this point,
+             then switch to that map (if it's different to the current map) */
+          if(this.switcherIsInAutoMode()) {
+            var c1 = this.getCentreLonLatOfCurrentExtent();
+            var n = this.getMapIndexNearestToLonLat(c1);
+            this.switchToMapIndex(n);
+          }
         }
+      },
+
+      /**
+       * Check whether the map switcher is in auto mode
+       */
+      switcherIsInAutoMode: function() {
+        var autoMode = false;
 
         // In auto mode, we switch maps according to proximity to zoomed region
         if(this.config.useSwitcherAuto) {
@@ -297,49 +310,71 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           autoMode = (sa && sa.is(':checked'));
         }
 
-        if(autoMode) {
-          // Get the centre lon/lat (accounting for CRS) of current map
-          if(this.curr.config.map.object) {
-            c1 = this.curr.config.map.object.getExtent().clone().transform(this.curr.config.map.object.getProjectionObject(), new OpenLayers.Projection("EPSG:4326")).getCenterLonLat();
-          }
+        return autoMode;
+      },
 
-          /* Get centre lon/lat of each map in mapset, & calculate the
-             nearest centre to the current map */
-          if(c1) {
-            for(var i = 0, len = this.maps.length; i < len; i++) {
-              c2 = this.maps[i].config.map.options.centre;
+      /**
+       * Get the centre lon/lat (accounting for CRS) of current map extent
+       */
+      getCentreLonLatOfCurrentExtent: function() {
+        var c;
 
-              if(c2) {
-                var d = OpenLayers.Util.distVincenty(c1, c2);
-                dists.push(d);
+        if(this.curr.config.map.object) {
+          c = this.curr.config.map.object.getExtent().clone().transform(this.curr.config.map.object.getProjectionObject(), new OpenLayers.Projection("EPSG:4326")).getCenterLonLat();
+        }
 
-                if(Math.min.apply(null, dists) == d) {
-                  n = i;
-                }
+        return c;
+      },
+
+      /**
+       * Get the maps array index of the map whose centre is the closest to
+       * the given lon/lat
+       */
+      getMapIndexNearestToLonLat: function(c1) {
+        var c2, n, dists = [];
+
+        /* Get centre lon/lat of each map in mapset, & calculate the
+           nearest centre to the given lon/lat */
+        if(c1) {
+          for(var i = 0, len = this.maps.length; i < len; i++) {
+            c2 = this.maps[i].config.map.options.centre;
+
+            if(c2) {
+              var d = OpenLayers.Util.distVincenty(c1, c2);
+              dists.push(d);
+
+              if(Math.min.apply(null, dists) == d) {
+                n = i;
               }
             }
           }
+        }
 
-          /* Switch to the map that's nearest to the zoomed region, only if
-             it's different to the current map */
-          if(SOS.Utils.isValidObject(n)) {
-            if(this.curr !== this.maps[n]) {
+        return n;
+      },
+
+      /**
+       * Switch to the map corresponding to the given maps array index (only
+       * if it's different to the current map)
+       */
+      switchToMapIndex: function(n) {
+        if(SOS.Utils.isValidObject(n) && n >= 0 && n < this.maps.length) {
+          if(this.curr !== this.maps[n]) {
+            this.curr.config.map.container.empty();
+            this.setCurrentMap(n);
+            this.curr.config.isInitLoad = true;
+
+            /* If the original map handles the zoomend event first, then we
+               end up with two maps instead of the switched map replacing
+               the original.  This late check for emptiness is to overcome
+               that situation */
+            if(!jQuery.trim(this.curr.config.map.container.html()).length) {
+              this.curr.display();
+            } else {
               this.curr.config.map.container.empty();
-              this.setCurrentMap(n);
-              this.curr.config.isInitLoad = true;
-
-              /* If the original map handles the zoomend event first, then we
-                 end up with two maps instead of the switched map replacing
-                 the original.  This late check for emptiness is to overcome
-                 that situation */
-              if(!jQuery.trim(this.curr.config.map.container.html()).length) {
-                this.curr.display();
-              } else {
-                this.curr.config.map.container.empty();
-                this.curr.display();
-              }
-              this.config.switchers[n].object.prop("checked", true);
+              this.curr.display();
             }
+            this.config.switchers[n].object.prop("checked", true);
           }
         }
       }
