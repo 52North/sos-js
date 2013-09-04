@@ -126,7 +126,6 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         }
 
         // Display currently selected map
-        this.curr.config.isInitLoad = true;
         this.curr.display();
       },
   
@@ -273,7 +272,6 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           }
         }
         self.curr.config.map.container.empty();
-        self.curr.config.isInitLoad = true;
         self.curr.display();
       },
 
@@ -362,7 +360,6 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           if(this.curr !== this.maps[n]) {
             this.curr.config.map.container.empty();
             this.setCurrentMap(n);
-            this.curr.config.isInitLoad = true;
 
             /* If the original map handles the zoomend event first, then we
                end up with two maps instead of the switched map replacing

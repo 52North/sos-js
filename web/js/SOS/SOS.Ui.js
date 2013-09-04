@@ -1670,7 +1670,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           },
           overview: {
             options: {
-              show: false
+              show: false,
+              params: {
+              }
             }
           },
           baseLayer: {
@@ -1681,6 +1683,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               url: "http://vmap0.tiles.osgeo.org/wms/vmap0?",
               params: {
                 layers: "basic"
+              },
+              extras: {
               }
             }
           },
@@ -1766,10 +1770,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * draw the map
        */
       _display: function() {
+        this.config.isInitLoad = true;
         this.initMap();
+        this.initOverviewMap();
         this.initBaseLayer();
         this.initView();
         this.initFeatureOfInterestLayer();
+        this.config.isInitLoad = false;
       },
  
       /**
@@ -1790,13 +1797,20 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         map.addControl(new OpenLayers.Control.LayerSwitcher());
         map.addControl(new OpenLayers.Control.MousePosition());
 
-        // Optionally generate the map overview
+        this.config.map.object = map;
+      },
+
+      /**
+       * Initialise the map overview map
+       */
+      initOverviewMap: function() {
+        var map = this.config.map.object;
+
+        // Optionally generate the map overview map
         if(this.config.overview.options.show) {
           var params = this.config.overview.options.params || {};
           map.addControl(new OpenLayers.Control.OverviewMap(params));
         }
-
-        this.config.map.object = map;
       },
  
       /**
@@ -1806,13 +1820,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var map = this.config.map.object;
 
         // Setup the map's base layer, and its controls
-        var baseLayer = new OpenLayers.Layer.WMS(this.config.baseLayer.options.label, this.config.baseLayer.options.url, this.config.baseLayer.options.params);
+        var baseLayer = new OpenLayers.Layer.WMS(this.config.baseLayer.options.label, this.config.baseLayer.options.url, this.config.baseLayer.options.params, this.config.baseLayer.options.extras);
 
         map.addLayers([baseLayer]);
 
         this.config.baseLayer.object = baseLayer;
       },
- 
+
       /**
        * Initialise the map view
        */
