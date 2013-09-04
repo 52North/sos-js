@@ -2493,8 +2493,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         // Setup menu event handlers
         m.bind('accordionchange', {self: this}, this.changeMenuTabHandler);
 
-        // Configure & instantiate the menu
-        var opts = {fillSpace: true};
+        /* Configure & instantiate the menu.  N.B.: These options do the same
+           thing; fillSpace is the older jQuery UI method */
+        var opts = {fillSpace: true, heightStyle: "fill"};
 
         if(this.config.menu.step > -1) {
           opts.active = this.config.menu.step;
