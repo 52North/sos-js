@@ -274,11 +274,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         container.after(panel);
 
         var buttons = [
-          {text: "Close", click: function() {jQuery(this).dialog("close");}}
+          {text: "Close", click: function() {jQuery(this).dialog().dialog("close");}}
         ];
 
         var dialog = panel.dialog({position: ['center', 'center'], buttons: buttons, title: series.label, width: 540, zIndex: 1010, stack: false});
-        dialog.bind('dialogclose', function() {jQuery(this).remove(); jQuery(this).dialog("destroy");});
+        dialog.bind('dialogclose', function() {jQuery(this).remove(); jQuery(this).dialog().dialog("destroy");});
       },
 
       /**
