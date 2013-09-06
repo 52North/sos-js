@@ -6,18 +6,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>SOS Plot Browser</title>
 
-    <link rel="stylesheet" href="/js/sos/jquery/theme/default/jquery-ui.min.css" type="text/css"/>
-    <link rel="stylesheet" href="/js/sos/SOS/SOS.Styles.css" type="text/css"/>
-    <script type="text/javascript" src="/js/sos/proj4js/lib/proj4js-combined.js"></script>
-    <script type="text/javascript" src="/js/sos/OpenLayers/OpenLayers.js"></script>
-    <script type="text/javascript" src="/js/sos/jquery/jquery.min.js"></script>
-    <script type="text/javascript" src="/js/sos/jquery/jquery-ui.min.js"></script>
-    <!--[if lte IE 8]><script type="text/javascript" src="/js/sos/flot/excanvas.min.js"></script><![endif]-->
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.min.js"></script>
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.selection.min.js"></script>
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.axislabels.min.js"></script>
-    <script type="text/javascript" src="/js/sos/SOS/SOS.js"></script>
-    <script type="text/javascript" src="/js/sos/SOS/SOS.Ui.js"></script>
+    <link rel="stylesheet" href="http://basmet.nerc-bas.ac.uk/js/sos/jquery/theme/default/jquery-ui.min.css" type="text/css"/>
+    <link rel="stylesheet" href="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.Styles.css" type="text/css"/>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/OpenLayers/OpenLayers.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/jquery/jquery-ui.min.js"></script>
+    <!--[if lte IE 8]><script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/excanvas.min.js"></script><![endif]-->
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.selection.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.axislabels.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.Ui.js"></script>
   </head>
   <body onload="init()">
 
@@ -26,6 +25,7 @@
   $title = (!empty($_POST['title']) ? $_POST['title'] : (!empty($_GET['title']) ? $_GET['title'] : NULL));
   if($title) print "<h3 id=\"title\">$title</h3>\n";
 ?>
+    <p>This tests the SOS.Plot component from the SOS.Ui.js module.  This PHP script shows how a SOS.Plot can be dynamically constructed from arguments to this script's URL.  See also the SOS Plot Test example.</p>
 
     <!-- This is all the SOS.Plot needs -->
     <div id="sosPlot" class="sos-plot"></div>

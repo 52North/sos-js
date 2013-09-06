@@ -6,18 +6,18 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>SOS App</title>
 
-    <link rel="stylesheet" href="/js/sos/jquery/theme/default/jquery-ui.min.css" type="text/css"/>
-    <link rel="stylesheet" href="/js/sos/SOS/SOS.Styles.css" type="text/css"/>
-    <script type="text/javascript" src="/js/sos/proj4js/lib/proj4js-combined.js"></script>
-    <script type="text/javascript" src="/js/sos/OpenLayers/OpenLayers.js"></script>
-    <script type="text/javascript" src="/js/sos/jquery/jquery.min.js"></script>
-    <script type="text/javascript" src="/js/sos/jquery/jquery-ui.min.js"></script>
-    <!--[if lte IE 8]><script type="text/javascript" src="/js/sos/flot/excanvas.min.js"></script><![endif]-->
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.min.js"></script>
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.selection.min.js"></script>
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.axislabels.min.js"></script>
-    <script type="text/javascript" src="/js/sos/SOS/SOS.js"></script>
-    <script type="text/javascript" src="/js/sos/SOS/SOS.Ui.js"></script>
+    <link rel="stylesheet" href="http://basmet.nerc-bas.ac.uk/js/sos/jquery/theme/default/jquery-ui.min.css" type="text/css"/>
+    <link rel="stylesheet" href="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.Styles.css" type="text/css"/>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/proj4js/lib/proj4js-combined.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/OpenLayers/OpenLayers.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/jquery/jquery-ui.min.js"></script>
+    <!--[if lte IE 8]><script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/excanvas.min.js"></script><![endif]-->
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.selection.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.axislabels.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.Ui.js"></script>
 
     <script type="text/javascript">
       /**
@@ -31,8 +31,19 @@
         app.display();
       }
     </script>
+    <style>
+      .sos-app-container {
+        width: 100%;
+        position: relative;
+        left: 0px;
+        top: 10px;
+      }
+    </style>
   </head>
   <body onload="init()">
+    <h3 id="title">SOS App Test</h3>
+    <p>This tests the SOS.App default application from the SOS.Ui.js module.  The SOS.App pulls together the various UI components, such as SOS.Map, SOS.Plot etc. into an application to enable browsing, visualisation, and access, of SOS data.</p>
+    <p>Select a station from the map.  Select an offering, then an observed property.  The observed property's data will then be plotted and tabulated.  By default, a rolling month's worth of data is shown, but specific dates can be selected via the Date Range controls under the Controls menu item.  To overplot further data, check the Add To Existing control before selecting an additional observed property.</p>
   </body>
 </html>
 

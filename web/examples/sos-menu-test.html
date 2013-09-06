@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>SOS Menu Test</title>
-    <link rel="stylesheet" href="/js/sos/jquery/theme/default/jquery-ui.min.css" type="text/css"/>
-    <link rel="stylesheet" href="/js/sos/jquery/theme/default/jquery.selectBox.css" type="text/css"/>
-    <link rel="stylesheet" href="/js/sos/SOS/SOS.Styles.css" type="text/css"/>
-    <script type="text/javascript" src="/js/sos/proj4js/lib/proj4js-combined.js"></script>
-    <script type="text/javascript" src="/js/sos/OpenLayers/OpenLayers.js"></script>
-    <script type="text/javascript" src="/js/sos/jquery/jquery.min.js"></script>
-    <script type="text/javascript" src="/js/sos/jquery/jquery-ui.min.js"></script>
-    <!--[if lte IE 8]><script type="text/javascript" src="/js/sos/flot/excanvas.min.js"></script><![endif]-->
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.min.js"></script>
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.selection.min.js"></script>
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.axislabels.min.js"></script>
-    <script type="text/javascript" src="/js/sos/SOS/SOS.js"></script>
-    <script type="text/javascript" src="/js/sos/SOS/SOS.Ui.js"></script>
+
+    <link rel="stylesheet" href="http://basmet.nerc-bas.ac.uk/js/sos/jquery/theme/default/jquery-ui.min.css" type="text/css"/>
+    <link rel="stylesheet" href="http://basmet.nerc-bas.ac.uk/js/sos/jquery/theme/default/jquery.selectBox.css" type="text/css"/>
+    <link rel="stylesheet" href="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.Styles.css" type="text/css"/>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/OpenLayers/OpenLayers.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/jquery/jquery-ui.min.js"></script>
+    <!--[if lte IE 8]><script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/excanvas.min.js"></script><![endif]-->
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.selection.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.axislabels.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.Ui.js"></script>
 
     <script type="text/javascript">
       /**
@@ -31,8 +31,16 @@
         menu.display();
       }
     </script>
+    <style>
+      .sos-menu {
+        position: relative;
+        top: 10px;
+      }
+    </style>
   </head>
   <body onload="init()">
+    <h3 id="title">SOS Menu Test</h3>
+    <p>This tests the SOS.Menu component from the SOS.Ui.js module.  Given a particular feature of interest (FOI), say, from a SOS.Map object, it can show all offerings of that FOI.  Alternatively, as here, it can show all offerings for all FOIs.  Selecting an offering from the Offerings list will then show all observed properties for that offering, in the Observed Properties list.  Selecting an observed property can then be used to trigger further behaviour, such as plotting that observed property's data via a SOS.Plot for example.  Also, the menu can contain a Controls panel; useful for configuring SOS.Plot or SOS.Table objects.</p>
     <!-- <div id="sosMenu" class="sos-menu"></div> -->
   </body>
 </html>

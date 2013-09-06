@@ -5,18 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>SOS Table Test</title>
-    <link rel="stylesheet" href="/js/sos/jquery/theme/default/jquery-ui.min.css" type="text/css"/>
-    <link rel="stylesheet" href="/js/sos/SOS/SOS.Styles.css" type="text/css"/>
-    <script type="text/javascript" src="/js/sos/proj4js/lib/proj4js-combined.js"></script>
-    <script type="text/javascript" src="/js/sos/OpenLayers/OpenLayers.js"></script>
-    <script type="text/javascript" src="/js/sos/jquery/jquery.min.js"></script>
-    <script type="text/javascript" src="/js/sos/jquery/jquery-ui.min.js"></script>
-    <!--[if lte IE 8]><script type="text/javascript" src="/js/sos/flot/excanvas.min.js"></script><![endif]-->
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.min.js"></script>
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.selection.min.js"></script>
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.axislabels.min.js"></script>
-    <script type="text/javascript" src="/js/sos/SOS/SOS.js"></script>
-    <script type="text/javascript" src="/js/sos/SOS/SOS.Ui.js"></script>
+
+    <link rel="stylesheet" href="http://basmet.nerc-bas.ac.uk/js/sos/jquery/theme/default/jquery-ui.min.css" type="text/css"/>
+    <link rel="stylesheet" href="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.Styles.css" type="text/css"/>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/OpenLayers/OpenLayers.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/jquery/jquery-ui.min.js"></script>
+    <!--[if lte IE 8]><script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/excanvas.min.js"></script><![endif]-->
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.selection.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.Ui.js"></script>
 
     <script type="text/javascript">
       /**
@@ -37,6 +36,7 @@
   </head>
   <body onload="init()">
     <h3 id="title">SOS Table Test</h3>
+    <p>This tests the SOS.Table component from the SOS.Ui.js module.  It requests the <em>air_temperature</em> observed property from the <em>HalleyMet</em> offering, with a relative time of <em>yesterday</em>.  It also includes an optional overview plot below the table, which allows the table to be subsetted, via a dragged selection across the overview plot.  Similarly, two rows can be shift+clicked on the table to subselect, which is also reflected in the overview plot.  Clicking anywhere on the overview plot resets the subselection.  Furthermore, two rows can be clicked on the table, which will then produce summary statistics for the selected interval, displayed in a pop-up dialog.</p>
     <div id="sosTable" class="sos-table"></div>
   </body>
 </html>

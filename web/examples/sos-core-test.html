@@ -5,19 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>SOS Core Test</title>
+
     <style type="text/css">
-    table, th, td {
-      padding-right: 10px;
-    }
+      table, th, td {
+        padding-right: 10px;
+      }
     </style>
-    <script type="text/javascript" src="/js/sos/OpenLayers/OpenLayers.js"></script>
-    <script type="text/javascript" src="/js/sos/SOS/SOS.js"></script>
+
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/OpenLayers/OpenLayers.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.js"></script>
+
     <script type="text/javascript">
       /**
        * Initializes the page
        */
       function init() {
-        alert("Open the console log (Ctrl+Shift+k) to see outputs from this test harness");
+        alert("Open the console log (Ctrl+Shift+k in Firefox) to see outputs from this test harness");
 
         var sos = new SOS({url: 'http://sosmet.nerc-bas.ac.uk:8080/sosmet/sos'});
 
@@ -87,8 +90,9 @@
     </script>
   </head>
   <body onload="init()">
-    <h1 id="title">SOS Core Test</h1>
-    <p>Open the console log (Ctrl+Shift+k) to see outputs from this test harness</p>
+    <h3 id="title">SOS Core Test</h3>
+    <p>Open the console log (Ctrl+Shift+k in Firefox) to see outputs from this test harness</p>
+    <p>This tests the core SOS objects from the SOS.js module, via a number of user-defined callbacks.  It requests the latest data from the <em>HalleyMet</em> offering, for all observed properties, and dumps lots of output to the console log.  It is these core SOS objects that underpin the user interface components, such as SOS.Plot etc.</p>
     <div id="output"></div>
   </body>
 </html>

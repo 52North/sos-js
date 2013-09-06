@@ -5,18 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>SOS Map Test</title>
-    <link rel="stylesheet" href="/js/sos/jquery/theme/default/jquery-ui.min.css" type="text/css"/>
-    <link rel="stylesheet" href="/js/sos/SOS/SOS.Styles.css" type="text/css"/>
-    <script type="text/javascript" src="/js/sos/proj4js/lib/proj4js-combined.js"></script>
-    <script type="text/javascript" src="/js/sos/OpenLayers/OpenLayers.js"></script>
-    <script type="text/javascript" src="/js/sos/jquery/jquery.min.js"></script>
-    <script type="text/javascript" src="/js/sos/jquery/jquery-ui.min.js"></script>
-    <!--[if lte IE 8]><script type="text/javascript" src="/js/sos/flot/excanvas.min.js"></script><![endif]-->
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.min.js"></script>
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.selection.min.js"></script>
-    <script type="text/javascript" src="/js/sos/flot/jquery.flot.axislabels.min.js"></script>
-    <script type="text/javascript" src="/js/sos/SOS/SOS.js"></script>
-    <script type="text/javascript" src="/js/sos/SOS/SOS.Ui.js"></script>
+
+    <link rel="stylesheet" href="http://basmet.nerc-bas.ac.uk/js/sos/jquery/theme/default/jquery-ui.min.css" type="text/css"/>
+    <link rel="stylesheet" href="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.Styles.css" type="text/css"/>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/proj4js/lib/proj4js-combined.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/OpenLayers/OpenLayers.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/jquery/jquery-ui.min.js"></script>
+    <!--[if lte IE 8]><script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/excanvas.min.js"></script><![endif]-->
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.selection.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.axislabels.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.Ui.js"></script>
 
     <script type="text/javascript">
       /**
@@ -32,14 +33,14 @@
           centre: new OpenLayers.LonLat(0, -90),
           params: {
             projection: "EPSG:3031",
-            maxExtent: new OpenLayers.Bounds(-2700000.0,-2250000.0,2850000.0,2400000.0)
+            maxExtent: new OpenLayers.Bounds(-5000000.0,-5000000.0,5000000.0,5000000.0),
           }
         });
         map.setBaseLayerOptions({
-          label: "Bamber Hillshade",
+          label: "SCAR ADD",
           url: "http://www.add.scar.org:8080/geoserver/wms?",
           params: {
-            layers: "bamber_hillshade"
+            layers: ["add:timmermann_bathy_3031", "add:bamber_hillshade", "add:cst10_polygon", "add:cst10_linestring", "add:sgssi10_polygon", "add:macquarie10_polygon", "add:heard10_polygon", "add:outliers10_polygon", "add:graticule", "add:add_data_limit"]
           }
         });
         map.setOverviewOptions({show: true});
@@ -49,6 +50,7 @@
   </head>
   <body onload="init()">
     <h3 id="title">SOS Map Test</h3>
+    <p>This tests the SOS.Map component from the SOS.Ui.js module.  It overlays some BAS meteorological stations, requested from the SOS, as features of interest on an OpenLayers polar stereographic map of Antarctica.</p>
     <!-- <div id="sosMap" class="sos-map"></div> -->
   </body>
 </html>
