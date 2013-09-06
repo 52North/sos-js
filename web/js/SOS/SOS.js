@@ -162,10 +162,12 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
        */
       setObservationResponseFormatFromTypeSuggestion: function(type) {
         if(this.haveValidCapabilitiesObject()) {
-          for(var format in this.SOSCapabilities.operationsMetadata.GetObservation.parameters.responseFormat.allowedValues) {
-            if(format.indexOf(type) >= 0) {
-              this.config.observation.responseFormat = format;
-              break;
+          if(SOS.Utils.isValidObject(this.SOSCapabilities.operationsMetadata)) {
+            for(var format in this.SOSCapabilities.operationsMetadata.GetObservation.parameters.responseFormat.allowedValues) {
+              if(format.indexOf(type) >= 0) {
+                this.config.observation.responseFormat = format;
+                break;
+              }
             }
           }
         }
