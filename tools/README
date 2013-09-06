@@ -1,5 +1,0 @@
-			Tools to access an SOS web service
-			==================================
-
-This directory collects together various tools that have been developed for accessing an SOS web service.  Note that these are generally non web based.  The web based tools (i.e. the SOS javascript libraries) are located elsewhere in this repository.
-
