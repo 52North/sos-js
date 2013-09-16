@@ -1708,6 +1708,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               }),
               displayLatestObservations: false
             }
+          },
+          latestObservationsPopup: {
+            active: true,
+            caption: "Latest Values",
+            columnHeadings: [
+              "Observed Property",
+              "Time",
+              "Value"
+            ]
           }
         };
         jQuery.extend(true, this, options);
@@ -1940,12 +1949,12 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             tcontent += '</tr>';
           }
           html += '<table class="sos-table sos-embedded-table">';
-          html += '<caption class="sos-table"></caption>';
+          html += '<caption class="sos-table">' + this.config.latestObservationsPopup.caption + '</caption>';
           html += '<thead class="sos-table">';
           html += '<tr class="sos-table">';
-          html += '<th class="sos-table">Observed Property</th>';
-          html += '<th class="sos-table">Time</th>';
-          html += '<th class="sos-table">Value</th>';
+          for(var j = 0, len = this.config.latestObservationsPopup.columnHeadings.length; j < len; j++) {
+            html += '<th class="sos-table">' + this.config.latestObservationsPopup.columnHeadings[j] + '</th>';
+          }
           html += '</tr>';
           html += '</thead>';
           html += '<tfoot/>';
