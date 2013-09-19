@@ -136,11 +136,11 @@ In our observation handler, we can then iterate over the observation records tha
     tbody += '<tr>';
     tbody += '<td>' + ob.observedPropertyTitle + '</td>';
     tbody += '<td>' + ob.time + '</td>';
-    tbody += '<td>' + ob.result.value + ' ' + ob.UomTitle + '</td>';
+    tbody += '<td>' + ob.result.value + ' ' + ob.uomTitle + '</td>';
     tbody += '</tr>';
   }
 
-The observation record that is returned by a call to ``getObservationRecord`` is an `Observations and Measurements`_ om:Measurement resultModel representation, as returned by SOS, with additional convenience members of ``time``, ``observedPropertyTitle`` and ``UomTitle``.  It has the following structure::
+The observation record that is returned by a call to ``getObservationRecord`` is an `Observations and Measurements`_ om:Measurement resultModel representation, as returned by SOS, with additional convenience members of ``time``, ``observedPropertyTitle`` and ``uomTitle``.  It has the following structure::
 
   {
     samplingTime: {
@@ -178,7 +178,7 @@ The observation record that is returned by a call to ``getObservationRecord`` is
     },
     time: "2013-08-25T00:00:00.000Z",
     observedPropertyTitle: "Air Temperature",
-    UomTitle: "&deg;C"
+    uomTitle: "&deg;C"
   }
 
 .. rubric:: Footnotes

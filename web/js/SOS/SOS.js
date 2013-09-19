@@ -456,7 +456,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           // Some convenience properties
           record.time = record.samplingTime.timeInstant.timePosition;
           record.observedPropertyTitle = SOS.Utils.toTitleCase(SOS.Utils.toDisplayName(SOS.Utils.urnToName(record.observedProperty)));
-          record.UomTitle = SOS.Utils.toDisplayUom(record.result.uom);
+          record.uomTitle = SOS.Utils.toDisplayUom(record.result.uom);
         }
 
         return record;
@@ -606,6 +606,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         "m/s": "m s<sup>-1</sup>"
       },
 
+      nonPrintingCharacterLabels: {
+        ' ': "(space)",
+        '\t': "(tab)",
+        '\n': "(newline)",
+        '\r\n': "(carriage return/newline)",
+        '\r': "(carriage return)"
+      },
+
       isValidObject: function(x) {
         return (typeof x !== "undefined" && x !== null);
       },
@@ -719,6 +727,26 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
 
             for(var i = 0, len = x.length; i < len; i++) {
               y.push(this.toDisplayUom(x[i]));
+            }
+          }
+        }
+
+        return y;
+      },
+
+      nonPrintingCharacterToLabel: function(x) {
+        var y = x;
+
+        if(this.isValidObject(this.nonPrintingCharacterLabels)) {
+          if(typeof x == "string") {
+            if(this.nonPrintingCharacterLabels[x]) {
+              y = this.nonPrintingCharacterLabels[x];
+            }
+          } else if(this.isArray(x)) {
+            y = [];
+
+            for(var i = 0, len = x.length; i < len; i++) {
+              y.push(this.nonPrintingCharacterToLabel(x[i]));
             }
           }
         }

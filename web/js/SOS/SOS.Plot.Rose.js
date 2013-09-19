@@ -173,7 +173,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var stats = this.computeDataStats([mag], 1);
         this.drawTitle();
         this.drawAnnotationBox();
-        this.drawMeanLabel(stats.mean, mag.uom);
+        this.drawMeanLabel(stats.mean, mag.uomTitle);
         this.drawCalmLabel(stats.calm, "%");
       },
 
@@ -320,7 +320,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
            the given magnitude within the given sector, expressed as a
            percentage */
         for(var j = 0, c = 0; j < magMax; j += options.f_max) {
-          var label = j + " to " + (j + options.f_max) + " / " + mag.uom;
+          var label = j + " to " + (j + options.f_max) + " / " + mag.uomTitle;
           var data = [];
 
           for(var i = 0; i < options.Nd; i++) {

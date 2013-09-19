@@ -173,7 +173,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * suitable for displaying
        */
       constructDataTable: function(res) {
-        var table = {label: "", headerLabel: "", name: "", uom: "", data: []};
+        var table = {label: "", headerLabel: "", name: "", uom: "", uomTitle: "", data: []};
 
         // Construct the data table
         for(var i = 0, len = res.getCountOfObservations(); i < len; i++) {
@@ -183,7 +183,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             table.name = ob.observedPropertyTitle;
           }
           if(table.uom.length < 1) {
-            table.uom = ob.UomTitle;
+            table.uom = ob.result.uom;
+            table.uomTitle = ob.uomTitle;
           }
           table.data.push([SOS.Utils.isoToJsTimestamp(ob.time), ob.result.value]);
         }
@@ -197,7 +198,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         }
         if(table.label.length > 0) table.label += " ";
         table.label += table.name;
-        table.headerLabel = table.label + (table.uom.length > 0 ? " / " + table.uom : "");
+        table.headerLabel = table.label + (table.uomTitle.length > 0 ? " / " + table.uomTitle : "");
 
         return table;
       },
@@ -209,11 +210,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var subset = [], n = 0;
 
         for(var i = 0, slen = series.length; i < slen; i++) {
-          subset[i] = {label: "", headerLabel: "", name: "", uom: "", data: []};
+          subset[i] = {label: "", headerLabel: "", name: "", uom: "", uomTitle: "", data: []};
           n = 0;
 
           // Copy all metadata
-          for(var key in {label: "", headerLabel: "", name: "", uom: ""}) {
+          for(var key in {label: "", headerLabel: "", name: "", uom: "", uomTitle: ""}) {
             subset[i][key] = series[i][key];
           }
 
@@ -309,7 +310,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         table += '</tbody></table>';
         st.append(table);
 
-        panel.append('<span class="sos-control-title">' + series.name + ' / ' + series.uom + '</span>', '<hr></hr>');
+        panel.append('<span class="sos-control-title">' + series.name + ' / ' + series.uomTitle + '</span>', '<hr></hr>');
         panel.append(st, sp);
 
         // Generate stats plot
@@ -611,7 +612,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               series[i].yaxis = (i + 1);
 
               options.yaxes[i].axisLabel = series[i].name;
-              options.yaxes[i].axisLabel += (series[i].uom.length > 0 ? " / " + series[i].uom : "");
+              options.yaxes[i].axisLabel += (series[i].uomTitle.length > 0 ? " / " + series[i].uomTitle : "");
             }
           }
         }
@@ -657,7 +658,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             var y = pos.pageY + 20;
             var time = item.datapoint[0];
             var datum = item.datapoint[1];
-            var html = jQuery('<p><span class="sos-control-title">Time:</span> <span>' + ft.formatter(time) + '</span><br/><span class="sos-control-title">Value:</span> <span>' + fv.formatter(datum, fv.sciLimit, fv.digits) + ' ' + item.series.uom + '</span></p>');
+            var html = jQuery('<p><span class="sos-control-title">Time:</span> <span>' + ft.formatter(time) + '</span><br/><span class="sos-control-title">Value:</span> <span>' + fv.formatter(datum, fv.sciLimit, fv.digits) + ' ' + item.series.uomTitle + '</span></p>');
 
             valueBox.html(html);
             valueBox.css({
@@ -1513,6 +1514,90 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Generate a plain non-HTML table of the given observation data
+       */
+      generatePlainDataTable: function(t, series, options) {
+        var tcontent = "";
+        var lengths = [];
+        var ft = this.config.format.time;
+        var fv = this.config.format.value;
+        var commentCharacter = options.commentCharacter || '#';
+        var columnSeparator = options.columnSeparator || ',';
+        var rowSeparator = options.rowSeparator || '\n';
+
+        // The value formatter should be plain non-HTML
+        fv.formatter = SOS.Ui.prototype.formatValueSimple;
+
+        for(var i = 0, len = series.length; i < len; i++) {
+          lengths.push(series[i].data.length);
+        }
+        var maxrows = Math.max.apply(null, lengths);
+ 
+        tcontent += commentCharacter;
+
+        // Series header label (with plain non-HTML UOMs)
+        for(var i = 0, len = series.length; i < len; i++) {
+          tcontent += series[i].label + (series[i].uom.length > 0 ? " / " + series[i].uom : "");
+
+          if(i < len - 1) {
+            tcontent += columnSeparator;
+          }
+        }
+        tcontent += rowSeparator;
+        tcontent += commentCharacter;
+
+        // Per series column headings
+        for(var i = 0, len = series.length; i < len; i++) {
+          tcontent += 'Time';
+          tcontent += columnSeparator;
+          tcontent += 'Value';
+
+          if(i < len - 1) {
+            tcontent += columnSeparator;
+          }
+        }
+        tcontent += rowSeparator;
+
+        // Per series data
+        for(var i = 0; i < maxrows; i++) {
+          for(var j = 0, slen = series.length; j < slen; j++) {
+            if(SOS.Utils.isValidObject(series[j].data[i])) {
+              for(var k = 0, dlen = series[j].data[i].length; k < dlen; k++) {
+                var id = j + "." + i + "." + k, datum;
+
+                // Format the datetime or value accordingly
+                if(k == 0) {
+                  datum = ft.formatter(series[j].data[i][k]);
+                } else {
+                  datum = (SOS.Utils.isNumber(series[j].data[i][k]) ? fv.formatter(parseFloat(series[j].data[i][k]), fv.sciLimit, fv.digits) : series[j].data[i][k]);
+                }
+                tcontent += datum;
+
+                if(k < dlen - 1) {
+                  tcontent += columnSeparator;
+                }
+              }
+            } else {
+              tcontent += columnSeparator;
+            }
+            if(j < slen - 1) {
+              tcontent += columnSeparator;
+            }
+          }
+          tcontent += rowSeparator;
+        }
+
+        var tableText = '';
+        tableText += (SOS.Utils.isValidObject(options.header.title) ? options.header.title : '');
+        tableText += tcontent;
+
+        t = t || {};
+        t.tableText = tableText;
+
+        return t;
+      },
+
+      /**
        * Convert an event object to a flot-item-like object
        */
       eventToItem: function(evt) {
@@ -1945,7 +2030,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             tcontent += '<tr class="' + cssClass + '">';
             tcontent += '<td class="sos-table">' + ob.observedPropertyTitle + '</td>';
             tcontent += '<td class="sos-table">' + ob.time + '</td>';
-            tcontent += '<td class="sos-table">' + ob.result.value + ' ' + ob.UomTitle + '</td>';
+            tcontent += '<td class="sos-table">' + ob.result.value + ' ' + ob.uomTitle + '</td>';
             tcontent += '</tr>';
           }
           html += '<table class="sos-table sos-embedded-table">';
@@ -2035,7 +2120,20 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 active: true,
                 sectionLabel: "Plot / Table",
                 dateLabel: "Date Range",
-                addToLabel: "Add To Existing"
+                addToLabel: "Add To Existing",
+                downloadData: {
+                  active: true,
+                  icon: "ui-icon-disk",
+                  label: "Download Data",
+                  prompt: "Format the data for download",
+                  errorMessage: "No data selected.  You must plot/tabulate the data before you can download them.",
+                  commentCharacterLabel: "Comment Character",
+                  commentCharacters: ["#", "//", "--", "%", ";"],
+                  columnSeparatorLabel: "Column Separator",
+                  columnSeparators: [",", " ", "|", "\t"],
+                  rowSeparatorLabel: "Row Separator",
+                  rowSeparators: ["\n", "\r\n", "\r", ";"]
+                }
               },
               searchOfferings: {
                 active: true,
@@ -2402,6 +2500,22 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             text: options.plotTableControlsSection.addToLabel
           });
           csc1.append('<br/>', add, addLabel);
+
+          // Download data
+          if(options.plotTableControlsSection.downloadData.active) {
+            var dl = jQuery('<span></span>', {
+              id: this.config.menu.id + "ControlsDownloadData",
+              "class": "sos-menu-icon-button"
+            }).button({
+              icons: {
+                primary: options.plotTableControlsSection.downloadData.icon
+              }
+            });
+            var dlLabel = jQuery('<span></span>', {
+              text: options.plotTableControlsSection.downloadData.label
+            });
+            csc1.append('<br/>', dl, dlLabel);
+          }
         }
       },
 
@@ -2412,11 +2526,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var sd = jQuery('#' + this.config.menu.id + 'ControlsStartDatetime');
         var ed = jQuery('#' + this.config.menu.id + 'ControlsEndDatetime');
         var add = jQuery('#' + this.config.menu.id + 'ControlsAddToExisting');
+        var dl = jQuery('#' + this.config.menu.id + 'ControlsDownloadData');
 
         // Add the start/end date to any selected items
         sd.bind("change", {self: this, pos: "start"}, this.datepickerChangeHandler);
         ed.bind("change", {self: this, pos: "end"}, this.datepickerChangeHandler);
         add.bind("change", {self: this}, this.addToExistingChangeHandler);
+        dl.bind("click", {self: this}, this.downloadDataClickHandler);
       },
 
       /**
@@ -2471,6 +2587,19 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // For external listeners (application-level plumbing)
         self.sos.events.triggerEvent("sosMenuAddToExistingChange");
+      },
+
+      /**
+       * Event handler for download data button click.  This merely passes
+       * on the fact that the download data button was clicked, via the
+       * sosMenuDownloadDataClick event.  This event should be handled at
+       * the application level, to actually download the data
+       */
+      downloadDataClickHandler: function(evt) {
+        var self = evt.data.self;
+
+        // For external listeners (application-level plumbing)
+        self.sos.events.triggerEvent("sosMenuDownloadDataClick");
       },
 
       /**
@@ -2945,6 +3074,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.sos.registerUserCallback({event: "sosMenuStartDatetimeChange", scope: this, callback: this.sosMenuChangeHandler});
 
         this.sos.registerUserCallback({event: "sosMenuEndDatetimeChange", scope: this, callback: this.sosMenuChangeHandler});
+
+        this.sos.registerUserCallback({event: "sosMenuDownloadDataClick", scope: this, callback: this.sosMenuDownloadDataClickHandler});
       },
 
       /**
@@ -3207,6 +3338,153 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           }
 
           this.getObservationData();
+        }
+      },
+
+      /**
+       * Event handler for menu download data button click
+       */
+      sosMenuDownloadDataClickHandler: function(evt) {
+        var components = this.config.app.components;
+        var errorMessage = this.config.app.components.menu.config.menu.options.plotTableControlsSection.downloadData.errorMessage;
+
+        // Only enable download if user has selected some data
+        if(components.table.config.table.series.length > 0) {
+          this.openDownloadDataDialog();
+        } else {
+          alert(errorMessage);
+        }
+      },
+
+      /**
+       * Open a dialog box to configure data format for download
+       */
+      openDownloadDataDialog: function() {
+        var components = this.config.app.components;
+        var dlOptions = this.config.app.components.menu.config.menu.options.plotTableControlsSection.downloadData;
+        var m = new SOS.Menu();
+        var panel = jQuery('<div/>');
+
+        m.setMenuOptions({listBoxes: {size: 1}});
+
+        // Construct the controls for configuring the data format
+        var promptRow = jQuery('<div></div>', {
+          "class": "sos-download-dialog-control-row"
+        });
+        var promptLabel = jQuery('<div></div>', {
+          text: dlOptions.prompt
+        });
+        promptRow.append(promptLabel);
+        panel.append(promptRow);
+
+        var commentCharacterRow = jQuery('<div></div>', {
+          "class": "sos-download-dialog-control-row"
+        });
+        var commentCharacterLabel = jQuery('<div></div>', {
+          text: dlOptions.commentCharacterLabel
+        });
+        var commentCharacterList = jQuery('<div></div>', {
+          "class": "sos-download-dialog-select-list",
+          id: this.config.app.id + "DownloadDataDialogCommentCharacterList"
+        });
+        for(var i = 0, len = dlOptions.commentCharacters.length; i < len; i++) {
+          var label = SOS.Utils.nonPrintingCharacterToLabel(dlOptions.commentCharacters[i]);
+          var entry = {value: dlOptions.commentCharacters[i], label: label};
+          m.config.menu.entries.push(entry);
+        }
+        m.initMenu(commentCharacterList);
+        commentCharacterRow.append(commentCharacterLabel, commentCharacterList);
+        panel.append(commentCharacterRow);
+        m.config.menu.entries = [];
+
+        var columnSeparatorRow = jQuery('<div></div>', {
+          "class": "sos-download-dialog-control-row"
+        });
+        var columnSeparatorLabel = jQuery('<div></div>', {
+          text: dlOptions.columnSeparatorLabel
+        });
+        var columnSeparatorList = jQuery('<div></div>', {
+          "class": "sos-download-dialog-select-list",
+          id: this.config.app.id + "DownloadDataDialogColumnSeparatorList"
+        });
+        for(var i = 0, len = dlOptions.columnSeparators.length; i < len; i++) {
+          var label = SOS.Utils.nonPrintingCharacterToLabel(dlOptions.columnSeparators[i]);
+          var entry = {value: dlOptions.columnSeparators[i], label: label};
+          m.config.menu.entries.push(entry);
+        }
+        m.initMenu(columnSeparatorList);
+        columnSeparatorRow.append(columnSeparatorLabel, columnSeparatorList);
+        panel.append(columnSeparatorRow);
+        m.config.menu.entries = [];
+
+        var rowSeparatorRow = jQuery('<div></div>', {
+          "class": "sos-download-dialog-control-row"
+        });
+        var rowSeparatorLabel = jQuery('<div></div>', {
+          text: dlOptions.rowSeparatorLabel
+        });
+        var rowSeparatorList = jQuery('<div></div>', {
+          "class": "sos-download-dialog-select-list",
+          id: this.config.app.id + "DownloadDataDialogRowSeparatorList"
+        });
+        for(var i = 0, len = dlOptions.rowSeparators.length; i < len; i++) {
+          var label = SOS.Utils.nonPrintingCharacterToLabel(dlOptions.rowSeparators[i]);
+          var entry = {value: dlOptions.rowSeparators[i], label: label};
+          m.config.menu.entries.push(entry);
+        }
+        m.initMenu(rowSeparatorList);
+        rowSeparatorRow.append(rowSeparatorLabel, rowSeparatorList);
+        panel.append(rowSeparatorRow);
+        m.config.menu.entries = [];
+
+        jQuery("body").after(panel);
+
+        var self = this;
+        var cc = jQuery('#' + this.config.app.id + 'DownloadDataDialogCommentCharacterList > .sos-menu-select-list');
+        var cs = jQuery('#' + this.config.app.id + 'DownloadDataDialogColumnSeparatorList > .sos-menu-select-list');
+        var rs = jQuery('#' + this.config.app.id + 'DownloadDataDialogRowSeparatorList > .sos-menu-select-list');
+
+        var buttons = [
+          {
+            text: dlOptions.label,
+            click: function() {
+              var formatOptions = {};
+              formatOptions.commentCharacter = cc.val();
+              formatOptions.columnSeparator = cs.val();
+              formatOptions.rowSeparator = rs.val();
+              self.downloadTableSeriesData(formatOptions);
+            }
+          },
+          {
+            text: "Cancel",
+            click: function() {jQuery(this).dialog().dialog("close");}
+          }
+        ];
+
+        var dialog = panel.dialog({position: ['center', 'center'], buttons: buttons, title: dlOptions.label, width: 400, zIndex: 1010, stack: false});
+        dialog.bind('dialogclose', function() {jQuery(this).remove(); jQuery(this).dialog().dialog("destroy");});
+      },
+
+      /**
+       * Download data of the current table series
+       */
+      downloadTableSeriesData: function(formatOptions) {
+        var components = this.config.app.components;
+        var t = {};
+
+        // Format data suitable for download, then write it out
+        if(components.table.config.table.series.length > 0) {
+          jQuery.extend(true, formatOptions, components.table.config.table.options);
+          components.table.generatePlainDataTable(t, components.table.config.table.series, formatOptions);
+
+          if(SOS.Utils.isValidObject(t.tableText)) {
+            document.open("text/html");
+            document.write("<!DOCTYPE html>" + formatOptions.rowSeparator);
+            document.write("<html><body><pre>" + formatOptions.rowSeparator);
+            document.write(t.tableText);
+            document.write("</pre></body></html>" + formatOptions.rowSeparator);
+            document.close();
+          }
         }
       },
 

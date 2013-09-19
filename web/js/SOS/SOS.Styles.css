@@ -164,6 +164,14 @@ table.sos-table-scrollable {
   width: 132px;
 }
 
+.sos-menu-icon-button {
+  width: 16px;
+  height: 16px;
+  padding: 0px;
+  margin-left: 5px;
+  margin-right: 2px;
+}
+
 .sos-app-container {
   width: 1024px;
   height: 768px;
@@ -188,6 +196,17 @@ table.sos-table-scrollable {
   font-size: 0.9em;
 }
 
+.sos-download-dialog-select-list {
+  float: right;
+  margin-top: -20px;
+  margin-right: 5px;
+}
+
+.sos-download-dialog-control-row {
+  font-size: 0.9em;
+  height: 25px;
+}
+
 /* flot legend styles */
 div.legend {
   font-size: 0.70em;
@@ -200,5 +219,9 @@ div.ui-datepicker {
 
 .ui-autocomplete {
   font-size: 75%;
+}
+
+span.ui-icon-disk {
+  margin: -6px;
 }
 
