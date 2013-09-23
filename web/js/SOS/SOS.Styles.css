@@ -144,7 +144,7 @@ table.sos-table-scrollable {
 }
 
 .sos-menu-container {
-  height: 330px;
+  height: 240px;
 }
 
 .sos-menu {
@@ -153,6 +153,19 @@ table.sos-table-scrollable {
   position: absolute;
   left: 0px;
   top: 0px;
+  font-size: 0.75em;
+}
+
+.sos-menu-controls-container {
+  height: 180px;
+}
+
+.sos-menu-controls {
+  width: 200px;
+  padding: 5px;
+  position: absolute;
+  left: 0px;
+  top: 240px;
   font-size: 0.75em;
 }
 
@@ -179,7 +192,7 @@ table.sos-table-scrollable {
 
 .sos-app {
   width: 80%;
-  height: 80%;
+  height: 600px;
   padding: 5px;
   position: absolute;
   left: 210px;

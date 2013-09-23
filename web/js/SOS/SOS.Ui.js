@@ -2606,30 +2606,51 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Construct the menu according to this object's properties
        */
       constructMenu: function() {
-        var mc = jQuery('#' + this.config.menu.id + 'Container');
-        var m = jQuery('#' + this.config.menu.id);
+        var mc1 = jQuery('#' + this.config.menu.id + 'Container');
+        var mc2 = jQuery('#' + this.config.menu.id + 'ControlsContainer');
+        var m1 = jQuery('#' + this.config.menu.id);
+        var m2 = jQuery('#' + this.config.menu.id + 'Controls');
 
         // If menu container div doesn't exist, create one on the fly
-        if(mc.length < 1) {
-          mc = jQuery('<div id="' + this.config.menu.id + 'Container" class="sos-menu-container"/>');
-          jQuery('body').append(mc);
+        if(mc1.length < 1) {
+          mc1 = jQuery('<div id="' + this.config.menu.id + 'Container" class="sos-menu-container"/>');
+          jQuery('body').append(mc1);
+        }
+
+        // If menu controls container div doesn't exist, create one on the fly
+        if(mc2.length < 1) {
+          mc2 = jQuery('<div id="' + this.config.menu.id + 'Container" class="sos-menu-controls-container"/>');
+          jQuery('body').append(mc2);
         }
 
         // If menu div doesn't exist, create one on the fly
-        if(m.length < 1) {
-          m = jQuery('<div id="' + this.config.menu.id + '" class="sos-menu"/>');
-          mc.append(m);
+        if(m1.length < 1) {
+          m1 = jQuery('<div id="' + this.config.menu.id + '" class="sos-menu"/>');
+          mc1.append(m1);
+        }
+
+        // If menu controls div doesn't exist, create one on the fly
+        if(m2.length < 1) {
+          m2 = jQuery('<div id="' + this.config.menu.id + 'ControlsPanel" class="sos-menu-controls"/>');
+          mc2.append(m2);
         }
 
         // Construct the menu according to what tabs have been configured
         var tabs = this.constructMenuTabs();
 
         if(tabs) {
-          m.append(tabs);
+          m1.append(tabs);
+        }
+
+        tabs = this.constructMenuControlsTabs();
+
+        if(tabs) {
+          m2.append(tabs);
         }
 
         // Setup menu event handlers
-        m.bind('accordionchange', {self: this}, this.changeMenuTabHandler);
+        m1.bind('accordionchange', {self: this}, this.changeMenuTabHandler);
+        m2.bind('accordionchange', {self: this}, this.changeMenuTabHandler);
 
         /* Configure & instantiate the menu.  N.B.: These options do the same
            thing; fillSpace is the older jQuery UI method */
@@ -2638,9 +2659,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(this.config.menu.step > -1) {
           opts.active = this.config.menu.step;
         }
-        m.accordion(opts);
+        m1.accordion(opts);
+        m2.accordion(opts);
 
-        this.config.menu.object = m;
+        this.config.menu.object = {menu: m1, controls: m2};
       },
 
       /**
@@ -2656,6 +2678,19 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(SOS.Utils.isValidObject(options.tabs.observedProperties) && options.tabs.observedProperties.active) {
           text += '<h3><a href="#">' + options.tabs.observedProperties.label + '</a></h3><div id="' + this.config.menu.id + 'ObservedPropertiesTab"></div>';
         }
+
+        tabs = jQuery(text);
+
+        return tabs;
+      },
+
+      /**
+       * Construct menu controls tabs according to this object's properties
+       */
+      constructMenuControlsTabs: function() {
+        var tabs, text = "";
+        var options = this.config.menu.options;
+
         if(SOS.Utils.isValidObject(options.tabs.controls) && options.tabs.controls.active) {
           text += '<h3><a href="#">' + options.tabs.controls.label + '</a></h3><div id="' + this.config.menu.id + 'ControlsTab"></div>';
         }
