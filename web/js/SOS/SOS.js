@@ -24,7 +24,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
     OpenLayers.Util.extend(OpenLayers.Lang.en, {
       "SOSGetCapabilitiesErrorMessage": "SOS Get Capabilities failed: ",
       "SOSGetLatestObservationsErrorMessage": "SOS Get Latest Observations failed: ",
-      "SOSGetObservationsErrorMessage": "SOS Get Observations failed: "
+      "SOSGetObservationsErrorMessage": "SOS Get Observations failed: ",
+      "SOSGetFeatureOfInterestErrorMessage": "SOS Get Feature Of Interest failed: ",
+      "SOSGetFeatureOfInterestTimeErrorMessage": "SOS Get Feature Of Interest Time failed: ",
+      "SOSDescribeSensorErrorMessage": "SOS Describe Sensor failed: "
     });
 
     /* This library uses a proxy host.  Change the path accordingly */
@@ -38,6 +41,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
       events: null,
       capsFormatter: null,
       obsFormatter: null,
+      foiFormatter: null,
+      foiTimeFormatter: null,
+      sensorDescFormatter: null,
       config: null,
       CLASS_NAME: "SOS",
 
@@ -51,6 +57,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         this.events = new OpenLayers.Events(this);
         this.capsFormatter = new OpenLayers.Format.SOSCapabilities();
         this.obsFormatter = new OpenLayers.Format.SOSGetObservation();
+        this.foiFormatter = new OpenLayers.Format.SOSGetFeatureOfInterest();
+        this.foiTimeFormatter = new OpenLayers.Format.SOSGetFeatureOfInterestTime();
+        this.sensorDescFormatter = new OpenLayers.Format.SOSDescribeSensor();
         this.config = {
           /* N.B.: Our SOS instance (52n) fails unless version is 1.0.0 */
           version: "1.0.0",
@@ -59,7 +68,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
             responseFormatType: "text/xml",
             responseFormat: "text/xml;subtype=\"om/1.0.0\"",
             eventTimeLatest: "latest",
-            eventTimeFirst: "first",
+            eventTimeFirst: "getFirst",
             resultModel: "om:Measurement",
             responseMode: "inline",
             forceSort: true
@@ -460,6 +469,96 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         }
 
         return record;
+      },
+
+      /**
+       * Get details for the given FOI
+       */
+      getFeatureOfInterest: function(foiId) {
+        /* Build the request document */
+        var params = {
+          fois: [foiId]
+        };
+        var xml = this.foiFormatter.write(params);
+        OpenLayers.Request.POST({
+          url: this.url,
+          scope: this,
+          async: this.config.async,
+          failure: function() {
+            alert(OpenLayers.i18n("SOSGetFeatureOfInterestErrorMessage") + url);
+          },
+          success: this._parseFeatureOfInterest,
+          data: xml
+        });
+      },
+
+      /**
+       * Parse the FOI result & notify any listeners
+       */
+      _parseFeatureOfInterest: function(response) {
+        var a = this.foiFormatter.read(response.responseXML || response.responseText);
+        if(a && a.length > 0) {
+          this.SOSFeatureOfInterest = a[0];
+        }
+        this.events.triggerEvent("sosFeatureOfInterestAvailable", {response: response});
+      },
+
+      /**
+       * Get the temporal coverage for the given FOI
+       */
+      getTemporalCoverageForFeatureOfInterestId: function(foiId) {
+        /* Build the request document */
+        var params = {
+          foi: foiId
+        };
+        var xml = this.foiTimeFormatter.write(params);
+        OpenLayers.Request.POST({
+          url: this.url,
+          scope: this,
+          async: this.config.async,
+          failure: function() {
+            alert(OpenLayers.i18n("SOSGetFeatureOfInterestTimeErrorMessage") + url);
+          },
+          success: this._parseTemporalCoverage,
+          data: xml
+        });
+      },
+
+      /**
+       * Parse the temporal coverage result & notify any listeners
+       */
+      _parseTemporalCoverage: function(response) {
+        this.SOSTemporalCoverage = this.foiTimeFormatter.read(response.responseXML || response.responseText);
+        this.events.triggerEvent("sosTemporalCoverageAvailable", {response: response});
+      },
+
+      /**
+       * Get the description for the given procedure (sensor system)
+       */
+      describeSensor: function(procedureId) {
+        /* Build the request document */
+        var params = {
+          procedure: procedureId
+        };
+        var xml = this.sensorDescFormatter.write(params);
+        OpenLayers.Request.POST({
+          url: this.url,
+          scope: this,
+          async: this.config.async,
+          failure: function() {
+            alert(OpenLayers.i18n("SOSDescribeSensorErrorMessage") + url);
+          },
+          success: this._parseSensorDescription,
+          data: xml
+        });
+      },
+
+      /**
+       * Parse the describe sensor result & notify any listeners
+       */
+      _parseSensorDescription: function(response) {
+        this.SOSSensorDescription = this.sensorDescFormatter.read(response.responseXML || response.responseText);
+        this.events.triggerEvent("sosSensorDescriptionAvailable", {response: response});
       }
     });
 
@@ -495,7 +594,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
             responseFormatType: "text/xml",
             responseFormat: "text/xml;subtype=\"om/1.0.0\"",
             eventTimeLatest: "latest",
-            eventTimeFirst: "first",
+            eventTimeFirst: "getFirst",
             resultModel: "om:Measurement",
             responseMode: "inline",
             forceSort: true
@@ -603,6 +702,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
     SOS.Utils = {
       uomDisplayTitles: {
         "Cel": "&deg;C",
+        "deg": "&deg;",
         "m/s": "m s<sup>-1</sup>"
       },
 
@@ -748,6 +848,22 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
             for(var i = 0, len = x.length; i < len; i++) {
               y.push(this.nonPrintingCharacterToLabel(x[i]));
             }
+          }
+        }
+
+        return y;
+      },
+
+      newlineToBr: function(x) {
+        var y = x;
+
+        if(typeof x == "string") {
+          y = x.replace(/(\r\n|\n|\r)/g, "<br/>");
+        } else if(this.isArray(x)) {
+          y = [];
+
+          for(var i = 0, len = x.length; i < len; i++) {
+            y.push(this.newlineToBr(x[i]));
           }
         }
 
@@ -1013,6 +1129,549 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         };
       }());
     }
+
+    /* OpenLayers formatters for parsing various SOS response documents.
+       These are missing from a stock OpenLayers install */
+
+    /**
+     * Method: write
+     *
+     * Parameters:
+     * options - {Object} Optional object.
+     *
+     * Returns:
+     * {String} An SOS GetFeatureOfInterest request XML string.
+     */
+    OpenLayers.Format.SOSGetFeatureOfInterest.prototype.write = function(options) {
+        /* N.B.: Some of the namespaces are missing from the original OL class,
+                 hence they're explicitly specified here */
+        this.namespaces.ows = this.namespaces.ows || "http://www.opengis.net/ows";
+        this.namespaces.ogc = this.namespaces.ogc || "http://www.opengis.net/ogc";
+
+        var node = this.writeNode("sos:GetFeatureOfInterest", options);
+        node.setAttribute("xmlns:ows", this.namespaces.ows);
+        node.setAttribute("xmlns:ogc", this.namespaces.ogc);
+        node.setAttribute("xmlns:gml", this.namespaces.gml);
+        this.setAttributeNS(
+            node, this.namespaces.xsi,
+            "xsi:schemaLocation", this.schemaLocation
+        );
+        return OpenLayers.Format.XML.prototype.write.apply(this, [node]);
+    } 
+
+    /**
+     * @requires OpenLayers/Format/XML.js
+     * @requires OpenLayers/Format/GML/v3.js
+     */
+
+    /**
+     * Class: OpenLayers.Format.SOSGetFeatureOfInterestTime
+     * Read and write SOS GetFeatureOfInterestTime. This is used to get temporal
+     * coverage of the features (stations). The stations can have 1 or more
+     * sensors.
+     *
+     * Inherits from:
+     *  - <OpenLayers.Format.XML>
+     */
+    OpenLayers.Format.SOSGetFeatureOfInterestTime = OpenLayers.Class(OpenLayers.Format.XML, {
+        
+        /**
+         * Constant: VERSION
+         * {String} 1.0.0
+         */
+        VERSION: "1.0.0",
+
+        /**
+         * Property: namespaces
+         * {Object} Mapping of namespace aliases to namespace URIs.
+         */
+        namespaces: {
+            sos: "http://www.opengis.net/sos/1.0",
+            ogc: "http://www.opengis.net/ogc",
+            ows: "http://www.opengis.net/ows",
+            gml: "http://www.opengis.net/gml",
+            xsi: "http://www.w3.org/2001/XMLSchema-instance"
+        },
+
+        /**
+         * Property: schemaLocation
+         * {String} Schema location
+         */
+        schemaLocation: "http://www.opengis.net/sos/1.0 http://schemas.opengis.net/sos/1.0.0/sosGetFeatureOfInterest.xsd",
+
+        /**
+         * Property: defaultPrefix
+         */
+        defaultPrefix: "sos",
+
+        /**
+         * Property: regExes
+         * Compiled regular expressions for manipulating strings.
+         */
+        regExes: {
+            trimSpace: (/^\s*|\s*$/g),
+            removeSpace: (/\s*/g),
+            splitSpace: (/\s+/),
+            trimComma: (/\s*,\s*/g)
+        },
+        
+        /**
+         * Constructor: OpenLayers.Format.SOSGetFeatureOfInterest
+         *
+         * Parameters:
+         * options - {Object} An optional object whose properties will be set on
+         *     this instance.
+         */
+
+        /**
+         * APIMethod: read
+         * Parse a GetFeatureOfInterest response and return an array of features
+         * 
+         * Parameters: 
+         * data - {String} or {DOMElement} data to read/parse.
+         *
+         * Returns:
+         * {Array(<OpenLayers.Feature.Vector>)} An array of features. 
+         */
+        read: function(data) {
+            if(typeof data == "string") {
+                data = OpenLayers.Format.XML.prototype.read.apply(this, [data]);
+            }
+            if(data && data.nodeType == 9) {
+                data = data.documentElement;
+            }
+            var info = {};
+            this.readNode(data, info);
+            return info;
+        },
+
+        /**
+         * Method: write
+         *
+         * Parameters:
+         * options - {Object} Optional object.
+         *
+         * Returns:
+         * {String} An SOS GetFeatureOfInterestTime request XML string.
+         */
+        write: function(options) {
+            var node = this.writeNode("sos:GetFeatureOfInterestTime", options);
+            node.setAttribute("xmlns:ows", this.namespaces.ows);
+            node.setAttribute("xmlns:ogc", this.namespaces.ogc);
+            node.setAttribute("xmlns:gml", this.namespaces.gml);
+            this.setAttributeNS(
+                node, this.namespaces.xsi,
+                "xsi:schemaLocation", this.schemaLocation
+            );
+            return OpenLayers.Format.XML.prototype.write.apply(this, [node]);
+        }, 
+
+        /**
+         * Property: readers
+         * Contains public functions, grouped by namespace prefix, that will
+         *     be applied when a namespaced node is found matching the function
+         *     name.  The function will be applied in the scope of this parser
+         *     with two arguments: the node being read and a context object passed
+         *     from the parent.
+         */
+        readers: {
+            "gml": OpenLayers.Util.applyDefaults({
+                "TimePeriod": function(node, obj) {
+                    var timePeriod = {};
+                    obj.timePeriod = timePeriod;
+                    this.readChildNodes(node, timePeriod);
+                },
+                "beginPosition": function(node, timePeriod) {
+                    timePeriod.beginPosition = this.getChildValue(node);
+                },
+                "endPosition": function(node, timePeriod) {
+                    timePeriod.endPosition = this.getChildValue(node);
+                }
+            }, OpenLayers.Format.GML.v3.prototype.readers.gml)
+        },
+
+        /**
+         * Property: writers
+         * As a compliment to the readers property, this structure contains public
+         *     writing functions grouped by namespace alias and named like the
+         *     node names they produce.
+         */
+        writers: {
+            "sos": {
+                "GetFeatureOfInterestTime": function(options) {
+                    var node = this.createElementNSPlus("GetFeatureOfInterestTime", {
+                        attributes: {
+                            version: this.VERSION,
+                            service: 'SOS',
+                            "xsi:schemaLocation": this.schemaLocation
+                        } 
+                    }); 
+                    if (options.foi) {
+                        this.writeNode("FeatureOfInterestId", {foi: options.foi}, node);
+                    }
+                    return node; 
+                },
+                "FeatureOfInterestId": function(options) {
+                    var node = this.createElementNSPlus("FeatureOfInterestId", {value: options.foi});
+                    return node;
+                }
+            }
+        },
+
+        CLASS_NAME: "OpenLayers.Format.SOSGetFeatureOfInterestTime"
+    });
+
+    /**
+     * @requires OpenLayers/Format/XML.js
+     */
+
+    /**
+     * Class: OpenLayers.Format.SOSDescribeSensor
+     * Read and write SOS DescribeSensor (to get metadata for a sensor system) 
+     *     version 1.0.0
+     *
+     * Inherits from:
+     *  - <OpenLayers.Format.XML>
+     */
+    OpenLayers.Format.SOSDescribeSensor = OpenLayers.Class(OpenLayers.Format.XML, {
+
+        /**
+         * Property: namespaces
+         * {Object} Mapping of namespace aliases to namespace URIs.
+         */
+        namespaces: {
+            sos: "http://www.opengis.net/sos/1.0",
+            sml: "http://www.opengis.net/sensorML/1.0.1",
+            swe: "http://www.opengis.net/swe/1.0.1",
+            gml: "http://www.opengis.net/gml",
+            xlink: "http://www.w3.org/1999/xlink",
+            xsi: "http://www.w3.org/2001/XMLSchema-instance"
+        },
+
+        /**
+         * Property: regExes
+         * Compiled regular expressions for manipulating strings.
+         */
+        regExes: {
+            trimSpace: (/^\s*|\s*$/g),
+            removeSpace: (/\s*/g),
+            splitSpace: (/\s+/),
+            trimComma: (/\s*,\s*/g)
+        },
+
+        /**
+         * Constant: VERSION
+         * {String} 1.0.0
+         */
+        VERSION: "1.0.0",
+
+        /**
+         * Property: schemaLocation
+         * {String} Schema location
+         */
+        schemaLocation: "http://www.opengis.net/sos/1.0 http://schemas.opengis.net/sos/1.0.0/sosDescribeSensor.xsd",
+
+        /**
+         * Property: outputFormat
+         * {String} Output format
+         */
+        outputFormat: "text/xml;subtype=\"sensorML/1.0.1\"",
+
+        /**
+         * Property: defaultPrefix
+         */
+        defaultPrefix: "sos",
+
+        /**
+         * Constructor: OpenLayers.Format.SOSDescribeSensor
+         *
+         * Parameters:
+         * options - {Object} An optional object whose properties will be set on
+         *     this instance.
+         */
+
+        /**
+         * Method: read
+         * 
+         * Parameters: 
+         * data - {String} or {DOMElement} data to read/parse.
+         *
+         * Returns:
+         * {Object} An object containing the sensor system(s) description
+         */
+        read: function(data) {
+            if(typeof data == "string") {
+                data = OpenLayers.Format.XML.prototype.read.apply(this, [data]);
+            }
+            if(data && data.nodeType == 9) {
+                data = data.documentElement;
+            }
+            var info = {members: []};
+            this.readNode(data, info);
+            return info;
+        },
+
+        /**
+         * Method: write
+         *
+         * Parameters:
+         * options - {Object} Optional object.
+         *
+         * Returns:
+         * {String} An SOS DescribeSensor request XML string.
+         */
+        write: function(options) {
+            var node = this.writeNode("sos:DescribeSensor", options);
+            node.setAttribute("outputFormat", this.outputFormat);
+            this.setAttributeNS(
+                node, this.namespaces.xsi,
+                "xsi:schemaLocation", this.schemaLocation
+            );
+            return OpenLayers.Format.XML.prototype.write.apply(this, [node]);
+        }, 
+
+        /**
+         * Property: readers
+         * Contains public functions, grouped by namespace prefix, that will
+         *     be applied when a namespaced node is found matching the function
+         *     name.  The function will be applied in the scope of this parser
+         *     with two arguments: the node being read and a context object passed
+         *     from the parent.
+         */
+        readers: {
+            "sml": {
+                "SensorML": function(node, obj) {
+                    this.readChildNodes(node, obj);
+                },
+                "member": function(node, obj) {
+                    var member = {};
+                    obj.members.push(member);
+                    this.readChildNodes(node, member);
+                },
+                "System": function(node, member) {
+                    var system = {
+                      id: this.getAttributeNS(node, this.namespaces.gml, "id"),
+                      description: null
+                    };
+                    member.system = system;
+                    this.readChildNodes(node, system);
+                },
+                "identification": function(node, system) {
+                    var identification = {};
+                    system.identification = identification;
+                    this.readChildNodes(node, identification);
+                },
+                "IdentifierList": function(node, identification) {
+                    identification.identifierList = [];
+                    this.readChildNodes(node, identification.identifierList);
+                },
+                "identifier": function(node, identifierList) {
+                    var identifier = {
+                      name: node.getAttribute("name"),
+                      term: {}
+                    };
+                    identifierList.push(identifier);
+                    this.readChildNodes(node, identifier);
+                },
+                "classification": function(node, system) {
+                    var classification = {};
+                    system.classification = classification;
+                    this.readChildNodes(node, classification);
+                },
+                "ClassifierList": function(node, classification) {
+                    classification.classifierList = [];
+                    this.readChildNodes(node, classification.classifierList);
+                },
+                "classifier": function(node, classifierList) {
+                    var classifier = {
+                      name: node.getAttribute("name"),
+                      term: {}
+                    };
+                    classifierList.push(classifier);
+                    this.readChildNodes(node, classifier);
+                },
+                "Term": function(node, obj) {
+                    obj.term.definition = node.getAttribute("definition");
+                    this.readChildNodes(node, obj);
+                },
+                "value": function(node, obj) {
+                    obj.term.value = this.getChildValue(node);
+                },
+                "capabilities": function(node, system) {
+                    var capabilities = {};
+                    system.capabilities = capabilities;
+                    this.readChildNodes(node, capabilities);
+                },
+                "position": function(node, system) {
+                    var position = {
+                      name: node.getAttribute("name")
+                    };
+                    system.position = position;
+                    this.readChildNodes(node, position);
+                },
+                "inputs": function(node, system) {
+                    var inputs = {};
+                    system.inputs = inputs;
+                    this.readChildNodes(node, inputs);
+                },
+                "InputList": function(node, inputs) {
+                    inputs.inputList = [];
+                    this.readChildNodes(node, inputs.inputList);
+                },
+                "input": function(node, inputList) {
+                    /* N.B.: The content object of an input could be a
+                             swe:ObservableProperty or swe:Quantity */
+                    var input = {
+                      name: node.getAttribute("name"),
+                      quantity: {},
+                      observableProperty: {}
+                    };
+                    inputList.push(input);
+                    this.readChildNodes(node, input);
+                },
+                "outputs": function(node, system) {
+                    var outputs = {};
+                    system.outputs = outputs;
+                    this.readChildNodes(node, outputs);
+                },
+                "OutputList": function(node, outputs) {
+                    outputs.outputList = [];
+                    this.readChildNodes(node, outputs.outputList);
+                },
+                "output": function(node, outputList) {
+                    var output = {
+                      name: node.getAttribute("name"),
+                      quantity: {}
+                    };
+                    outputList.push(output);
+                    this.readChildNodes(node, output);
+                },
+                "offering": function(node, obj) {
+                    this.readChildNodes(node, obj);
+                },
+                "id": function(node, obj) {
+                    obj.id = this.getChildValue(node);
+                },
+                "name": function(node, obj) {
+                    obj.name = this.getChildValue(node);
+                }
+            },
+            "swe": {
+                "SimpleDataRecord": function(node, obj) {
+                    var record = {
+                      fields: []
+                    };
+                    obj.record = record;
+                    this.readChildNodes(node, record.fields);
+                },
+                "Record": function(node, obj) {
+                    var record = {
+                      fields: []
+                    };
+                    obj.record = record;
+                    this.readChildNodes(node, record.fields);
+                },
+                "field": function(node, fields) {
+                    var field = {
+                      name: node.getAttribute("name"),
+                      quantity: {},
+                      text: {},
+                      category: {},
+                      count: {}
+                    };
+                    fields.push(field);
+                    this.readChildNodes(node, field);
+                },
+                "Text": function(node, obj) {
+                    obj.text.definition = node.getAttribute("definition");
+                    this.readChildNodes(node, obj.text);
+                },
+                "ObservableProperty": function(node, obj) {
+                    obj.observableProperty.definition = node.getAttribute("definition");
+                    this.readChildNodes(node, obj.observableProperty);
+                },
+                "Quantity": function(node, obj) {
+                    obj.quantity.definition = node.getAttribute("definition");
+                    obj.quantity.axisId = node.getAttribute("axisID");
+                    this.readChildNodes(node, obj.quantity);
+                },
+                "description": function(node, obj) {
+                    obj.description = this.getChildValue(node);
+                },
+                "value": function(node, obj) {
+                    obj.value = this.getChildValue(node);
+                },
+                "uom": function(node, obj) {
+                    obj.uom = node.getAttribute("code");
+                },
+                "Position": function(node, obj) {
+                    obj.referenceFrame = node.getAttribute("referenceFrame");
+                    var location = {};
+                    obj.location = location;
+                    this.readChildNodes(node, obj.location);
+                },
+                "location": function(node, obj) {
+                    this.readChildNodes(node, obj);
+                },
+                "Vector": function(node, obj) {
+                    var vector = {
+                      id: this.getAttributeNS(node, this.namespaces.gml, "id"),
+                      coordinates: []
+                    };
+                    obj.vector = vector;
+                    this.readChildNodes(node, vector.coordinates);
+                },
+                "coordinate": function(node, coordinates) {
+                    var coordinate = {
+                      name: node.getAttribute("name"),
+                      quantity: {}
+                    };
+                    coordinates.push(coordinate);
+                    this.readChildNodes(node, coordinate);
+                }
+            },
+            "gml": {
+                "metaDataProperty": function(node, obj) {
+                    var metadataProperty = {};
+                    obj.metadataProperty = metadataProperty;
+                    this.readChildNodes(node, metadataProperty);
+                },
+                "description": function(node, obj) {
+                    obj.description = this.getChildValue(node);
+                }
+            }
+        },
+
+        /**
+         * Property: writers
+         * As a compliment to the readers property, this structure contains public
+         *     writing functions grouped by namespace alias and named like the
+         *     node names they produce.
+         */
+        writers: {
+            "sos": {
+                "DescribeSensor": function(options) {
+                    var node = this.createElementNSPlus("DescribeSensor", {
+                        attributes: {
+                            version: this.VERSION,
+                            service: 'SOS',
+                            "xsi:schemaLocation": this.schemaLocation
+                        } 
+                    }); 
+                    if (options.procedure) {
+                        this.writeNode("procedure", {procedure: options.procedure}, node);
+                    }
+                    return node; 
+                },
+                "procedure": function(options) {
+                    var node = this.createElementNSPlus("procedure", {value: options.procedure});
+                    return node;
+                }
+            }
+        },
+
+        CLASS_NAME: "OpenLayers.Format.SOSDescribeSensor"
+    });
   }
 }
 

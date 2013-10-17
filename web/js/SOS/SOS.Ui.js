@@ -1969,7 +1969,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       featureOfInterestSelectHandler: function(feature) {
         var item = {
-          foi: {id: feature.attributes.id, geometry: feature.geometry}
+          foi: {
+            id: feature.attributes.id,
+            name: feature.attributes.name,
+            geometry: feature.geometry
+          }
         };
 
         // Store each selected item (FOI)
@@ -2928,6 +2932,423 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
     });
   }
 
+  /* Create the SOS.Info namespace */
+  if(typeof SOS.Info === "undefined") {
+    /**
+     * SOS.Info Class
+     * Class for displaying supplementary information in a SOS application
+     *
+     * Inherits from:
+     *  - <SOS.Ui>
+     */
+    SOS.Info = OpenLayers.Class(SOS.Ui, {
+      url: null,
+      sos: null,
+      offering: null,
+      observedProperty: null,
+      config: null,
+      CLASS_NAME: "SOS.Info",
+
+      /**
+       * Constructor for a SOS.Info object
+       *
+       * @constructor
+       */
+      initialize: function(options) {
+        this.url = null;
+        this.sos = null;
+        this.offering = null;
+        this.observedProperty = null;
+        this.config = {
+          info: {
+            object: null,
+            id: "sosInfo",
+            "class": "sos-info-box",
+            eventHandlers: [],
+            content: null,
+            contentTemplate: null,
+            options: {
+              show: true,
+              makeDraggable: true,
+              initialContent: {
+                active: true
+              },
+              contentSection: {
+                active: true,
+                "class": "sos-info-box-content"
+              },
+              controlsSection: {
+                active: true,
+                "class": "sos-info-box-control-section"
+              },
+              controlsSectionTitle: {
+                active: true,
+                "class": "sos-info-box-control-section-title",
+                label: ""
+              },
+              showHideControl: {
+                active: true,
+                "class": "sos-info-box-control ui-icon",
+                icons: {
+                  show: "ui-icon-triangle-1-s",
+                  hide: "ui-icon-triangle-1-e"
+                }
+              },
+              closeControl: {
+                active: true,
+                "class": "sos-info-box-control-right ui-icon",
+                icons: {
+                  close: "ui-icon-close"
+                }
+              }
+            }
+          }
+        };
+        jQuery.extend(true, this, options);
+      },
+
+      /**
+       * Destructor for a SOS.Info object
+       * 
+       * @destructor
+       */
+      destroy: function() {
+      },
+
+      /**
+       * Set options for the info object
+       */
+      setInfoOptions: function(options) {
+        jQuery.extend(true, this.config.info.options, options);
+      },
+
+      /**
+       * Set the content for the info panel
+       */
+      setContent: function(content) {
+        this.config.info.content = content;
+      },
+
+      /**
+       * Get the content for the info panel
+       */
+      getContent: function() {
+        return this.config.info.content;
+      },
+
+      /**
+       * Append the given content to any existing content for the info panel
+       */
+      appendToContent: function(content) {
+        if(this.config.info.content) {
+          this.config.info.content += content;
+        } else {
+          this.config.info.content = content;
+        }
+      },
+
+      /**
+       * Set the content template for the info panel
+       */
+      setContentTemplate: function(contentTemplate) {
+        this.config.info.contentTemplate = contentTemplate;
+      },
+
+      /**
+       * Get the content template for the info panel
+       */
+      getContentTemplate: function() {
+        return this.config.info.contentTemplate;
+      },
+
+      /**
+       * Append the given content template to any existing content template
+       * for the info panel
+       */
+      appendToContentTemplate: function(contentTemplate) {
+        if(this.config.info.contentTemplate) {
+          this.config.info.contentTemplate += contentTemplate;
+        } else {
+          this.config.info.contentTemplate = contentTemplate;
+        }
+      },
+ 
+      /**
+       * Initialise the content for the info panel as the content template
+       */
+      initContentFromTemplate: function() {
+        if(this.config.info.contentTemplate) {
+          this.setContent(this.config.info.contentTemplate);
+        }
+      },
+ 
+      /**
+       * Substitute matches of the given regexp with the given content against
+       * the content template, and store in the content for this info panel
+       */
+      setContentFromTemplate: function(regexp, content) {
+        if(this.config.info.content) {
+          this.setContent(this.config.info.content.replace(regexp, content));
+        }
+      },
+
+      /**
+       * Set the title for the info panel
+       */
+      setTitle: function(title) {
+        this.setInfoOptions({controlsSectionTitle: {label: title}});
+      },
+
+      /**
+       * Set CSS class for the info panel
+       */
+      setClass: function(c) {
+        this.config.info.class = c;
+      },
+
+      /**
+       * Add a CSS class to the info panel
+       */
+      addClass: function(c) {
+        this.config.info.class += " " + c;
+      },
+
+      /**
+       * Add an event handler object to the info panel's event handler array.
+       * The event handler object has the form:
+       * {event: e, scope: object, callback: function}
+       * The callback function will be called in the given scope
+       */
+      addEventHandler: function(h) {
+        this.config.info.eventHandlers.push(h);
+      },
+   
+      /**
+       * Generate the info panel
+       */
+      display: function(options) {
+        // Parameters can optionally be tweaked for each call
+        if(arguments.length > 0) {
+          jQuery.extend(true, this.config.info.options, options);
+        }
+        if(this.config.info.options.show) {
+          this.initInfoPanel();
+          this.displayInitialContent();
+        }
+      },
+ 
+      /**
+       * Initialise the info panel
+       */
+      initInfoPanel: function() {
+        var p = jQuery('#' + this.config.info.id);
+
+        // If info panel div doesn't exist, create one on the fly
+        if(p.length < 1) {
+          p = jQuery("<div></div>", {
+            id: this.config.info.id,
+            "class": this.config.info.class
+          });
+          jQuery('body').append(p);
+        }
+        this.config.info.object = p;
+
+        // Setup the info panel & its controls
+        if(this.config.info.options.makeDraggable) {
+          this.config.info.object.draggable();
+        }
+        this.addContentSection();
+        this.addControlsSection();
+        this.addControlsSectionTitle();
+        this.addShowHideControl();
+        this.addCloseControl();
+        this.setupBehaviour();
+      },
+ 
+      /**
+       * Display the initial content for this info panel
+       */
+      displayInitialContent: function() {
+        if(SOS.Utils.isValidObject(this.config.info.object)) {
+          if(this.config.info.options.show && this.config.info.options.initialContent.active) {
+            this.displayContent();
+          }
+        }
+      },
+ 
+      /**
+       * Display the previously set content for this info panel
+       */
+      displayContent: function() {
+        if(SOS.Utils.isValidObject(this.config.info.object)) {
+          var s = this.config.info.object.children("." + this.config.info.options.contentSection.class);
+          s.html(this.config.info.content);
+        }
+      },
+ 
+      /**
+       * Set the content for this info panel and then display it
+       */
+      updateContent: function(content) {
+        this.setContent(content);
+        this.displayContent();
+      },
+ 
+      /**
+       * Substitute matches of the given regexp with the given content against
+       * the content template, and store in the content for this info panel,
+       * then display it
+       */
+      updateContentFromTemplate: function(regexp, content) {
+        if(this.config.info.content) {
+          this.setContent(this.config.info.content.replace(regexp, content));
+          this.displayContent();
+        }
+      },
+
+      /**
+       * Adds a content section to this info panel.  This holds the content
+       * of the info panel
+       */
+      addContentSection: function() {
+        if(SOS.Utils.isValidObject(this.config.info.object)) {
+          if(this.config.info.options.show && this.config.info.options.contentSection.active) {
+            var c = jQuery("<div></div>", {
+              "class": this.config.info.options.contentSection.class
+            });
+
+            // Add the content section to this info panel
+            this.config.info.object.append(c);
+          }
+        }
+      },
+
+      /**
+       * Adds a controls section to this info panel.  This groups all controls
+       * of the info panel
+       */
+      addControlsSection: function() {
+        if(SOS.Utils.isValidObject(this.config.info.object)) {
+          if(this.config.info.options.show && this.config.info.options.controlsSection.active) {
+            var c = jQuery("<div></div>", {
+              "class": this.config.info.options.controlsSection.class
+            });
+
+            // Add the controls section to this info panel
+            this.config.info.object.append(c);
+          }
+        }
+      },
+
+      /**
+       * Adds a controls section title to this info panel
+       */
+      addControlsSectionTitle: function() {
+        if(SOS.Utils.isValidObject(this.config.info.object)) {
+          if(this.config.info.options.show && this.config.info.options.controlsSectionTitle.active) {
+            var c = jQuery("<div></div>", {
+              "class": this.config.info.options.controlsSectionTitle.class,
+              html: this.config.info.options.controlsSectionTitle.label
+            });
+
+            // Add the control to this info panel's control section
+            var s = this.config.info.object.children("." + this.config.info.options.controlsSection.class);
+            s.append(c);
+          }
+        }
+      },
+
+      /**
+       * Adds a show/hide control to this info panel.  This control toggles the
+       * visibility of the content of the info panel
+       */
+      addShowHideControl: function() {
+        if(SOS.Utils.isValidObject(this.config.info.object)) {
+          if(this.config.info.options.show && this.config.info.options.showHideControl.active) {
+            var c = jQuery("<div></div>", {
+              "class": this.config.info.options.showHideControl.class
+            });
+            c.addClass(this.config.info.options.showHideControl.icons.show);
+            c.bind("click", {self: this}, this.showHideControlClickHandler);
+
+            // Add the control to this info panel's control section
+            var s = this.config.info.object.children("." + this.config.info.options.controlsSection.class);
+            s.append(c);
+          }
+        }
+      },
+
+      /**
+       * Event handler for show/hide control click.  This toggles the
+       * visibility of the content of the info panel, changing the icon
+       * accordingly
+       */
+      showHideControlClickHandler: function(evt) {
+        var c = jQuery(this);
+        var icons = evt.data.self.config.info.options.showHideControl.icons;
+
+        if(c.hasClass(icons.show)) {
+          c.parent().siblings().hide();
+          c.removeClass(icons.show);
+          c.addClass(icons.hide);
+        } else {
+          c.parent().siblings().show();
+          c.removeClass(icons.hide);
+          c.addClass(icons.show);
+        }
+      },
+
+      /**
+       * Adds a close control to this info panel.  This control closes the
+       * info panel (i.e. removes it from the DOM)
+       */
+      addCloseControl: function() {
+        if(SOS.Utils.isValidObject(this.config.info.object)) {
+          if(this.config.info.options.show && this.config.info.options.closeControl.active) {
+            var c = jQuery("<div></div>", {
+              "class": this.config.info.options.closeControl.class
+            });
+            c.addClass(this.config.info.options.closeControl.icons.close);
+            c.bind("click", {self: this}, this.closeControlClickHandler);
+
+            // Add the control to this info panel's control section
+            var s = this.config.info.object.children("." + this.config.info.options.controlsSection.class);
+            s.append(c);
+          }
+        }
+      },
+
+      /**
+       * Event handler for close control click.  This closes the
+       * info panel (i.e. removes it from the DOM)
+       */
+      closeControlClickHandler: function(evt) {
+        var p = evt.data.self.config.info.object;
+
+        if(p) {
+          p.remove();
+        }
+      },
+
+      /**
+       * Register all configured event handlers, to manage the info panel's
+       * runtime behaviour
+       */
+      setupBehaviour: function() {
+        if(SOS.Utils.isValidObject(this.sos)) {
+          for(var i = 0, len = this.config.info.eventHandlers.length; i < len; i++) {
+            var h = this.config.info.eventHandlers[i];
+
+            if(SOS.Utils.isValidObject(h) && SOS.Utils.isValidObject(h.event) && SOS.Utils.isValidObject(h.callback)) {
+              h.scope = h.scope || this;
+              this.sos.registerUserCallback(h);
+            }
+          }
+        }
+      }
+    });
+  }
+
   /* Create the SOS.App namespace */
   if(typeof SOS.App === "undefined") {
     /**
@@ -2972,7 +3393,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               menu: null,
               map: null,
               plot: null,
-              table: null
+              table: null,
+              infoMetadata: null,
+              infoHelp: null
             },
             options: {
               tabs: {
@@ -2983,7 +3406,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               time: {
                 useOfferingTimePeriod: false,
                 ms: 31 * 8.64e7
-              }
+              },
+              info: SOS.App.Resources.config.app.options.info
             }
           },
           overview: {
@@ -3074,12 +3498,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         components.map = new SOS.Map(options);
         components.plot = new SOS.Plot(options);
         components.table = new SOS.Table(options);
+        components.infoMetadata = new SOS.Info(options);
+        components.infoHelp = new SOS.Info(options);
 
         // Set the IDs of where each component is located on the page
         components.menu.config.menu.id = this.config.app.id + "Menu";
         components.map.config.map.id = this.config.app.id + "MapPanel";
         components.plot.config.plot.id = this.config.app.id + "PlotPanel";
         components.table.config.table.id = this.config.app.id + "TablePanel";
+        components.infoMetadata.config.info.id = this.config.app.id + "InfoMetadataBox";
+        components.infoHelp.config.info.id = this.config.app.id + "InfoHelpBox";
 
         // Set any component-specific initial options
         components.menu.config.menu.step = this.config.app.step;
@@ -3093,6 +3521,12 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           components.plot.config.overview.id = this.config.app.id + "Overview";
           components.table.config.overview.id = this.config.app.id + "Overview";
         }
+        components.infoMetadata.addClass("sos-info-metadata-box");
+        components.infoHelp.addClass("sos-info-help-box");
+        components.infoMetadata.setTitle(this.config.app.options.info.metadata.title);
+        components.infoHelp.setTitle(this.config.app.options.info.help.title);
+        components.infoMetadata.setContent(this.config.app.options.info.metadata.initialContent);
+        components.infoHelp.setContent(this.config.app.options.info.help.initialContent);
       },
  
       /**
@@ -3111,6 +3545,104 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.sos.registerUserCallback({event: "sosMenuEndDatetimeChange", scope: this, callback: this.sosMenuChangeHandler});
 
         this.sos.registerUserCallback({event: "sosMenuDownloadDataClick", scope: this, callback: this.sosMenuDownloadDataClickHandler});
+
+        this.setupInfoComponentsBehaviour();
+      },
+ 
+      /**
+       * Setup the behaviour for this app's info components
+       */
+      setupInfoComponentsBehaviour: function() {
+        var components = this.config.app.components;
+        var self = this;
+
+        /* Register event handlers to update the application info boxes as the
+           user navigates the application.  The scope for each callback is set
+           to the particular info box, so we use 'self' to refer to this app */
+        this.sos.registerUserCallback({
+          event: "sosCapsAvailable",
+          scope: components.infoMetadata,
+          callback: function() {
+            var c = this.sos.SOSCapabilities.serviceIdentification.title
+            + "<p/>Data Availability<br/>"
+            + "Starts: " + this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue + "<br/>"
+            + "Ends: " + this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue + "<br/>";
+            this.updateContent(c);
+          }
+        });
+
+        this.sos.registerUserCallback({
+          event: "sosCapsAlreadyAvailable",
+          scope: components.infoMetadata,
+          callback: function() {
+            var c = this.sos.SOSCapabilities.serviceIdentification.title
+            + "<p/>Data Availability<br/>"
+            + "Starts: " + this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue + "<br/>"
+            + "Ends: " + this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue + "<br/>";
+            this.updateContent(c);
+          }
+        });
+
+        /* The sosCapsAvailable event will probably have already fired by the
+           time we're setting up these handlers, hence the custom event
+           sosCapsAlreadyAvailable, so we can update the metadata info panel */
+        if(components.infoMetadata.haveValidCapabilitiesObject()) {
+          this.sos.events.triggerEvent("sosCapsAlreadyAvailable");
+        }
+
+        this.sos.registerUserCallback({
+          event: "sosMenuOfferingChange",
+          scope: components.infoMetadata,
+          callback: function() {
+            var item = components.menu.getCurrentItem();
+            if(item) {
+              var off = this.sos.getOffering(item.offering.id);
+              var c = off.name
+              + "<p/>Data Availability<br/>"
+              + "Starts: " + off.time.timePeriod.beginPosition + "<br/>"
+              + "Ends: " + off.time.timePeriod.endPosition + "<br/>";
+              this.updateContent(c);
+            }
+          }
+        });
+
+        this.sos.registerUserCallback({
+          event: "sosMapFeatureOfInterestSelect",
+          scope: components.infoMetadata,
+          callback: function() {
+            // Setup a template as the content comes from more than one SOS call
+            this.setContentTemplate("[%foi%] ([%lon%]&deg;, [%lat%]&deg;)<p/>Data Availability<br/>Starts: [%startDatetime%]<br/>Ends: [%endDatetime%]<br/>");
+            this.initContentFromTemplate();
+            var item = components.menu.getCurrentItem();
+            if(item) {
+              this.setContentFromTemplate(/\[%foi%\]/, item.foi.name);
+              var point = self.pointToLonLat(item.foi.geometry);
+              this.setContentFromTemplate(/\[%lon%\]/, parseFloat(point.x).toFixed(2));
+              this.setContentFromTemplate(/\[%lat%\]/, parseFloat(point.y).toFixed(2));
+              // Get data availability over all offerings at this FOI
+              this.sos.getTemporalCoverageForFeatureOfInterestId(item.foi.id);
+            }
+          }
+        });
+
+        this.sos.registerUserCallback({
+          event: "sosTemporalCoverageAvailable",
+          scope: components.infoMetadata,
+          callback: function() {
+            this.setContentFromTemplate(/\[%startDatetime%\]/, this.sos.SOSTemporalCoverage.timePeriod.beginPosition);
+            this.setContentFromTemplate(/\[%endDatetime%\]/, this.sos.SOSTemporalCoverage.timePeriod.endPosition);
+            this.displayContent();
+          }
+        });
+
+        this.sos.registerUserCallback({
+          event: "sosAppChangeAppTab",
+          scope: components.infoHelp,
+          callback: function(evt) {
+            var contentName = evt.data.componentName + "Content";
+            this.updateContent(self.config.app.options.info.help[contentName]);
+          }
+        });
       },
 
       /**
@@ -3214,6 +3746,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var amc = jQuery('#' + this.config.app.id + 'MenuContainer');
         var am = jQuery('#' + this.config.app.id + 'Menu');
         var a = jQuery('#' + this.config.app.id);
+        var irc = jQuery('#' + this.config.app.id + 'InfoRightContainer');
 
         // If app container div doesn't exist, create one on the fly
         if(ac.length < 1) {
@@ -3239,6 +3772,12 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           ac.append(a);
         }
 
+        // If app info right container div doesn't exist, create one on the fly
+        if(irc.length < 1) {
+          irc = jQuery('<div id="' + this.config.app.id + 'InfoRightContainer" class="sos-info-right-container"/>');
+          ac.append(irc);
+        }
+
         // Construct the app menu
         this.config.app.components.menu.display();
 
@@ -3248,6 +3787,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         // Setup app tabs event handlers
         a.bind("tabscreate", {self: this}, this.initAppHandler);
         a.tabs();
+
+        // Display the app info panels & add to the right-hand container
+        this.config.app.components.infoMetadata.display();
+        this.config.app.components.infoHelp.display();
+
+        var im = jQuery('#' + this.config.app.id + 'InfoMetadataBox');
+        var ih = jQuery('#' + this.config.app.id + 'InfoHelpBox');
+        irc.append(im, ih);
 
         this.config.app.object = a;
       },
@@ -3325,6 +3872,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(o.length > 0) {
           evt.data.componentName == "map" ? o.hide() : o.show();
         }
+
+        // For external listeners (application-level plumbing)
+        self.sos.events.triggerEvent("sosAppChangeAppTab", evt);
       },
  
       /**
@@ -3343,6 +3893,20 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         // Store map FOI selection in menu, & then display offerings for FOI
         components.menu.config.menu.selected = components.map.config.map.selected;
         components.menu.displayOfferings();
+      },
+ 
+      /**
+       * Transform point in map component CRS to EPSG:4326
+       */
+      pointToLonLat: function(p1) {
+        var map = this.config.app.components.map.config.map.object;
+        var p2;
+
+        if(p1) {
+          p2 = new OpenLayers.Geometry.Point(p1.x, p1.y).transform(map.getProjectionObject(), new OpenLayers.Projection("EPSG:4326"));
+        }
+
+        return p2;
       },
  
       /**
@@ -3667,8 +4231,40 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           components.table.config.overview.object = components.plot.config.overview.object = this.config.overview.object;
           this.setupOverviewBehaviour();
         }
+
+        // For external listeners (application-level plumbing)
+        this.sos.events.triggerEvent("sosAppDrawObservationData");
       }
     });
+
+    /**
+     * SOS.App.Resources
+     * Utility object for holding static resources used by the SOS.App class.
+     * This keeps SOS.App tidier, as well as making it easier to override
+     * these resources when specialising SOS.App
+     */
+    SOS.App.Resources = {
+      config: {
+        app: {
+          options: {
+            info: {
+              metadata: {
+                title: "Metadata",
+                initialContent: "Welcome to SOS.App"
+              },
+              help: {
+                title: "Help",
+                initialContent: "Quick Start<ul><li>Select a Feature of Interest</li><li>Select an Offering from that Feature Of Interest</li><li>Select an Observed Property from that Offering</li></ul>The system will then plot/tabulate a rolling month's worth of data. Use the Controls to refine the query.",
+                mapContent: "Map controls<ul><li>Click a point on the map to see available offerings</li><li>Zoom the map</li><ul><li>Shift+drag a region on the map to zoom in</li><li>Use the upper left '+' button to zoom in</li><li>Use the upper left '-' button to zoom out</li></ul><li>Drag to pan across the map</li><li>Click on the upper right '+' button to control available map layers</li><li>Click on the lower right '+' button to control the zoom region on an overview map</li></ul>",
+                plotContent: "Plot controls<ul><li>Date Range</li><ul><li>Enter date as YYYY-MM-DD</li><li>Or pick from date selector</li></ul><li>Overplot further observed properties by checking Add To Existing</li><li>Subset the plot by dragging a selection across the plot (or across the lower overview plot); click anywhere on the overview plot to reset</li><li>Click on any two points on the plot to see summary statistics for data on that interval</li><li>Download the data via the Download Data button</li></ul>",
+                tableContent: "Table controls<ul><li>Date Range</li><ul><li>Enter date as YYYY-MM-DD</li><li>Or pick from date selector</li></ul><li>Add further observed properties to the table by checking Add To Existing</li><li>Subset the table by dragging a selection down the table rows (or across the lower overview plot); click anywhere on the overview plot to reset</li><li>Shift+click on any two rows on the table to see summary statistics for data on that interval</li><li>Download the data via the Download Data button</li></ul>"
+              }
+            }
+          }
+        }
+      },
+      CLASS_NAME: "SOS.App.Resources"
+    }
   }
 }
 
