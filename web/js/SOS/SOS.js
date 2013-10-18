@@ -315,7 +315,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           scope: this,
           async: this.config.async,
           failure: function() {
-            alert(OpenLayers.i18n("SOSGetLatestObservationsErrorMessage") + url);
+            alert(OpenLayers.i18n("SOSGetLatestObservationsErrorMessage") + this.url);
           },
           success: this._parseLatestObservations,
           data: xml
@@ -410,7 +410,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           scope: this,
           async: this.config.async,
           failure: function() {
-            alert(OpenLayers.i18n("SOSGetObservationsErrorMessage") + url);
+            alert(OpenLayers.i18n("SOSGetObservationsErrorMessage") + this.url);
           },
           success: this._parseObservations,
           data: xml
@@ -485,7 +485,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           scope: this,
           async: this.config.async,
           failure: function() {
-            alert(OpenLayers.i18n("SOSGetFeatureOfInterestErrorMessage") + url);
+            alert(OpenLayers.i18n("SOSGetFeatureOfInterestErrorMessage") + this.url);
           },
           success: this._parseFeatureOfInterest,
           data: xml
@@ -517,7 +517,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           scope: this,
           async: this.config.async,
           failure: function() {
-            alert(OpenLayers.i18n("SOSGetFeatureOfInterestTimeErrorMessage") + url);
+            alert(OpenLayers.i18n("SOSGetFeatureOfInterestTimeErrorMessage") + this.url);
           },
           success: this._parseTemporalCoverage,
           data: xml
@@ -546,7 +546,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           scope: this,
           async: this.config.async,
           failure: function() {
-            alert(OpenLayers.i18n("SOSDescribeSensorErrorMessage") + url);
+            alert(OpenLayers.i18n("SOSDescribeSensorErrorMessage") + this.url);
           },
           success: this._parseSensorDescription,
           data: xml
