@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>SOS Info Test</title>
+
+    <link rel="stylesheet" href="http://basmet.nerc-bas.ac.uk/js/sos/jquery/theme/default/jquery-ui.min.css" type="text/css"/>
+    <link rel="stylesheet" href="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.Styles.css" type="text/css"/>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/proj4js/lib/proj4js-combined.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/OpenLayers/OpenLayers.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/jquery/jquery-ui.min.js"></script>
+    <!--[if lte IE 8]><script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/excanvas.min.js"></script><![endif]-->
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.selection.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.axislabels.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.Ui.js"></script>
+
+    <script type="text/javascript">
+      /**
+       * Initializes the page
+       */
+      function init() {
+        var options = {
+          url: 'http://sosmet.nerc-bas.ac.uk:8080/sosmet/sos',
+        };
+        var sos = new SOS(options);
+
+        /* Instantiate & configure the info boxes */
+        var infoMetadata = new SOS.Info(options);
+        var infoHelp = new SOS.Info(options);
+        var infoContact = new SOS.Info(options);
+        var infoAbstract = new SOS.Info(options);
+        var infoKeywords = new SOS.Info(options);
+
+        infoMetadata.sos = sos;
+        infoHelp.sos = sos;
+        infoContact.sos = sos;
+        infoAbstract.sos = sos;
+        infoKeywords.sos = sos;
+
+        infoMetadata.config.info.id = "sosInfoMetadataBox";
+        infoHelp.config.info.id = "sosInfoHelpBox";
+        infoContact.config.info.id = "sosInfoContactBox";
+        infoAbstract.config.info.id = "sosInfoAbstractBox";
+        infoKeywords.config.info.id = "sosInfoKeywordsBox";
+
+        infoMetadata.addClass("sos-info-metadata-box");
+        infoHelp.addClass("sos-info-help-box");
+        infoContact.addClass("sos-info-contact-box");
+        infoContact.addClass("local-info-contact-box");
+        infoAbstract.addClass("local-info-abstract-box");
+        infoKeywords.addClass("local-info-keywords-box");
+
+        infoMetadata.setTitle("Metadata");
+        infoHelp.setTitle("Help");
+        infoContact.setTitle("Contact");
+        infoAbstract.setTitle("Abstract");
+        infoKeywords.setTitle("Keywords");
+
+        /* Setup event handlers to dynamically change the content of various
+           info boxes, dependent on the state of the application */
+        infoMetadata.addEventHandler({
+          event: "sosCapsAvailable",
+          callback: function() {
+            /* Content can be a plain string */
+            var c = this.sos.SOSCapabilities.serviceIdentification.title
+            + "<p/>Data Availability<br/>"
+            + "Starts: " + this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue + "<br/>"
+            + "Ends: " + this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue + "<br/>";
+            this.updateContent(c);
+          }
+        });
+        infoContact.addEventHandler({
+          event: "sosCapsAvailable",
+          callback: function() {
+            /* Content can be a jQuery object */
+            var c = jQuery("<div></div>", {
+              html: 'Service: <a href="' + this.sos.url + '">' + this.sos.SOSCapabilities.serviceIdentification.title + '</a>' + '<br/>'
+              + 'Provider: <a href="' + this.sos.SOSCapabilities.serviceProvider.providerSite + '">' + this.sos.SOSCapabilities.serviceProvider.providerName + '</a>' + '<br/>'
+              + 'Contact: <a href="mailto:' + this.sos.SOSCapabilities.serviceProvider.serviceContact.contactInfo.address.electronicMailAddress + '">' + this.sos.SOSCapabilities.serviceProvider.serviceContact.individualName + '</a>' + '<br/>'
+            });
+            this.updateContent(c);
+          }
+        });
+        infoAbstract.addEventHandler({
+          event: "sosCapsAvailable",
+          callback: function() {
+            /* Take the content as-is, but convert newlines to <br/>s */
+            this.updateContent(SOS.Utils.newlineToBr(this.sos.SOSCapabilities.serviceIdentification.abstract));
+          }
+        });
+        infoKeywords.addEventHandler({
+          event: "sosCapsAvailable",
+          callback: function() {
+            /* Display keywords as an unordered list */
+            var a = [];
+            for(var k in this.sos.SOSCapabilities.serviceIdentification.keywords) {
+              a.push(k);
+            }
+            var c = jQuery("<ul></ul>");
+            jQuery.each(a, function(i) {
+              var li = jQuery("<li/>").appendTo(c);
+              var tag = jQuery("<span/>", {
+                text: a[i]
+              }).appendTo(li);
+            });
+            this.updateContent(c);
+          }
+        });
+
+        /* Set any intitial content for the info boxes */
+        var infoMetadataInitialContent = "Welcome to SOS Info Test";
+        var infoHelpInitialContent = "Quick Start<ul><li>Select a Feature of Interest</li><li>Select an Offering from that Feature Of Interest</li><li>Select an Observed Property from that Offering</li></ul>The system will then plot/tabulate a rolling month's worth of data. Use the Controls to refine the query.";
+        var infoContactInitialContent = "";
+        var infoAbstractInitialContent = "";
+        var infoKeywordsInitialContent = "";
+
+        infoMetadata.setContent(infoMetadataInitialContent);
+        infoHelp.setContent(infoHelpInitialContent);
+        infoContact.setContent(infoContactInitialContent);
+        infoAbstract.setContent(infoAbstractInitialContent);
+        infoKeywords.setContent(infoKeywordsInitialContent);
+
+        /* Display the info boxes */
+        infoMetadata.display();
+        infoHelp.display();
+        infoContact.display();
+        infoAbstract.display();
+        infoKeywords.display();
+
+        /* This is a 'plain' info box that doesn't use any calls to the SOS,
+           but can be used for displaying static content */
+        var infoVanilla = new SOS.Info(options);
+        infoVanilla.addClass("sos-info-vanilla-box");
+        infoVanilla.setTitle("SOS.Info Box");
+        infoVanilla.setContent("This is a somewhat vanilla SOS.Info box");
+        infoVanilla.display();
+
+        /* Do a getCapabilities call to the SOS, to kickstart the dynamic
+           nature of some of the info boxes */
+        sos.getCapabilities();
+
+        /* The following buttons are used to illustrate how info boxes can
+           change their content based upon the state of an application */
+
+        var b1 = jQuery("<div/>", {
+          text: "Get FOI Details"
+        }).button();
+        b1.bind("click", {self: this}, function(evt) {
+          var self = evt.data.self;
+          var foiId = "foi_34579";          // Halley
+          // var foiId = "foi_18753";          // Tromso
+
+          /* Setup a template as the content comes from more than one SOS call.
+             We then use a regular expression to substitute the runtime values
+             into this template, via calls to setContentFromTemplate() */
+          infoMetadata.setContentTemplate("[%foi%] ([%lon%]&deg;, [%lat%]&deg;)<p/>Data Availability<br/>Starts: [%startDatetime%]<br/>Ends: [%endDatetime%]<br/>");
+          infoMetadata.initContentFromTemplate();
+
+          /* Register handlers against events on this SOS object */
+          sos.registerUserCallback({
+            event: "sosFeatureOfInterestAvailable",
+            callback: function() {
+              /* Substitute values from SOS calls into template & display */
+              infoMetadata.setContentFromTemplate(/\[%foi%\]/, this.SOSFeatureOfInterest.attributes.name);
+              infoMetadata.setContentFromTemplate(/\[%lon%\]/, this.SOSFeatureOfInterest.geometry.x);
+              infoMetadata.setContentFromTemplate(/\[%lat%\]/, this.SOSFeatureOfInterest.geometry.y);
+              infoMetadata.displayContent();
+            }
+          });
+          sos.registerUserCallback({
+            event: "sosTemporalCoverageAvailable",
+            callback: function() {
+              /* Substitute values from SOS calls into template & display */
+              infoMetadata.setContentFromTemplate(/\[%startDatetime%\]/, this.SOSTemporalCoverage.timePeriod.beginPosition);
+              infoMetadata.setContentFromTemplate(/\[%endDatetime%\]/, this.SOSTemporalCoverage.timePeriod.endPosition);
+              infoMetadata.displayContent();
+            }
+          });
+
+          /* Do calls to get info for the given FOI.  This will trigger the
+             metadata info box to update its content based on what the SOS
+             returns */
+          sos.getFeatureOfInterest(foiId);
+          sos.getTemporalCoverageForFeatureOfInterestId(foiId);
+        });
+        jQuery("body").append(b1);
+
+        var b2 = jQuery("<div/>", {
+          text: "Get Offering Details"
+        }).button();
+        b2.bind("click", {self: this}, function(evt) {
+          var self = evt.data.self;
+          var off = sos.getOffering("HalleyMet");
+          // var off = sos.getOffering("TromsoMet");
+
+          if(off) {
+            /* Register handlers against events on this SOS.Offering object */
+            off.registerUserCallback({
+              event: "sosLatestObsAvailable",
+              callback: function() {
+                var c = off.name
+                + "<p/>Data Availability<br/>"
+                + "Starts: " + off.time.timePeriod.beginPosition + "<br/>"
+                + "Ends: " + off.time.timePeriod.endPosition + "<br/>";
+                infoMetadata.updateContent(c);
+              }
+            });
+
+            /* Do calls to get info for the given offering.  This will trigger
+               the metadata info box to update its content based on what the
+               SOS returns */
+            off.getLatestObservations();
+          }
+        });
+        jQuery("body").append(b2);
+
+        var b3 = jQuery("<div/>", {
+          text: "Describe Sensor"
+        }).button();
+        b3.bind("click", {self: this}, function(evt) {
+          var self = evt.data.self;
+          var procedure = "urn:ogc:object:feature:Sensor:BAS:bas-met-halley-met";
+          // var procedure = "urn:ogc:object:feature:Sensor:BAS:bas-met-tromso-met";
+
+          /* Register handlers against events on this SOS object */
+          sos.registerUserCallback({
+            event: "sosSensorDescriptionAvailable",
+            callback: function() {
+              var c = procedure
+              + "<p/>Station Location<br/>"
+              + SOS.Utils.toTitleCase(this.SOSSensorDescription.members[0].system.position.location.vector.coordinates[0].name) + ": " + this.SOSSensorDescription.members[0].system.position.location.vector.coordinates[0].quantity.value + " " + this.SOSSensorDescription.members[0].system.position.location.vector.coordinates[0].quantity.uom + "<br/>"
+              + this.SOSSensorDescription.members[0].system.position.location.vector.coordinates[1].name + ": " + this.SOSSensorDescription.members[0].system.position.location.vector.coordinates[1].quantity.value + " " + this.SOSSensorDescription.members[0].system.position.location.vector.coordinates[1].quantity.uom + "<br/>"
+              + this.SOSSensorDescription.members[0].system.position.location.vector.coordinates[2].name + ": " + this.SOSSensorDescription.members[0].system.position.location.vector.coordinates[2].quantity.value + " " + this.SOSSensorDescription.members[0].system.position.location.vector.coordinates[2].quantity.uom + "<br/>";
+              infoMetadata.updateContent(c);
+            }
+          });
+
+          /* Do calls to get info for the given procedure.  This will trigger
+             the metadata info box to update its content based on what the
+             SOS returns */
+          sos.describeSensor(procedure);
+        });
+        jQuery("body").append(b3);
+      }
+    </script>
+
+    <style>
+      .sos-info-vanilla-box {
+        padding: 5px; 
+        padding-top: 20px;
+        width: 400px;
+      }
+
+      /* Local override of .sos-info-right-container class */
+      .sos-info-right-container {
+        width: 200px;
+        position: absolute;
+        top: 152px;
+        left: 1027px;
+      }
+
+      /* Local override of .sos-info-contact-box class */
+      .local-info-contact-box {
+        position: absolute;
+        left: 10px;
+      }
+
+      /* Abstract box is only local; there is no pre-defined style - yet */
+      .local-info-abstract-box {
+        position: absolute;
+        left: 10px;
+        top: 400px;
+        width: 400px;
+        padding: 5px;
+        padding-top: 20px;
+        font-size: 0.65em;
+      }
+
+      /* Keywords box is only local; there is no pre-defined style - yet */
+      .local-info-keywords-box {
+        position: absolute;
+        left: 510px;
+        top: 310px;
+        width: 400px;
+        padding: 5px;
+        padding-top: 20px;
+      }
+    </style>
+  </head>
+  <body onload="init()">
+    <h3 id="title">SOS Info Test</h3>
+    <p>This tests the SOS.Info component from the SOS.Ui.js module.  These controls allow for informational panels to be distributed around the application, which hook into the SOS (via defined event handlers) to show context-sensitive metadata.  They can also be used for displaying static content, such as the context-sensitive help panels etc.  Clicking on the buttons will simulate typical interaction during a SOS.App session, illustrating how the SOS.Info panels' content can be dynamically updated at runtime, according to the state of the application.</p>
+    <div id="sosInfoRightContainer" class="sos-info-right-container">
+      <div id="sosInfoMetadataBox" class="sos-info-box sos-info-metadata-box"></div>
+      <div id="sosInfoHelpBox" class="sos-info-box sos-info-help-box"></div>
+    </div>
+  </body>
+</html>
+
