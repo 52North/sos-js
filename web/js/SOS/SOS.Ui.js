@@ -1559,7 +1559,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           for(var j = 0, clen = options.columns.names.length; j < clen; j++) {
             tcontent += options.columns.names[j];
 
-            if(i < slen - 1 && j < clen - 1) {
+            if(i < slen - 1 || j < clen - 1) {
               tcontent += columnSeparator;
             }
           }
