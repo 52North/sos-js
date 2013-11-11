@@ -909,6 +909,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             options: {
               show: true,
               header: {},
+              columns: {
+                names: ["Time", "Value"]
+              },
               scrollable: false
             }
           },
@@ -1383,9 +1386,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         for(var i = 0, slen = series.length; i < slen; i++) {
           if(i != seriesIndex) {
-            jQuery('th[class="sos-table"][id="sl' + i + '"]').css(style);
-            jQuery('th[class="sos-table"][id="ch' + i + '"]').css(style);
-            jQuery('td[class="sos-table"][id^="' + i + '"]').css(style);
+            jQuery('th[class^="sos-table"][id="sl' + i + '"]').css(style);
+            jQuery('th[class^="sos-table"][id="ch' + i + '"]').css(style);
+            jQuery('td[class^="sos-table"][id^="' + i + '"]').css(style);
+            jQuery('td[class^="sos-table"][id^="' + i + '"]').removeClass("sos-table-highlight-selected");
           }
         }
       },
@@ -1446,6 +1450,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var lengths = [];
         var ft = this.config.format.time;
         var fv = this.config.format.value;
+        options.columns.names = options.columns.names || ["Time", "Value"];
+        var clen = options.columns.names.length;
 
         for(var i = 0, len = series.length; i < len; i++) {
           lengths.push(series[i].data.length);
@@ -1457,15 +1463,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Series header label
         for(var i = 0, len = series.length; i < len; i++) {
-          tcontent += '<th id="sl' + i + '" class="sos-table" colspan="2">' + series[i].headerLabel + '</th>';
+          tcontent += '<th id="sl' + i + '" class="sos-table" colspan="' + clen + '">' + series[i].headerLabel + '</th>';
         }
         tcontent += '</tr>';
         tcontent += '<tr class="sos-table">';
 
         // Per series column headings
-        for(var i = 0, len = series.length; i < len; i++) {
-          tcontent += '<th id="ch' + i + '" class="sos-table">Time</th>';
-          tcontent += '<th id="ch' + i + '" class="sos-table">Value</th>';
+        for(var i = 0, slen = series.length; i < slen; i++) {
+          for(var j = 0, clen = options.columns.names.length; j < clen; j++) {
+            tcontent += '<th id="ch' + i + '" class="sos-table">' + options.columns.names[j] + '</th>';
+          }
         }
         tcontent += '</tr>';
         tcontent += '</thead>';
@@ -1524,6 +1531,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var commentCharacter = options.commentCharacter || '#';
         var columnSeparator = options.columnSeparator || ',';
         var rowSeparator = options.rowSeparator || '\n';
+        options.columns.names = options.columns.names || ["Time", "Value"];
 
         // The value formatter should be plain non-HTML
         fv.formatter = SOS.Ui.prototype.formatValueSimple;
@@ -1532,7 +1540,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           lengths.push(series[i].data.length);
         }
         var maxrows = Math.max.apply(null, lengths);
- 
+
         tcontent += commentCharacter;
 
         // Series header label (with plain non-HTML UOMs)
@@ -1547,13 +1555,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         tcontent += commentCharacter;
 
         // Per series column headings
-        for(var i = 0, len = series.length; i < len; i++) {
-          tcontent += 'Time';
-          tcontent += columnSeparator;
-          tcontent += 'Value';
+        for(var i = 0, slen = series.length; i < slen; i++) {
+          for(var j = 0, clen = options.columns.names.length; j < clen; j++) {
+            tcontent += options.columns.names[j];
 
-          if(i < len - 1) {
-            tcontent += columnSeparator;
+            if(i < slen - 1 && j < clen - 1) {
+              tcontent += columnSeparator;
+            }
           }
         }
         tcontent += rowSeparator;
@@ -1669,8 +1677,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       highlightCellGroup: function(elem) {
         var cell = jQuery(elem);
-        this.highlight(cell);
-        (cell.index() % 2 == 0) ? this.highlight(cell.next()) : this.highlight(cell.prev());
+        this.highlight(cell.closest('td').parent()[0].children);
       },
 
       /**
@@ -1678,8 +1685,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       toggleHighlightCellGroup: function(elem) {
         var cell = jQuery(elem);
-        this.toggleHighlight(cell);
-        (cell.index() % 2 == 0) ? this.toggleHighlight(cell.next()) : this.toggleHighlight(cell.prev());
+        this.toggleHighlight(cell.closest('td').parent()[0].children);
       },
 
       /**
@@ -1703,8 +1709,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       highlightSelectedCellGroup: function(elem) {
         var cell = jQuery(elem);
-        this.highlightSelected(cell);
-        (cell.index() % 2 == 0) ? this.highlightSelected(cell.next()) : this.highlightSelected(cell.prev());
+        this.highlightSelected(cell.closest('td').parent()[0].children);
       },
 
       /**
