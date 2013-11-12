@@ -373,12 +373,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             series: [],
             options: {
               show: true,
-              xaxis: {mode: "time", axisLabel: "Time"},
+              xaxis: {mode: "time", axisLabel: "Time", panRange: false},
               yaxis: {},
               xaxes: [],
               yaxes: [],
               haveCustomAxes: false,
               selection: {mode: "x"},
+              zoom: {interactive: true},
+              pan: {interactive: true},
               grid: {borderWidth: 1, hoverable: true, clickable: true},
               legend: {show: true, backgroundOpacity: 0.5},
               series: {lines: {show: true}, points: {show: false}, bars: {show: false}}
@@ -4261,7 +4263,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 title: "Help",
                 initialContent: "Quick Start<ul><li>Select a Feature of Interest</li><li>Select an Offering from that Feature Of Interest</li><li>Select an Observed Property from that Offering</li></ul>The system will then plot/tabulate a rolling month's worth of data. Use the Controls to refine the query.",
                 mapContent: "Map controls<ul><li>Click a point on the map to see available offerings</li><li>Zoom the map</li><ul><li>Shift+drag a region on the map to zoom in</li><li>Use the upper left '+' button to zoom in</li><li>Use the upper left '-' button to zoom out</li></ul><li>Drag to pan across the map</li><li>Click on the upper right '+' button to control available map layers</li><li>Click on the lower right '+' button to control the zoom region on an overview map</li></ul>",
-                plotContent: "Plot controls<ul><li>Date Range</li><ul><li>Enter date as YYYY-MM-DD</li><li>Or pick from date selector</li></ul><li>Overplot further observed properties by checking Add To Existing</li><li>Subset the plot by dragging a selection across the plot (or across the lower overview plot); click anywhere on the overview plot to reset</li><li>Click on any two points on the plot to see summary statistics for data on that interval</li><li>Download the data via the Download Data button</li></ul>",
+                plotContent: "Plot controls<ul><li>Date Range</li><ul><li>Enter date as YYYY-MM-DD</li><li>Or pick from date selector</li></ul><li>Overplot further observed properties by checking Add To Existing</li><li>Subset the plot by dragging a selection across the plot (or across the lower overview plot); click anywhere on the overview plot to reset</li><li>Use the mouse scrollwheel to zoom in/out</li><li>Realign the plot vertically by dragging</li><li>Click on any two points on the plot to see summary statistics for data on that interval</li><li>Download the data via the Download Data button</li></ul>",
                 tableContent: "Table controls<ul><li>Date Range</li><ul><li>Enter date as YYYY-MM-DD</li><li>Or pick from date selector</li></ul><li>Add further observed properties to the table by checking Add To Existing</li><li>Subset the table by dragging a selection down the table rows (or across the lower overview plot, or shift+click on any two rows on the table); click anywhere on the overview plot to reset</li><li>Click on any two rows on the table to see summary statistics for data on that interval</li><li>Download the data via the Download Data button</li></ul>"
               }
             }

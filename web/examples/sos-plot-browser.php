@@ -15,6 +15,7 @@
     <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.min.js"></script>
     <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.selection.min.js"></script>
     <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.axislabels.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.navigate.min.js"></script>
     <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.js"></script>
     <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.Ui.js"></script>
   </head>
