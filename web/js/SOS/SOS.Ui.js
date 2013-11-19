@@ -1767,6 +1767,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               }
             }
           },
+          format: {
+            time: {
+              formatter: SOS.Utils.jsTimestampToIso
+            },
+            value: {
+              sciLimit: 0.1,
+              digits: 2,
+              formatter: SOS.Ui.prototype.formatValueFancy
+            }
+          },
           baseLayer: {
             object: null,
             id: "sosMapBaseLayer",
@@ -2033,6 +2043,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       populateMultivariateTable: function(sos) {
         var tcontent = "", html = "";
+        var ft = this.config.format.time;
+        var fv = this.config.format.value;
 
         if(SOS.Utils.isValidObject(sos)) {
           for(var i = 0, len = sos.getCountOfObservations(); i < len; i++) {
@@ -2040,8 +2052,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             var cssClass = (i % 2 == 0 ? "sos-table-even" : "sos-table-odd");
             tcontent += '<tr class="' + cssClass + '">';
             tcontent += '<td class="sos-table">' + ob.observedPropertyTitle + '</td>';
-            tcontent += '<td class="sos-table">' + ob.time + '</td>';
-            tcontent += '<td class="sos-table">' + ob.result.value + ' ' + ob.uomTitle + '</td>';
+            tcontent += '<td class="sos-table">' + ft.formatter(ob.time) + '</td>';
+            tcontent += '<td class="sos-table">' + fv.formatter(ob.result.value, fv.sciLimit, fv.digits) + ' ' + ob.uomTitle + '</td>';
             tcontent += '</tr>';
           }
           html += '<table class="sos-table sos-embedded-table">';
@@ -2156,6 +2168,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 label: "List all Offerings",
                 prompt: "or alternatively"
               }
+            }
+          },
+          format: {
+            time: {
+              formatter: SOS.Utils.jsTimestampToIso
+            },
+            value: {
+              sciLimit: 0.1,
+              digits: 2,
+              formatter: SOS.Ui.prototype.formatValueFancy
             }
           }
         };
@@ -3009,6 +3031,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 }
               }
             }
+          },
+          format: {
+            time: {
+              formatter: SOS.Utils.jsTimestampToIso
+            },
+            value: {
+              sciLimit: 0.1,
+              digits: 2,
+              formatter: SOS.Ui.prototype.formatValueFancy
+            }
           }
         };
         jQuery.extend(true, this, options);
@@ -3430,6 +3462,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               legend: {show: false},
               series: {lines: {show: true, lineWidth: 1}, shadowSize: 0}
             }
+          },
+          format: {
+            time: {
+              formatter: SOS.Utils.jsTimestampToIso
+            },
+            value: {
+              sciLimit: 0.1,
+              digits: 2,
+              formatter: SOS.Ui.prototype.formatValueFancy
+            }
           }
         };
         jQuery.extend(true, this, options);
@@ -3508,6 +3550,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         components.infoMetadata = new SOS.Info(options);
         components.infoHelp = new SOS.Info(options);
 
+        // Ensure that all components share common time/value formatters
+        for(var p in components) {
+          components[p].config.format = this.config.format;
+        }
+
         // Set the IDs of where each component is located on the page
         components.menu.config.menu.id = this.config.app.id + "Menu";
         components.map.config.map.id = this.config.app.id + "MapPanel";
@@ -3570,10 +3617,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           event: "sosCapsAvailable",
           scope: components.infoMetadata,
           callback: function() {
+            var ft = this.config.format.time;
             var c = this.sos.SOSCapabilities.serviceIdentification.title
             + "<p/>Data Availability<br/>"
-            + "Starts: " + this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue + "<br/>"
-            + "Ends: " + this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue + "<br/>";
+            + "Starts: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) + "<br/>"
+            + "Ends: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue) + "<br/>";
             this.updateContent(c);
           }
         });
@@ -3582,10 +3630,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           event: "sosCapsAlreadyAvailable",
           scope: components.infoMetadata,
           callback: function() {
+            var ft = this.config.format.time;
             var c = this.sos.SOSCapabilities.serviceIdentification.title
             + "<p/>Data Availability<br/>"
-            + "Starts: " + this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue + "<br/>"
-            + "Ends: " + this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue + "<br/>";
+            + "Starts: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) + "<br/>"
+            + "Ends: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue) + "<br/>";
             this.updateContent(c);
           }
         });
@@ -3601,13 +3650,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           event: "sosMenuOfferingChange",
           scope: components.infoMetadata,
           callback: function() {
+            var ft = this.config.format.time;
             var item = components.menu.getCurrentItem();
             if(item) {
               var off = this.sos.getOffering(item.offering.id);
               var c = off.name
               + "<p/>Data Availability<br/>"
-              + "Starts: " + off.time.timePeriod.beginPosition + "<br/>"
-              + "Ends: " + off.time.timePeriod.endPosition + "<br/>";
+              + "Starts: " + ft.formatter(off.time.timePeriod.beginPosition) + "<br/>"
+              + "Ends: " + ft.formatter(off.time.timePeriod.endPosition) + "<br/>";
               this.updateContent(c);
             }
           }
@@ -3636,8 +3686,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           event: "sosTemporalCoverageAvailable",
           scope: components.infoMetadata,
           callback: function() {
-            this.setContentFromTemplate(/\[%startDatetime%\]/, this.sos.SOSTemporalCoverage.timePeriod.beginPosition);
-            this.setContentFromTemplate(/\[%endDatetime%\]/, this.sos.SOSTemporalCoverage.timePeriod.endPosition);
+            var ft = this.config.format.time;
+            this.setContentFromTemplate(/\[%startDatetime%\]/, ft.formatter(this.sos.SOSTemporalCoverage.timePeriod.beginPosition));
+            this.setContentFromTemplate(/\[%endDatetime%\]/, ft.formatter(this.sos.SOSTemporalCoverage.timePeriod.endPosition));
             this.displayContent();
           }
         });
