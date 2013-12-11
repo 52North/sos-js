@@ -194,7 +194,7 @@ table.sos-table-scrollable {
   border-radius: 6px;
   background-color: #f2f5f7;
   border: thin solid #aed0ea;
-  z-index: 1200;
+  z-index: 1005;
   filter: alpha(opacity=80);
   opacity: 0.8;
 }
