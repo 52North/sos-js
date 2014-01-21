@@ -378,6 +378,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               xaxes: [],
               yaxes: [],
               haveCustomAxes: false,
+              forceSingleAxis: false,
               selection: {mode: "x"},
               zoom: {interactive: true},
               pan: {interactive: true},
@@ -608,13 +609,21 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           // We normally setup labels for y axes unless told otherwise
           if(!options.haveCustomAxes) {
             options.yaxes = options.yaxes || [];
+              
+            // We can force multiple data series to share a single axis
+            if(options.forceSingleAxis) {
+              if(series.length > 0) {
+                options.yaxis.axisLabel = series[0].name;
+                options.yaxis.axisLabel += (series[0].uomTitle.length > 0 ? " / " + series[0].uomTitle : "");
+              }
+            } else {
+              for(var i = 0, len = series.length; i < len; i++) {
+                options.yaxes[i] = {};
+                series[i].yaxis = (i + 1);
 
-            for(var i = 0, len = series.length; i < len; i++) {
-              options.yaxes[i] = {};
-              series[i].yaxis = (i + 1);
-
-              options.yaxes[i].axisLabel = series[i].name;
-              options.yaxes[i].axisLabel += (series[i].uomTitle.length > 0 ? " / " + series[i].uomTitle : "");
+                options.yaxes[i].axisLabel = series[i].name;
+                options.yaxes[i].axisLabel += (series[i].uomTitle.length > 0 ? " / " + series[i].uomTitle : "");
+              }
             }
           }
         }
@@ -1115,10 +1124,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         }
         options.yaxes = options.yaxes || [];
 
-        // Specify which yaxis applies to which data series
-        for(var i = 0, len = series.length; i < len; i++) {
-          options.yaxes[i] = {};
-          series[i].yaxis = (i + 1);
+        // We can force multiple data series to share a single axis
+        if(!options.forceSingleAxis) {
+          // Specify which yaxis applies to which data series
+          for(var i = 0, len = series.length; i < len; i++) {
+            options.yaxes[i] = {};
+            series[i].yaxis = (i + 1);
+          }
         }
       },
 

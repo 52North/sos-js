@@ -25,6 +25,9 @@
   background: #ffffff;
   filter: alpha(opacity=80);
   opacity: 0.8;
+  -moz-border-radius: 6px;
+  -webkit-border-radius: 6px;
+  border-radius: 6px;
   border: thin solid grey;
   padding: 5px;
   z-index: 1200;
