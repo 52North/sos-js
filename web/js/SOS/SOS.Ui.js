@@ -2627,9 +2627,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       updateCurrentItemDateRange: function() {
         var item = this.getDatepickerValues();
 
-        this.updateCurrentItem(item);
-
-        return item;
+        return this.updateCurrentItem(item);
       },
  
       /**
