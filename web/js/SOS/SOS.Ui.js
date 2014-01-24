@@ -3956,7 +3956,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       initMap: function() {
         this.config.app.components.map.display();
       },
- 
+
       /**
        * Event handler for map feature-of-interest (FOI) select
        */
@@ -4171,6 +4171,27 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Check that an offering contains an observed property
+       */
+      offeringHasObservedProperty: function(offeringId, observedPropertyId) {
+        var offering = this.sos.getOffering(offeringId);
+        var retval = false;
+
+        if(offering) {
+          var ids = offering.getObservedPropertyIds();
+
+          for(var i = 0, len = ids.length; i < len; i++) {
+            if(ids[i] == observedPropertyId) {
+              retval = true;
+              break;
+            }
+          }
+        }
+
+        return retval;
+      },
+
+      /**
        * Check whether the given item object contains the required
        * parameters to perform a getObservation request
        */
@@ -4181,7 +4202,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 this.isValidParameter(item.offering.id) &&
                 this.isValidParameter(item.observedProperty) &&
                 this.isValidParameter(item.time.startDatetime) &&
-                this.isValidParameter(item.time.endDatetime));
+                this.isValidParameter(item.time.endDatetime) &&
+                this.offeringHasObservedProperty(item.offering.id, item.observedProperty));
       },
 
       /**
