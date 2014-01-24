@@ -2584,6 +2584,22 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Set datepicker values from the time properties of the given item
+       */
+      setDatepickerValues: function(item) {
+        if(SOS.Utils.isValidObject(item.time)) {
+          if(SOS.Utils.isValidObject(item.time.startDatetime)) {
+            var sd = jQuery('#' + this.config.menu.id + 'ControlsStartDatetime');
+            sd.datepicker("setDate", SOS.Utils.isoToDateObject(item.time.startDatetime));
+          }
+          if(SOS.Utils.isValidObject(item.time.endDatetime)) {
+            var ed = jQuery('#' + this.config.menu.id + 'ControlsEndDatetime');
+            ed.datepicker("setDate", SOS.Utils.isoToDateObject(item.time.endDatetime));
+          }
+        }
+      },
+
+      /**
        * Event handler for datepicker change
        */
       datepickerChangeHandler: function(evt) {
@@ -3861,6 +3877,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         a.bind("tabscreate", {self: this}, this.initAppHandler);
         a.tabs();
 
+        // Initially set app menu date range to the default for this app
+        this.initMenuDateRangeControls();
+
         // Display the app info panels & add to the right-hand container
         this.config.app.components.infoMetadata.display();
         this.config.app.components.infoHelp.display();
@@ -3955,6 +3974,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       initMap: function() {
         this.config.app.components.map.display();
+      },
+ 
+      /**
+       * Initialise the menu date range controls to this app's default
+       */
+      initMenuDateRangeControls: function() {
+        var item = {};
+        item.time = this.getObservationQueryTimeParameters(item);
+        this.config.app.components.menu.setDatepickerValues(item);
       },
 
       /**
