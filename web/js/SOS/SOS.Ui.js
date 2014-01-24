@@ -2600,12 +2600,45 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Get datepicker values & store in the time properties of the returned
+       * item object
+       */
+      getDatepickerValues: function() {
+        var item = {time: {startDatetime: null, endDatetime: null}};
+        var sd = jQuery('#' + this.config.menu.id + 'ControlsStartDatetime');
+        var ed = jQuery('#' + this.config.menu.id + 'ControlsEndDatetime');
+        var start = sd.datepicker("getDate");
+        var end = ed.datepicker("getDate");
+
+        // Ensure the date range is inclusive
+        if(start) {
+          item.time.startDatetime = start.toISOString();
+        }
+        if(end) {
+          item.time.endDatetime = (new Date(end.getTime() + 8.64e7 - 1)).toISOString();
+        }
+
+        return item;
+      },
+
+      /**
+       * Get current date values & store in the current selected item
+       */
+      updateCurrentItemDateRange: function() {
+        var item = this.getDatepickerValues();
+
+        this.updateCurrentItem(item);
+
+        return item;
+      },
+ 
+      /**
        * Event handler for datepicker change
        */
       datepickerChangeHandler: function(evt) {
         var self = evt.data.self;
         var pos = evt.data.pos;
-        var val = jQuery(this).val();
+        var val = jQuery(this).datepicker("getDate");
         var item = {time: {}};
         var firstItem = self.getFirstItem();
 
@@ -2613,13 +2646,18 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                  The time axis is always set the same for all selected items */
 
         if(pos == "start") {
-          item.time.startDatetime = val;
+          if(val) {
+            item.time.startDatetime = val.toISOString();
+          }
 
           if(SOS.Utils.isValidObject(firstItem) && SOS.Utils.isValidObject(firstItem.time)) {
             item.time.endDatetime = firstItem.time.endDatetime;
           }
         } else if(pos == "end") {
-          item.time.endDatetime = val;
+          // Ensure end datetime is inclusive
+          if(val) {
+            item.time.endDatetime = (new Date(val.getTime() + 8.64e7 - 1)).toISOString();
+          }
 
           if(SOS.Utils.isValidObject(firstItem) && SOS.Utils.isValidObject(firstItem.time)) {
             item.time.startDatetime = firstItem.time.startDatetime;
@@ -3981,7 +4019,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       initMenuDateRangeControls: function() {
         var item = {};
-        item.time = this.getObservationQueryTimeParameters(item);
+        item.time = this.getDefaultObservationQueryTimeParameters(item);
         this.config.app.components.menu.setDatepickerValues(item);
       },
 
@@ -4018,6 +4056,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var item;
 
         if(components.menu.config.menu.selected) {
+          components.menu.updateCurrentItemDateRange();
           item = components.menu.getCurrentItem();
           item.time = this.getObservationQueryTimeParameters(item);
         }
@@ -4245,22 +4284,36 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(SOS.Utils.isValidObject(item.time) && this.isValidParameter(item.time.startDatetime) && this.isValidParameter(item.time.endDatetime)) {
           time = item.time;
         } else {
-          /* Optionally we can take the full available times from the
-             offering, however this could lead to performance problems */
-          if(this.config.app.options.time.useOfferingTimePeriod) {
+          time = this.getDefaultObservationQueryTimeParameters(item);
+        }
+
+        return time;
+      },
+
+      /**
+       * Get the fallback default time parameters for performing a
+       * getObservation request
+       */
+      getDefaultObservationQueryTimeParameters: function(item) {
+        var time = {startDatetime: null, endDatetime: null};
+
+        /* Optionally we can take the full available times from the
+           offering, however this could lead to performance problems */
+        if(this.config.app.options.time.useOfferingTimePeriod) {
+          if(SOS.Utils.isValidObject(item)) {
             if(SOS.Utils.isValidObject(item.offering)) {
               var offering = this.sos.getOffering(item.offering.id);
               time.startDatetime = offering.time.timePeriod.beginPosition;
               time.endDatetime = offering.time.timePeriod.endPosition;
             }
-          } else {
-            // Fallback default: show data between configured ms ago up to now
-            if(this.config.app.options.time.ms) {
-              var t = {start: new Date(), end: new Date()};
-              t = SOS.Utils.adjustTimeInterval(t, -this.config.app.options.time.ms, 0);
-              time.startDatetime = t.start.toISOString();
-              time.endDatetime = t.end.toISOString();
-            }
+          }
+        } else {
+          // Fallback default: show data between configured ms ago up to now
+          if(this.config.app.options.time.ms) {
+            var t = {start: new Date(), end: new Date()};
+            t = SOS.Utils.adjustTimeInterval(t, -this.config.app.options.time.ms, 0);
+            time.startDatetime = t.start.toISOString();
+            time.endDatetime = t.end.toISOString();
           }
         }
 
