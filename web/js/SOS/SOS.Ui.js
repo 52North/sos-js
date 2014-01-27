@@ -616,6 +616,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             // We can force multiple data series to share a single axis
             if(options.forceSingleAxis) {
               if(series.length > 0) {
+                options.yaxes = [];
                 options.yaxis.axisLabel = series[0].name;
                 options.yaxis.axisLabel += (series[0].uomTitle.length > 0 ? " / " + series[0].uomTitle : "");
               }
