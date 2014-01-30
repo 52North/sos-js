@@ -462,6 +462,18 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.config.overview.options[axis].transform = this.config.plot.options[axis].transform;
         this.config.overview.options[axis].inverseTransform = this.config.plot.options[axis].inverseTransform;
       },
+
+      /**
+       * Set the given axis to reverse logarithmic
+       */
+      setAxisReverseLogarithmic: function(axis, base) {
+        axis = axis || "yaxis";
+        base = base || 10;
+        this.config.plot.options[axis].transform = function(v) {return (v != 0 ? -(Math.log(v) / Math.log(base)) : 0);};
+        this.config.plot.options[axis].inverseTransform = function(v) {return -Math.pow(base, v);};
+        this.config.overview.options[axis].transform = this.config.plot.options[axis].transform;
+        this.config.overview.options[axis].inverseTransform = this.config.plot.options[axis].inverseTransform;
+      },
  
       /**
        * Generate the plot using this object's properties to query the SOS
