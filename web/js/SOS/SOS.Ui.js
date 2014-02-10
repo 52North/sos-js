@@ -3767,9 +3767,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           scope: components.infoMetadata,
           callback: function() {
             var ft = this.config.format.time;
-            this.setContentFromTemplate(/\[%startDatetime%\]/, ft.formatter(this.sos.SOSTemporalCoverage.timePeriod.beginPosition));
-            this.setContentFromTemplate(/\[%endDatetime%\]/, ft.formatter(this.sos.SOSTemporalCoverage.timePeriod.endPosition));
-            this.displayContent();
+            if(SOS.Utils.isValidObject(this.sos.SOSTemporalCoverage) && SOS.Utils.isValidObject(this.sos.SOSTemporalCoverage.timePeriod)) {
+              this.setContentFromTemplate(/\[%startDatetime%\]/, ft.formatter(this.sos.SOSTemporalCoverage.timePeriod.beginPosition));
+              this.setContentFromTemplate(/\[%endDatetime%\]/, ft.formatter(this.sos.SOSTemporalCoverage.timePeriod.endPosition));
+              this.displayContent();
+            }
           }
         });
 
