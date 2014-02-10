@@ -3748,7 +3748,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           scope: components.infoMetadata,
           callback: function() {
             // Setup a template as the content comes from more than one SOS call
-            this.setContentTemplate("[%foi%] ([%lon%]&deg;, [%lat%]&deg;)<p/>Data Availability<br/>Starts: [%startDatetime%]<br/>Ends: [%endDatetime%]<br/>");
+            this.setContentTemplate("[%foi%] (lon [%lon%]&deg;, lat [%lat%]&deg;)<p/>Data Availability<br/>Starts: [%startDatetime%]<br/>Ends: [%endDatetime%]<br/>");
             this.initContentFromTemplate();
             var item = components.menu.getCurrentItem();
             if(item) {
