@@ -58,6 +58,15 @@
   font-size: 60%;
 }
 
+.sos-plot-square {
+  width: 500px;
+  height: 500px;
+}
+
+.sos-plot-square-offset {
+  left: 110px;
+}
+
 .sos-control-title {
   font-weight: bold;
 }
