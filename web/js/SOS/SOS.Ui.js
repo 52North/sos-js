@@ -2155,6 +2155,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               listBoxes: {
                 multiple: false,
                 size: 5,
+                useToolTip: true,
                 useSelectBox: false
               },
               datePickers: {
@@ -2819,16 +2820,21 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       initMenu: function(tab) {
         var lb = this.config.menu.options.listBoxes;
         var s = jQuery('<select id="' + this.config.menu.id + 'SelectList"' + (lb.multiple ? ' multiple="multiple"' : '') + (lb.size ? ' size="' + lb.size + '"' : '') + ' class="sos-menu-select-list"></select>');
-        var options = [];
 
         tab.html("");
         tab.append(s);
 
         // Initialise the menu entries
         for(var i = 0, len = this.config.menu.entries.length; i < len; i++) {
-          options.push('<option value="' + this.config.menu.entries[i].value + '">' + this.config.menu.entries[i].label + '</option>');
+          var opt = jQuery("<option></option>", {
+            value: this.config.menu.entries[i].value,
+            html: this.config.menu.entries[i].label
+          });
+          if(lb.useToolTip) {
+            opt.attr("title", this.config.menu.entries[i].label);
+          }
+          s.append(opt);
         }
-        s.html(options.join(''));
 
         if(lb.useSelectBox && typeof jQuery('body').selectBox == "function") {
           // This call uses a jquery plugin to replace vanilla select boxes
