@@ -379,8 +379,18 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
        */
       insertGmlTimeperiodInRequest: function(xml, start, end) {
         var timeperiodXml = this.constructGmlTimeperiod(start, end);
-        xml = xml.replace("xmlns:ogc=\"http://www.opengis.net/ogc\"", "xmlns:ogc=\"http://www.opengis.net/ogc\" xmlns:gml=\"http://www.opengis.net/gml\"");
-        xml = xml.replace("<eventTime/>", timeperiodXml);
+
+        xml = xml.replace(/\<eventTime\s*\/\>/, timeperiodXml);
+
+        return xml;
+      },
+
+      /**
+       * Ensure request XML is as expected, after passing through OL formatter
+       */
+      fixGetObservationsRequest: function(xml) {
+        // IE 11 bugfix.  See: http://osgeo-org.1560.x6.nabble.com/WFS-and-IE-11-td5090636.html
+        xml = xml.replace(/xmlns:NS\d+=""\s+NS\d+:/g, "");
 
         return xml;
       },
@@ -404,6 +414,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           params.foi = {objectId: this.foiId};
         }
         var xml = this.obsFormatter.write(params);
+        xml = this.fixGetObservationsRequest(xml);
         xml = this.insertGmlTimeperiodInRequest(xml, start, end);
         OpenLayers.Request.POST({
           url: this.url,
@@ -1132,6 +1143,30 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
 
     /* OpenLayers formatters for parsing various SOS response documents.
        These are missing from a stock OpenLayers install */
+
+    /**
+     * Method: write
+     *
+     * Parameters:
+     * options - {Object} Optional object.
+     *
+     * Returns:
+     * {String} An SOS GetObservation request XML string.
+     */
+    OpenLayers.Format.SOSGetObservation.prototype.write = function(options) {
+        var node = this.writeNode("sos:GetObservation", options);
+        node.setAttribute("xmlns:om", this.namespaces.om);
+        node.setAttribute("xmlns:ogc", this.namespaces.ogc);
+
+        /* N.B.: The original OL method didn't include the gml namespace */
+        node.setAttribute("xmlns:gml", this.namespaces.gml);
+
+        this.setAttributeNS(
+            node, this.namespaces.xsi,
+            "xsi:schemaLocation", this.schemaLocation
+        );
+        return OpenLayers.Format.XML.prototype.write.apply(this, [node]);
+    }
 
     /**
      * Method: write
