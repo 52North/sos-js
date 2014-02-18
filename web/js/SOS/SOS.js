@@ -310,6 +310,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           params.foi = {objectId: this.foiId};
         }
         var xml = this.obsFormatter.write(params);
+        xml = this.fixRequestXml(xml);
         OpenLayers.Request.POST({
           url: this.url,
           scope: this,
@@ -350,6 +351,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
       },
 
       /**
+       * Ensure request XML is as expected, after passing through OL formatter
+       */
+      fixRequestXml: function(xml) {
+        // IE 11 bugfix.  See: http://osgeo-org.1560.x6.nabble.com/WFS-and-IE-11-td5090636.html
+        xml = xml.replace(/xmlns:NS\d+=""\s+NS\d+:/g, "");
+
+        return xml;
+      },
+
+      /**
        * Construct a GML time period given start and end datetimes
        */
       constructGmlTimeperiod: function(start, end) {
@@ -386,16 +397,6 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
       },
 
       /**
-       * Ensure request XML is as expected, after passing through OL formatter
-       */
-      fixGetObservationsRequest: function(xml) {
-        // IE 11 bugfix.  See: http://osgeo-org.1560.x6.nabble.com/WFS-and-IE-11-td5090636.html
-        xml = xml.replace(/xmlns:NS\d+=""\s+NS\d+:/g, "");
-
-        return xml;
-      },
-
-      /**
        * Get requested observations for a given SOS.Offering object
        * between given start and end datetimes
        */
@@ -414,7 +415,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           params.foi = {objectId: this.foiId};
         }
         var xml = this.obsFormatter.write(params);
-        xml = this.fixGetObservationsRequest(xml);
+        xml = this.fixRequestXml(xml);
         xml = this.insertGmlTimeperiodInRequest(xml, start, end);
         OpenLayers.Request.POST({
           url: this.url,
@@ -491,6 +492,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           fois: [foiId]
         };
         var xml = this.foiFormatter.write(params);
+        xml = this.fixRequestXml(xml);
         OpenLayers.Request.POST({
           url: this.url,
           scope: this,
@@ -523,6 +525,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           foi: foiId
         };
         var xml = this.foiTimeFormatter.write(params);
+        xml = this.fixRequestXml(xml);
         OpenLayers.Request.POST({
           url: this.url,
           scope: this,
@@ -552,6 +555,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           procedure: procedureId
         };
         var xml = this.sensorDescFormatter.write(params);
+        xml = this.fixRequestXml(xml);
         OpenLayers.Request.POST({
           url: this.url,
           scope: this,
