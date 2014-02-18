@@ -79,7 +79,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               grid: {borderWidth: 1},
               legend: {show: false},
               series: {lines: {show: true, lineWidth: 1}, points: {show: false}, bars: {show: false}, shadowSize: 0}
-            },
+            }
           },
           metadata: {
             launch: {
