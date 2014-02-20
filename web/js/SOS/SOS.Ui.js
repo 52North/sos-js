@@ -281,7 +281,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * 7 = debug)
        */
       formatMessage: function(text, options) {
-        var options = options || {level: {text: "Information", suffix: ":&nbsp;", n: 6}};
+        var options = options || {level: {text: "", suffix: "", n: 6}};
         var container = jQuery('<div></div>', {
           "class": "ui-corner-all sos-message-container"
         });
@@ -290,7 +290,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           "class": "ui-icon sos-message-icon"
         });
         var level = jQuery('<strong></strong>', {
-          html: (options.level.text + options.level.suffix)
+          html: ((options.level && options.level.text ? options.level.text : "") + (options.level && options.level.suffix ? options.level.suffix : ""))
         });
         var message = jQuery('<span></span>', {
           html: text
@@ -315,7 +315,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Format the given message text as an information-level message
        */
       formatInformationMessage: function(text) {
-        var options = {level: {text: "Information", suffix: ":&nbsp;", n: 6}};
+        var options = {level: {n: 6}};
         return this.formatMessage(text, options);
       },
 
@@ -323,7 +323,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Format the given message text as an alert-level message
        */
       formatAlertMessage: function(text) {
-        var options = {level: {text: "Alert", suffix: ":&nbsp;", n: 1}};
+        var options = {level: {n: 1}};
         return this.formatMessage(text, options);
       },
 
