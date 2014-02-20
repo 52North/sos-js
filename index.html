@@ -16,8 +16,8 @@
 	  }
     </style>
 
-    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/OpenLayers/OpenLayers.js"></script>
-    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/SOS/SOS.js"></script>
+    <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/openlayers/2.13.1/OpenLayers.js"></script>
+    <script type="text/javascript" src="SOS.js"></script>
 
     <script type="text/javascript">
       /**
@@ -26,12 +26,11 @@
       function init() {
         alert("Open the console log (Ctrl+Shift+k in Firefox) to see outputs from this test harness");
 
-        var sos = new SOS({url: 'http://sosmet.nerc-bas.ac.uk:8080/sosmet/sos'});
+        var sos = new SOS({url: 'http://geoviqua.dev.52north.org/SOS-Q/sos/kvp'});
 
         console.log("***** post instantiation tests *****");
 
-        console.log("sos = ");
-        console.log(sos);
+        console.log("sos = " + sos);
         console.log(sos.config);
  
         sos.getCapabilities(runCapsTests);
