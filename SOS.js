@@ -31,7 +31,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
     });
 
     /* This library uses a proxy host.  Change the path accordingly */
-    OpenLayers.ProxyHost = "/cgi-bin/proxy.cgi?url=";
+    //OpenLayers.ProxyHost = "/cgi-bin/proxy.cgi?url=";
 
     /**
      * SOS Class
