@@ -117,6 +117,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               }
             }
           },
+          messages: {
+            noDataForDateRange: "No data available for given dates."
+          },
           mode: {append: true}
         };
         jQuery.extend(true, this, options);
@@ -229,27 +232,25 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               }
             }
 
+            // Optionally generate the plot overview
+            if(this.config.overview.options.show) {
+              this.drawOverview();
+            }
+
+            // Manage the plot's interactive behaviour
+            this.setupBehaviour();
+
+            // Optionally manage the plot overview behaviour
+            if(this.config.overview.options.show) {
+              this.setupOverviewBehaviour();
+            }
+
             // For external listeners (application-level plumbing)
             this.sos.events.triggerEvent("sosPlotStuveDrawObservationData");
+          } else {
+            var container = jQuery('#' + this.config.plot.id);
+            container.html(this.formatInformationMessage(this.config.messages.noDataForDateRange));
           }
-
-          // Optionally generate the plot overview
-          if(this.config.overview.options.show) {
-            this.drawOverview();
-          }
-
-          // Manage the plot's interactive behaviour
-          this.setupBehaviour();
-
-          // Optionally manage the plot overview behaviour
-          if(this.config.overview.options.show) {
-            this.setupOverviewBehaviour();
-          }
-        }
-
-        // Now we have the base plot, plot any additional data
-        if(SOS.Utils.isValidObject(this.additional)) {
-          this.addData();
         }
       },
 

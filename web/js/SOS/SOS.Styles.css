@@ -84,6 +84,16 @@
   padding: 1px;
 }
 
+.sos-message-container {
+  margin-top: 10px;
+  padding: 0pt 0.7em;
+}
+
+.sos-message-icon {
+  float: left;
+  margin-right: 0.3em;
+}
+
 .sos-selected-interval-stats-table, .sos-embedded-table {
   font-size: 0.75em;
 }

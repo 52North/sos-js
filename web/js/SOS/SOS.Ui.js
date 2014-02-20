@@ -235,6 +235,23 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Get a total count of all series data
+       */
+      getCountOfSeriesData: function(series) {
+        var n = 0;
+
+        if(series) {
+          for(var i = 0, len = series.length; i < len; i++) {
+            if(series[i].data) {
+              n += series[i].data.length;
+            }
+          }
+        }
+
+        return n;
+      },
+
+      /**
        * Format the given value for display (simple)
        */
       formatValueSimple: function(v, L, N) {
@@ -256,6 +273,58 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         }
 
         return x;
+      },
+
+      /**
+       * Format the given message text for display, with optional level.  The
+       * level numbers are based on syslog levels (0 = emergency, ...,
+       * 7 = debug)
+       */
+      formatMessage: function(text, options) {
+        var options = options || {level: {text: "Information", suffix: ":&nbsp;", n: 6}};
+        var container = jQuery('<div></div>', {
+          "class": "ui-corner-all sos-message-container"
+        });
+        var paragraph = jQuery('<p></p>');
+        var icon = jQuery('<span></span>', {
+          "class": "ui-icon sos-message-icon"
+        });
+        var level = jQuery('<strong></strong>', {
+          html: (options.level.text + options.level.suffix)
+        });
+        var message = jQuery('<span></span>', {
+          html: text
+        });
+
+        if(options.level && options.level.n < 4) {
+          container.addClass("ui-state-error");
+          icon.addClass("ui-icon-alert");
+        } else {
+          container.addClass("ui-state-highlight");
+          icon.addClass("ui-icon-info");
+        }
+        container.append(paragraph);
+        paragraph.append(icon);
+        paragraph.append(level);
+        paragraph.append(message);
+
+        return container;
+      },
+
+      /**
+       * Format the given message text as an information-level message
+       */
+      formatInformationMessage: function(text) {
+        var options = {level: {text: "Information", suffix: ":&nbsp;", n: 6}};
+        return this.formatMessage(text, options);
+      },
+
+      /**
+       * Format the given message text as an alert-level message
+       */
+      formatAlertMessage: function(text) {
+        var options = {level: {text: "Alert", suffix: ":&nbsp;", n: 1}};
+        return this.formatMessage(text, options);
       },
 
       /**
@@ -414,6 +483,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               formatter: SOS.Ui.prototype.formatValueFancy
             }
           },
+          messages: {
+            noDataForDateRange: "No data available for given dates."
+          },
           mode: {append: false}
         };
         jQuery.extend(true, this, options);
@@ -552,6 +624,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Display the data series
         this.draw();
+
+        // Now we have the base plot, plot any additional data
+        if(SOS.Utils.isValidObject(this.additional)) {
+          this.addData();
+        }
       },
 
       /**
@@ -570,6 +647,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Check whether we have some data to plot
+       */
+      haveRequiredData: function() {
+        return this.getCountOfSeriesData(this.config.plot.series);
+      },
+ 
+      /**
        * Plot the given observation data
        */
       draw: function() {
@@ -580,26 +664,26 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.applyDefaults();
 
         if(this.config.plot.options.show) {
-          // Generate the plot
-          this.config.plot.object = jQuery.plot(jQuery('#' + this.config.plot.id), this.config.plot.series, this.config.plot.options);
+          if(this.haveRequiredData()) {
+            // Generate the plot
+            this.config.plot.object = jQuery.plot(jQuery('#' + this.config.plot.id), this.config.plot.series, this.config.plot.options);
 
-          // Optionally generate the plot overview
-          if(this.config.overview.options.show) {
-            this.drawOverview();
+            // Optionally generate the plot overview
+            if(this.config.overview.options.show) {
+              this.drawOverview();
+            }
+
+            // Manage the plot's interactive behaviour
+            this.setupBehaviour();
+
+            // Optionally manage the plot overview behaviour
+            if(this.config.overview.options.show) {
+              this.setupOverviewBehaviour();
+            }
+          } else {
+            var container = jQuery('#' + this.config.plot.id);
+            container.html(this.formatInformationMessage(this.config.messages.noDataForDateRange));
           }
-
-          // Manage the plot's interactive behaviour
-          this.setupBehaviour();
-
-          // Optionally manage the plot overview behaviour
-          if(this.config.overview.options.show) {
-            this.setupOverviewBehaviour();
-          }
-        }
-
-        // Now we have the base plot, plot any additional data
-        if(SOS.Utils.isValidObject(this.additional)) {
-          this.addData();
         }
       },
 
@@ -812,15 +896,23 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Construct the data series
         var table = this.constructDataTable(this.offering);
-        this.config.plot.series.push(table);
 
         if(this.config.plot.options.show) {
-          this.update();
+          if(table && table.data && table.data.length > 0) {
+            /* If base plot exists, we update, otherwise we generate plot */
+            if(SOS.Utils.isValidObject(this.config.plot.object)) {
+              this.config.plot.series.push(table);
+              this.update();
+            } else {
+              this.config.plot.series = [table];
+              this.draw();
+            }
 
-          // Optionally update the plot overview also
-          if(this.config.overview.options.show) {
-            this.config.overview.series = this.config.plot.series;
-            this.updateOverview();
+            // Optionally update the plot overview also
+            if(this.config.overview.options.show) {
+              this.config.overview.series = this.config.plot.series;
+              this.updateOverview();
+            }
           }
         }
       },
@@ -829,18 +921,22 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Redraw an existing plot
        */
       update: function() {
-        this.config.plot.object.setData(this.config.plot.series);
-        this.config.plot.object.setupGrid();
-        this.config.plot.object.draw();
+        if(SOS.Utils.isValidObject(this.config.plot.object)) {
+          this.config.plot.object.setData(this.config.plot.series);
+          this.config.plot.object.setupGrid();
+          this.config.plot.object.draw();
+        }
       },
 
       /**
        * Redraw an existing overview plot
        */
       updateOverview: function() {
-        this.config.overview.object.setData(this.config.overview.series);
-        this.config.overview.object.setupGrid();
-        this.config.overview.object.draw();
+        if(SOS.Utils.isValidObject(this.config.overview.object)) {
+          this.config.overview.object.setData(this.config.overview.series);
+          this.config.overview.object.setupGrid();
+          this.config.overview.object.draw();
+        }
       },
 
       /**
@@ -966,6 +1062,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               formatter: SOS.Ui.prototype.formatValueFancy
             }
           },
+          messages: {
+            noDataForDateRange: "No data available for given dates."
+          },
           mode: {append: false}
         };
         jQuery.extend(true, this, options);
@@ -1070,6 +1169,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Display the data series
         this.draw();
+
+        // Now we have the base table, add any additional data
+        if(SOS.Utils.isValidObject(this.additional)) {
+          this.addData();
+        }
       },
 
       /**
@@ -1088,6 +1192,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Check whether we have some data to display
+       */
+      haveRequiredData: function() {
+        return this.getCountOfSeriesData(this.config.table.series);
+      },
+
+      /**
        * Display the given observation data
        */
       draw: function() {
@@ -1098,28 +1209,28 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.applyDefaults();
 
         if(this.config.table.options.show) {
-          // Generate the table
-          var t = jQuery('#' + this.config.table.id);
-          this.clearTable(t);
-          this.config.table.object = this.generateTable(t, this.config.table.series, this.config.table.options);
+          if(this.haveRequiredData()) {
+            // Generate the table
+            var t = jQuery('#' + this.config.table.id);
+            this.clearTable(t);
+            this.config.table.object = this.generateTable(t, this.config.table.series, this.config.table.options);
 
-          // Optionally generate the table overview
-          if(this.config.overview.options.show) {
-            this.drawOverview();
+            // Optionally generate the table overview
+            if(this.config.overview.options.show) {
+              this.drawOverview();
+            }
+
+            // Manage the table's interactive behaviour
+            this.setupBehaviour();
+
+            // Optionally manage the table overview behaviour
+            if(this.config.overview.options.show) {
+              this.setupOverviewBehaviour();
+            }
+          } else {
+            var container = jQuery('#' + this.config.table.id);
+            container.html(this.formatInformationMessage(this.config.messages.noDataForDateRange));
           }
-
-          // Manage the table's interactive behaviour
-          this.setupBehaviour();
-
-          // Optionally manage the table overview behaviour
-          if(this.config.overview.options.show) {
-            this.setupOverviewBehaviour();
-          }
-        }
-
-        // Now we have the base table, add any additional data
-        if(SOS.Utils.isValidObject(this.additional)) {
-          this.addData();
         }
       },
 
@@ -1366,15 +1477,23 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Construct the data series
         var table = this.constructDataTable(this.offering);
-        this.config.table.series.push(table);
 
         if(this.config.table.options.show) {
-          this.update();
+          if(table && table.data && table.data.length > 0) {
+            /* If base table exists, we update, otherwise we generate table */
+            if(SOS.Utils.isValidObject(this.config.table.object)) {
+              this.config.table.series.push(table);
+              this.update();
+            } else {
+              this.config.table.series = [table];
+              this.draw();
+            }
 
-          // Optionally update the plot overview also
-          if(this.config.overview.options.show) {
-            this.config.overview.series = this.config.table.series;
-            this.updateOverview();
+            // Optionally update the plot overview also
+            if(this.config.overview.options.show) {
+              this.config.overview.series = this.config.table.series;
+              this.updateOverview();
+            }
           }
         }
       },
@@ -1383,17 +1502,21 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Redraw an existing table
        */
       update: function() {
-        this.config.table.object.html("");
-        this.generateTable(this.config.table.object, this.config.table.series, this.config.table.options);
+        if(SOS.Utils.isValidObject(this.config.table.object)) {
+          this.config.table.object.html("");
+          this.generateTable(this.config.table.object, this.config.table.series, this.config.table.options);
+        }
       },
 
       /**
        * Redraw an existing overview plot
        */
       updateOverview: function() {
-        this.config.overview.object.setData(this.config.overview.series);
-        this.config.overview.object.setupGrid();
-        this.config.overview.object.draw();
+        if(SOS.Utils.isValidObject(this.config.overview.object)) {
+          this.config.overview.object.setData(this.config.overview.series);
+          this.config.overview.object.setupGrid();
+          this.config.overview.object.draw();
+        }
       },
 
       /**
