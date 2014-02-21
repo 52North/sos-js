@@ -32,7 +32,7 @@
 
         console.log("sos = " + sos);
         console.log(sos.config);
- 
+		
         sos.getCapabilities(runCapsTests);
       }
 
@@ -45,10 +45,13 @@
         console.log("this (sos) = ");
         console.log(this);
 
-        var off = this.getOffering("HalleyMet");
-
+        var off = this.getOffering("ttp___geoviqua.dev.52north.org_procedures_WXT520");
+		
+		// HACK the correct endpoint
+		off.url = "http://geoviqua.dev.52north.org/SOS-Q/sos/pox";
+		
         if(off) {
-          console.log("off = ");
+          console.log("offering = ");
           console.log(off);
 
           // off.filterObservedProperties(["wind_speed"]);
@@ -95,7 +98,7 @@
   <body onload="init()">
     <h1 id="title">sos-js demo</h1>
     <p>Open the console log (Ctrl+Shift+k in Firefox) to see outputs from this test harness</p>
-    <p>This tests the core SOS objects from the SOS.js module, via a number of user-defined callbacks.  It requests the latest data from the <em>HalleyMet</em> offering, for all observed properties, and dumps lots of output to the console log.  It is these core SOS objects that underpin the user interface components, such as SOS.Plot etc.</p>
+    <p>This tests the core SOS objects from the SOS.js module, via a number of user-defined callbacks.  It requests the latest data from the <em>ttp___geoviqua.dev.52north.org_procedures_WXT520</em> offering, for all observed properties, and dumps lots of output to the console log.  It is these core SOS objects that underpin the user interface components, such as SOS.Plot etc.</p>
     <div id="output"></div>
 	
 	<h3 id="about">About</h3>
