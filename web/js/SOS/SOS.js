@@ -30,8 +30,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
       "SOSDescribeSensorErrorMessage": "SOS Describe Sensor failed: "
     });
 
-    /* This library uses a proxy host.  Change the path accordingly */
-    OpenLayers.ProxyHost = "/cgi-bin/proxy.cgi?url=";
+    /* This library uses a proxy host, by default.  See the SOS.Proxy object
+       (below) to configure/enable/disable this proxy at runtime */
+    var SOS_DEFAULT_PROXY_HOST = "/cgi-bin/proxy.cgi?url=";
+    OpenLayers.ProxyHost = SOS_DEFAULT_PROXY_HOST;
 
     /**
      * SOS Class
@@ -710,6 +712,56 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         this.getObservationsForOffering(this, start, end);
       }
     });
+
+    /**
+     * SOS.Proxy namespace.  Proxy functions for SOS connections
+     */
+    SOS.Proxy = {
+      use: true,
+      url: SOS_DEFAULT_PROXY_HOST,
+ 
+      /**
+       * Initialise the proxy for communicating to the SOS
+       */
+      init: function(options) {
+        // We can optionally modify the proxy settings here
+        if(SOS.Utils.isValidObject(options)) {
+          for(var p in options) {
+            this[p] = options[p];
+          }
+        }
+        /* Initialise the proxy, based on the "use" flag */
+        if(this.use) {
+          this.enable();
+        } else {
+          this.disable();
+        }
+      },
+ 
+      /**
+       * Enable the proxy for communicating to the SOS
+       */
+      enable: function(options) {
+        // We can optionally modify the proxy settings here
+        if(SOS.Utils.isValidObject(options)) {
+          for(var p in options) {
+            this[p] = options[p];
+          }
+        }
+        if(this.url) {
+          OpenLayers.ProxyHost = this.url;
+        }
+
+        return this.url;
+      },
+ 
+      /**
+       * Disable the proxy for communicating to the SOS
+       */
+      disable: function() {
+        OpenLayers.ProxyHost = null;
+      }
+    };
 
     /**
      * SOS.Utils namespace.  Utility functions for SOS classes
