@@ -2114,7 +2114,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               internalProjection: this.config.map.object.getProjectionObject(),
               externalProjection: this.config.map.options.defaultProjection
             },
-            url: this.url,
+            url: this.sos.config.post.url,
             fois: this.sos.getFeatureOfInterestIds()
           }),
           styleMap: styleMap
