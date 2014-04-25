@@ -1959,6 +1959,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 "labelOutlineColor": "white",
                 "labelOutlineWidth": 3
               }),
+              crs: {
+                format: {
+                  /* Optionally specifies coordinate order in layer CRS.
+                     If null, relies on OpenLayers defaults.
+                     If true, order will be xy (e.g., lon/lat).
+                     If false, order will be yx */
+                  xy: null
+                }
+              },
               displayLatestObservations: false
             }
           },
@@ -2106,14 +2115,23 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       initFeatureOfInterestLayer: function() {
         var styleMap = new OpenLayers.StyleMap(this.config.featureOfInterestLayer.options.pointStyle);
 
+        var protocolFormatOptions = {
+          internalProjection: this.config.map.object.getProjectionObject(),
+          externalProjection: this.config.map.options.defaultProjection
+        };
+
+        /* Allows the coordinate order in layer CRS to be explicitly
+           specified.  For example, the OpenLayers default for EPSG:4326 is
+           false = yx = lat/lon, but some SOS instances return lon/lat */
+        if(SOS.Utils.isValidObject(this.config.featureOfInterestLayer.options.crs.format.xy)) {
+          protocolFormatOptions.xy = this.config.featureOfInterestLayer.options.crs.format.xy;
+        }
+
         // Query FOIs from the SOS and present them as a vector layer
         var layer = new OpenLayers.Layer.Vector(this.config.featureOfInterestLayer.options.label, {
           strategies: [new OpenLayers.Strategy.Fixed()],
           protocol: new OpenLayers.Protocol.SOS({
-            formatOptions: {
-              internalProjection: this.config.map.object.getProjectionObject(),
-              externalProjection: this.config.map.options.defaultProjection
-            },
+            formatOptions: protocolFormatOptions,
             url: this.sos.config.post.url,
             fois: this.sos.getFeatureOfInterestIds()
           }),
@@ -3790,6 +3808,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         components.infoHelp.setTitle(this.config.app.options.info.help.title);
         components.infoMetadata.setContent(this.config.app.options.info.metadata.initialContent);
         components.infoHelp.setContent(this.config.app.options.info.help.initialContent);
+
+        // For external listeners (application-level plumbing)
+        this.sos.events.triggerEvent("sosAppInitComponents");
       },
  
       /**
@@ -3810,6 +3831,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.sos.registerUserCallback({event: "sosMenuDownloadDataClick", scope: this, callback: this.sosMenuDownloadDataClickHandler});
 
         this.setupInfoComponentsBehaviour();
+
+        // For external listeners (application-level plumbing)
+        this.sos.events.triggerEvent("sosAppSetupComponentsBehaviour");
       },
  
       /**
