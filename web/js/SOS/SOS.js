@@ -438,6 +438,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
       },
 
       /**
+       * Format a request datetime string given a javascript date object
+       */
+      formatRequestTimeString: function(D) {
+        /* A number of tested SOS instances can't handle the subsecond time
+           component, thus we remove it for broad applicability */
+        return D.toISOString().replace(/\.\d+Z$/, "Z");
+      },
+ 
+      /**
        * Construct a GML time period given start and end datetimes
        */
       constructGmlTimeperiod: function(start, end) {
@@ -452,8 +461,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
                   "<ogc:TM_During>" +
                     "<ogc:PropertyName>om:samplingTime</ogc:PropertyName>" +
                     "<gml:TimePeriod>" +
-                      "<gml:beginPosition>" + t.start.toISOString() + "</gml:beginPosition>" +
-                      "<gml:endPosition>" + t.end.toISOString() + "</gml:endPosition>" +
+                      "<gml:beginPosition>" + this.formatRequestTimeString(t.start) + "</gml:beginPosition>" +
+                      "<gml:endPosition>" + this.formatRequestTimeString(t.end) + "</gml:endPosition>" +
                     "</gml:TimePeriod>" +
                   "</ogc:TM_During>" +
                 "</eventTime>";
@@ -1021,6 +1030,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           if(a.length < 2) {a[1] = "00:00:00.000Z";}
           var d = a[0].split(/-/);
           a[1] = a[1].replace(/Z$/, "");
+
+          var tz = /([-+])(\d{2})[:]?(\d{2})?/.exec(a[1]);
+          var tzMins = 0;
+          if(tz) {
+            if(tz.length > 2) {tzMins += parseInt(tz[2], 10) * 60;}
+            if(tz.length > 3) {tzMins += parseInt(tz[3], 10);}
+            if(tz.length > 1 && tz[1] === '+') {tzMins *= -1;}
+          }
+          a[1] = a[1].replace(/[-+].+$/, "");
+
           var t = a[1].split(/:/);
           var ms = t[2].replace(/^\d+\./, "");
           t[2] = t[2].replace(/\.\d+$/, "");
@@ -1032,6 +1051,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
                        parseInt(t[1], 10),
                        parseInt(t[2], 10),
                        parseInt(ms, 10)));
+
+          if(!isNaN(y)) {
+            if(tzMins != 0) {
+              y.setTime(y.getTime() + tzMins * 60 * 1000);
+            }
+          } else {
+            y = x;
+          }
         } else if(this.isArray(x)) {
           y = [];
 
@@ -1065,7 +1092,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
 
         if(typeof x == "string" || typeof x == "number") {
           var D = new Date(x);
-          y = D.toISOString();
+
+          if(!isNaN(D)) {
+            y = D.toISOString();
+          }
         } else if(this.isArray(x)) {
           y = [];
 
