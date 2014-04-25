@@ -3673,6 +3673,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 useOfferingTimePeriod: false,
                 ms: 31 * 8.64e7
               },
+              observation: {
+                useFoiId: false
+              },
               info: SOS.App.Resources.config.app.options.info
             }
           },
@@ -4240,6 +4243,22 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             endDatetime: item.time.endDatetime
           });
 
+          /* For those data models that have multiple station data per
+             offering, we can specify the station via the selected FOI
+             (if selected from map) */
+          if(this.config.app.options.observation.useFoiId) {
+            if(SOS.Utils.isValidObject(item.foi)) {
+              jQuery.extend(true, this, {
+                foiId: item.foi.id
+              });
+            } else {
+              // Ensure we remove any reference to a previously selected FOI
+              if(SOS.Utils.isValidObject(this.foiId)) {
+                delete this.foiId;
+              }
+            }
+          }
+
           // Optionally add to existing base plot/table.  Otherwise overwrite
           if(SOS.Utils.isValidObject(item.options)) {
             components.plot.config.mode.append = item.options.addToExisting;
@@ -4511,6 +4530,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               }
             } else {
               this.offering.filterObservedProperties(this.observedProperty);
+            }
+          }
+
+          // The FOI will identify a given station in a multi-station offering
+          if(this.config.app.options.observation.useFoiId) {
+            if(SOS.Utils.isValidObject(this.foiId)) {
+              this.offering.foiId = this.foiId;
             }
           }
           this.determineObservationQueryTimeParameters();
