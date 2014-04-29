@@ -29,6 +29,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       offering: null,
       offeringId: null,
       observedProperty: null,
+      foiId: null,
       startDatetime: null,
       endDatetime: null,
       relativeTime: null,
@@ -46,6 +47,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.offering = null;
         this.offeringId = null;
         this.observedProperty = null;
+        this.foiId = null;
         this.startDatetime = null;
         this.endDatetime = null;
         this.relativeTime = "today";

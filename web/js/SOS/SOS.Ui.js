@@ -418,6 +418,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       offering: null,
       offeringId: null,
       observedProperty: null,
+      foiId: null,
       startDatetime: null,
       endDatetime: null,
       relativeTime: null,
@@ -435,6 +436,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.offering = null;
         this.offeringId = null;
         this.observedProperty = null;
+        this.foiId = null;
         this.startDatetime = null;
         this.endDatetime = null;
         this.relativeTime = "today";
@@ -597,6 +599,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             } else {
               this.offering.filterObservedProperties(this.observedProperty);
             }
+          }
+
+          // The FOI will identify a given station in a multi-station offering
+          if(SOS.Utils.isValidObject(this.foiId)) {
+            this.offering.foiId = this.foiId;
           }
           this.determineObservationQueryTimeParameters();
           this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawObservationData});
@@ -879,6 +886,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               if(SOS.Utils.isValidObject(this.observedProperty)) {
                 this.offering.filterObservedProperties(this.observedProperty);
               }
+              if(SOS.Utils.isValidObject(this.foiId)) {
+                this.offering.foiId = this.foiId;
+              }
               this.determineObservationQueryTimeParameters();
               this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawAdditionalData});
               this.offering.getObservations(this.startDatetime, this.endDatetime);
@@ -1004,6 +1014,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       offering: null,
       offeringId: null,
       observedProperty: null,
+      foiId: null,
       startDatetime: null,
       endDatetime: null,
       relativeTime: null,
@@ -1021,6 +1032,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.offering = null;
         this.offeringId = null;
         this.observedProperty = null;
+        this.foiId = null;
         this.startDatetime = null;
         this.endDatetime = null;
         this.relativeTime = "today";
@@ -1142,6 +1154,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             } else {
               this.offering.filterObservedProperties(this.observedProperty);
             }
+          }
+
+          // The FOI will identify a given station in a multi-station offering
+          if(SOS.Utils.isValidObject(this.foiId)) {
+            this.offering.foiId = this.foiId;
           }
           this.determineObservationQueryTimeParameters();
           this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawObservationData});
@@ -1459,6 +1476,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             if(this.haveValidOfferingObject()) {
               if(SOS.Utils.isValidObject(this.observedProperty)) {
                 this.offering.filterObservedProperties(this.observedProperty);
+              }
+              if(SOS.Utils.isValidObject(this.foiId)) {
+                this.offering.foiId = this.foiId;
               }
               this.determineObservationQueryTimeParameters();
               this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawAdditionalData});
@@ -3636,6 +3656,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       offering: null,
       offeringId: null,
       observedProperty: null,
+      foiId: null,
       startDatetime: null,
       endDatetime: null,
       relativeTime: null,
@@ -3653,6 +3674,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.offering = null;
         this.offeringId = null;
         this.observedProperty = null;
+        this.foiId = null;
         this.startDatetime = null;
         this.endDatetime = null;
         this.relativeTime = null;
