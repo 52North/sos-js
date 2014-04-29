@@ -2765,11 +2765,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var start = sd.datepicker("getDate");
         var end = ed.datepicker("getDate");
 
+        // N.B.: Datepicker returns the client's local time, but we require UTC
+
         // Ensure the date range is inclusive
         if(start) {
+          start.setTime(start.getTime() - start.getTimezoneOffset() * 60 * 1000);
           item.time.startDatetime = start.toISOString();
         }
         if(end) {
+          end.setTime(end.getTime() - end.getTimezoneOffset() * 60 * 1000);
           item.time.endDatetime = (new Date(end.getTime() + 8.64e7 - 1)).toISOString();
         }
 
@@ -2800,6 +2804,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         if(pos == "start") {
           if(val) {
+            val.setTime(val.getTime() - val.getTimezoneOffset() * 60 * 1000);
             item.time.startDatetime = val.toISOString();
           }
 
@@ -2809,6 +2814,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         } else if(pos == "end") {
           // Ensure end datetime is inclusive
           if(val) {
+            val.setTime(val.getTime() - val.getTimezoneOffset() * 60 * 1000);
             item.time.endDatetime = (new Date(val.getTime() + 8.64e7 - 1)).toISOString();
           }
 
