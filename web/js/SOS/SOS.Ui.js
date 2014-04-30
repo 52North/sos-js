@@ -3702,7 +3702,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 ms: 31 * 8.64e7
               },
               observation: {
-                useFoiId: false
+                useFoiId: true
               },
               info: SOS.App.Resources.config.app.options.info
             }
