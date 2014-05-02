@@ -129,9 +129,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Find the magnitude & direction from the retrieved data
         for(var i = 0, len = this.config.plot.series.length; i < len; i++) {
-          if(/Speed/i.test(this.config.plot.series[i].label)) {
+          if(/Speed/i.test(this.config.plot.series[i].name)) {
             mag = this.config.plot.series[i];
-          } else if(/Direction/i.test(this.config.plot.series[i].label)) {
+          } else if(/Direction/i.test(this.config.plot.series[i].name)) {
             dir = this.config.plot.series[i];
           }
         }

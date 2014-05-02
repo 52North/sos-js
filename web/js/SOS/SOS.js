@@ -560,7 +560,49 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         if(this.haveValidObservationsObject()) {
           record = this.SOSObservations.measurements[i];
 
-          // Some convenience properties
+          // Add some convenience properties
+          record = this.addPropertiesToObservationRecord(record);
+        }
+
+        return record;
+      },
+
+      /**
+       * Get the observation for the given index from the internal
+       * observations object, as long as it matches the given filter rules
+       */
+      getFilteredObservationRecord: function(i, filter) {
+        var record;
+
+        if(this.haveValidObservationsObject()) {
+          var r = this.SOSObservations.measurements[i];
+
+          if(SOS.Utils.isValidObject(filter)) {
+            if(SOS.Utils.isValidObject(filter.foiId)) {
+              if(r.fois[0].features[0].attributes.id == filter.foiId) {
+                record = this.SOSObservations.measurements[i];
+              }
+            } else if(SOS.Utils.isValidObject(filter.observedProperty)) {
+              if(r.observedProperty == filter.observedProperty) {
+                record = this.SOSObservations.measurements[i];
+              }
+            }
+          } else {
+            record = this.SOSObservations.measurements[i];
+          }
+
+          // Add some convenience properties
+          record = this.addPropertiesToObservationRecord(record);
+        }
+
+        return record;
+      },
+
+      /**
+       * Add some standard properties to the given observation record
+       */
+      addPropertiesToObservationRecord: function(record) {
+        if(SOS.Utils.isValidObject(record)) {
           record.time = record.samplingTime.timeInstant.timePosition;
           record.observedPropertyTitle = SOS.Utils.toTitleCase(SOS.Utils.toDisplayName(SOS.Utils.urnToName(record.observedProperty)));
           record.uomTitle = SOS.Utils.toDisplayUom(record.result.uom);
@@ -1019,6 +1061,29 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         }
 
         return y;
+      },
+
+      applyTemplate: function(x, template, reFlags) {
+        var reFlags = reFlags || "gi";
+        var t = template;
+
+        // Can't test x is an object first, as an array is also an object
+        if(this.isArray(x)) {
+          t = [];
+
+          for(var i = 0, len = x.length; i < len; i++) {
+            t.push(this.applyTemplate(x[i], template, reFlags));
+          }
+        } else {
+          if(t) {
+            for(var p in x) {
+              var re = new RegExp("\\[%\\s*" + p + "\\s*%\\]", reFlags);
+              t = t.replace(re, x[p]);
+            }
+          }
+        }
+
+        return t;
       },
 
       isoToDateObject: function(x) {

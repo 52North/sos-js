@@ -169,38 +169,106 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
-       * Get data from given SOS query result object & return as a table
-       * suitable for displaying
+       * Initialise a data table
        */
-      constructDataTable: function(res) {
-        var table = {label: "", headerLabel: "", name: "", uom: "", uomTitle: "", data: []};
+      initDataTable: function() {
+        var table = {label: "", headerLabel: "", ordinateLabel: "", name: "", uom: "", uomTitle: "", foiName: "", offeringName: "", data: []};
+
+        return table;
+      },
+
+      /**
+       * Initialise the default label templates for a data table
+       */
+      initLabelTemplates: function() {
+        var labelTemplates = {
+          label: "[%foiName%] [%name%]",
+          headerLabel: "[%foiName%] [%name%] / [%uomTitle%]",
+          ordinateLabel: "[%name%] / [%uomTitle%]"
+        };
+
+        return labelTemplates;
+      },
+
+      /**
+       * Get data from given SOS query result object & return as a table
+       * suitable for displaying.  Optionally format the table labels
+       * according to the given templates, otherwise defaults are used.  If an
+       * optional filter is given, then only return observations that match
+       * the filter rules
+       */
+      constructDataTable: function(res, labelTemplates, filter) {
+        var labelTemplates = labelTemplates || this.initLabelTemplates();
+        var table = this.initDataTable();
 
         // Construct the data table
         for(var i = 0, len = res.getCountOfObservations(); i < len; i++) {
-          var ob = res.getObservationRecord(i);
+          var ob = res.getFilteredObservationRecord(i, filter);
 
-          if(table.name.length < 1) {
-            table.name = ob.observedPropertyTitle;
+          if(ob) {
+            if(table.name.length < 1) {
+              table.name = ob.observedPropertyTitle;
+            }
+            if(table.uom.length < 1) {
+              table.uom = ob.result.uom;
+              table.uomTitle = ob.uomTitle;
+            }
+            if(table.foiName.length < 1) {
+              table.foiName = ob.fois[0].features[0].attributes.name;
+            }
+            table.data.push([SOS.Utils.isoToJsTimestamp(ob.time), ob.result.value]);
           }
-          if(table.uom.length < 1) {
-            table.uom = ob.result.uom;
-            table.uomTitle = ob.uomTitle;
-          }
-          table.data.push([SOS.Utils.isoToJsTimestamp(ob.time), ob.result.value]);
         }
 
-        /* Construct label as Offering + Observed Property,
-           & headerLabel as Offering + Observed Property + UOM */
         if(res.name) {
-          table.label = res.name;
+          table.offeringName = res.name;
         } else if(res.id) {
-          table.label = res.id;
+          table.offeringName = res.id;
         }
-        if(table.label.length > 0) table.label += " ";
-        table.label += table.name;
-        table.headerLabel = table.label + (table.uomTitle.length > 0 ? " / " + table.uomTitle : "");
+
+        // Construct the table labels according to the templates
+        this.constructLabels(table, labelTemplates);
 
         return table;
+      },
+
+      /**
+       * Construct table labels from the parsed metadata in the table object,
+       * according to the given templates.  Given a table: {name: "a", ...},
+       * & templates: {label: "[%name%] ...", headerLabel: "[%name%] ..."},
+       * this will infill table thus: {label: "a ...", headerLabel: "a ..."}
+       */
+      constructLabels: function(table, templates) {
+        if(SOS.Utils.isValidObject(table) && SOS.Utils.isValidObject(templates)) {
+          table.label = SOS.Utils.applyTemplate(table, templates.label);
+          table.headerLabel = SOS.Utils.applyTemplate(table, templates.headerLabel);
+          table.ordinateLabel = SOS.Utils.applyTemplate(table, templates.ordinateLabel);
+        }
+
+        return table;
+      },
+
+      /**
+       * Get data from given SOS query result object & return as an array of
+       * tables suitable for displaying.  Format the table labels according
+       * to the given templates
+       */
+      constructDataSeries: function(offering, labelTemplates) {
+        var tables = [];
+        var fois = offering.getFeatureOfInterestIds();
+
+        /* If foiId wasn't passed in the request & the offering is a
+           multi-station offering, then we filter the result on FOI (station),
+           to produce a number of data tables */
+        if(!SOS.Utils.isValidObject(offering.foiId) && fois.length > 1) {
+          for(var i = 0, len = fois.length; i < len; i++) {
+            tables.push(this.constructDataTable(offering, labelTemplates, {foiId: fois[i]}));
+          }
+        } else {
+          tables.push(this.constructDataTable(offering, labelTemplates));
+        }
+
+        return tables;
       },
 
       /**
@@ -210,12 +278,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var subset = [], n = 0;
 
         for(var i = 0, slen = series.length; i < slen; i++) {
-          subset[i] = {label: "", headerLabel: "", name: "", uom: "", uomTitle: "", data: []};
+          subset[i] = this.initDataTable();
           n = 0;
 
           // Copy all metadata
-          for(var key in {label: "", headerLabel: "", name: "", uom: "", uomTitle: ""}) {
-            subset[i][key] = series[i][key];
+          for(var key in this.initDataTable()) {
+            if(key != "data") {
+              subset[i][key] = series[i][key];
+            }
           }
 
           // Only select data whose datetime lie on the given closed interval
@@ -382,7 +452,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         table += '</tbody></table>';
         st.append(table);
 
-        panel.append('<span class="sos-control-title">' + series.name + ' / ' + series.uomTitle + '</span>', '<hr></hr>');
+        panel.append('<span class="sos-control-title">' + series.ordinateLabel + '</span>', '<hr></hr>');
         panel.append(st, sp);
 
         // Generate stats plot
@@ -453,6 +523,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               yaxes: [],
               haveCustomAxes: false,
               forceSingleAxis: false,
+              labelTemplates: {
+                label: "[%foiName%] [%name%]",
+                headerLabel: "[%foiName%] [%name%] / [%uomTitle%]",
+                ordinateLabel: "[%name%] / [%uomTitle%]"
+              },
               selection: {mode: "x"},
               zoom: {interactive: true},
               pan: {interactive: true},
@@ -643,13 +718,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       storeObservationData: function() {
         // Construct the data series
-        var table = this.constructDataTable(this.offering);
+        var tables = this.constructDataSeries(this.offering, this.config.plot.options.labelTemplates);
 
         // We can add to an existing base plot or overwrite, dependent on mode
         if(this.config.mode.append) {
-          this.config.plot.series.push(table);
+          this.config.plot.series = this.config.plot.series.concat(tables);
         } else {
-          this.config.plot.series = [table];
+          this.config.plot.series = tables;
         }
       },
 
@@ -720,16 +795,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             if(options.forceSingleAxis) {
               if(series.length > 0) {
                 options.yaxes = [];
-                options.yaxis.axisLabel = series[0].name;
-                options.yaxis.axisLabel += (series[0].uomTitle.length > 0 ? " / " + series[0].uomTitle : "");
+                options.yaxis.axisLabel = series[0].ordinateLabel;
               }
             } else {
               for(var i = 0, len = series.length; i < len; i++) {
                 options.yaxes[i] = {};
                 series[i].yaxis = (i + 1);
-
-                options.yaxes[i].axisLabel = series[i].name;
-                options.yaxes[i].axisLabel += (series[i].uomTitle.length > 0 ? " / " + series[i].uomTitle : "");
+                options.yaxes[i].axisLabel = series[i].ordinateLabel;
               }
             }
           }
@@ -905,16 +977,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawAdditionalData});
 
         // Construct the data series
-        var table = this.constructDataTable(this.offering);
+        var tables = this.constructDataSeries(this.offering, this.config.plot.options.labelTemplates);
 
         if(this.config.plot.options.show) {
-          if(table && table.data && table.data.length > 0) {
+          if(tables && tables[0].data && tables[0].data.length > 0) {
             /* If base plot exists, we update, otherwise we generate plot */
             if(SOS.Utils.isValidObject(this.config.plot.object)) {
-              this.config.plot.series.push(table);
+              this.config.plot.series = this.config.plot.series.concat(tables);
               this.update();
             } else {
-              this.config.plot.series = [table];
+              this.config.plot.series = tables;
               this.draw();
             }
 
@@ -1046,6 +1118,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               header: {},
               columns: {
                 names: ["Time", "Value"]
+              },
+              labelTemplates: {
+                label: "[%foiName%] [%name%]",
+                headerLabel: "[%foiName%] [%name%] / [%uomTitle%]",
+                ordinateLabel: "[%name%] / [%uomTitle%]"
               },
               scrollable: false
             }
@@ -1198,13 +1275,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       storeObservationData: function() {
         // Construct the data series
-        var table = this.constructDataTable(this.offering);
+        var tables = this.constructDataSeries(this.offering, this.config.table.options.labelTemplates);
 
         // We can add to an existing base table or overwrite, dependent on mode
         if(this.config.mode.append) {
-          this.config.table.series.push(table);
+          this.config.table.series = this.config.table.series.concat(tables);
         } else {
-          this.config.table.series = [table];
+          this.config.table.series = tables;
         }
       },
 
@@ -1496,16 +1573,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawAdditionalData});
 
         // Construct the data series
-        var table = this.constructDataTable(this.offering);
+        var tables = this.constructDataSeries(this.offering, this.config.table.options.labelTemplates);
 
         if(this.config.table.options.show) {
-          if(table && table.data && table.data.length > 0) {
+          if(tables && tables[0].data && tables[0].data.length > 0) {
             /* If base table exists, we update, otherwise we generate table */
             if(SOS.Utils.isValidObject(this.config.table.object)) {
-              this.config.table.series.push(table);
+              this.config.table.series = this.config.table.series.concat(tables);
               this.update();
             } else {
-              this.config.table.series = [table];
+              this.config.table.series = tables;
               this.draw();
             }
 

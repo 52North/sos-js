@@ -195,15 +195,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Find the components from the retrieved data
         for(var i = 0, len = this.config.plot.series.length; i < len; i++) {
-          if(/Dew Point Temperature/i.test(this.config.plot.series[i].label)) {
+          if(/Dew Point Temperature/i.test(this.config.plot.series[i].name)) {
             Td = this.config.plot.series[i];
-          } else if(/Air Temperature/i.test(this.config.plot.series[i].label)) {
+          } else if(/Air Temperature/i.test(this.config.plot.series[i].name)) {
             T = this.config.plot.series[i];
-          } else if(/Air Pressure/i.test(this.config.plot.series[i].label)) {
+          } else if(/Air Pressure/i.test(this.config.plot.series[i].name)) {
             P = this.config.plot.series[i];
-          } else if(/Wind Speed/i.test(this.config.plot.series[i].label)) {
+          } else if(/Wind Speed/i.test(this.config.plot.series[i].name)) {
             W.mag = this.config.plot.series[i];
-          } else if(/Wind Direction/i.test(this.config.plot.series[i].label)) {
+          } else if(/Wind Direction/i.test(this.config.plot.series[i].name)) {
             W.dir = this.config.plot.series[i];
           }
         }
@@ -607,7 +607,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * variable
        */
       constructPressureSeries: function() {
-        var table = {label: "", headerLabel: "", name: "", uom: "", uomTitle: "", data: []};
+        var table = this.initDataTable();
         var series = [], data = [], set1 = [], set2 = [], pcol = [];
 
         /* We take the pressure/temperature data series, & then the
