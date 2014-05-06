@@ -111,6 +111,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               sectorMargin: 5
             }
           },
+          messages: {
+            noDataForDateRange: "No data available for given dates."
+          },
           mode: {append: true}
         };
         jQuery.extend(true, this, options);
@@ -152,17 +155,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             if(this.config.plot.annotations.show) {
               this.drawAnnotations(mag);
             }
-          }
 
-          // Optionally generate the plot overview
-          if(this.config.overview.options.show) {
-            this.drawOverview();
+            // Optionally generate the plot overview
+            if(this.config.overview.options.show) {
+              this.drawOverview();
+            }
+          } else {
+            var container = jQuery('#' + this.config.plot.id);
+            container.html(this.formatInformationMessage(this.config.messages.noDataForDateRange));
           }
-        }
-
-        // Now we have the base plot, plot any additional data
-        if(SOS.Utils.isValidObject(this.additional)) {
-          this.addData();
         }
       },
 
