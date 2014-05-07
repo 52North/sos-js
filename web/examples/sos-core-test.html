@@ -48,7 +48,22 @@
           console.log("off = ");
           console.log(off);
 
+          /* Example: Request particular observed properties.  Note that
+             calling off.getObservedPropertyIds() will list available
+             observed properties of this offering.  Calling
+             off.unfilterObservedProperties() will mean that all observed
+             properties are requested, which is the default */
           // off.filterObservedProperties(["wind_speed"]);
+          // off.filterObservedProperties(["wind_speed", "wind_direction"]);
+          // off.unfilterObservedProperties();
+
+          /* Example: Request particular FOIs.  Note that calling
+             off.getFeatureOfInterestIds() will list available FOIs of this
+             offering.  Setting off.foiId to null will mean that all FOIs
+             are requested, which is the default */
+          // off.foiId = "foi_34579";
+          // off.foiId = null;
+
           off.getLatestObservations(runLatestObsTests);
         }
       }
@@ -57,6 +72,63 @@
        * Callback to run tests on the SOS latest observations
        */
       function runLatestObsTests(e) {
+        console.log("***** post getLatestObservations tests *****");
+
+        console.log("this (off) = ");
+        console.log(this);
+        console.log("this.getCountOfObservations() = " + this.getCountOfObservations());
+        console.log("this.getObservationRecord(0) = ");
+        console.log(this.getObservationRecord(0));
+
+        var fois = this.getFeatureOfInterestIds();
+        var html = "";
+
+        for(var i = 0, flen = fois.length; i < flen; i++) {
+          var tcaption = "";
+          var tbody = "";
+          var filter = {foiId: fois[i]};
+
+          for(var j = 0, olen = this.getCountOfObservations(); j < olen; j++) {
+            var ob = this.getFilteredObservationRecord(j, filter);
+            if(ob) {
+              if(tcaption.length < 1) {
+                tcaption = ob.fois[0].features[0].attributes.name;
+              }
+              tbody += '<tr>';
+              tbody += '<td>' + ob.observedPropertyTitle + '</td>';
+              tbody += '<td>' + ob.time + '</td>';
+              tbody += '<td>' + ob.result.value + ' ' + ob.uomTitle + '</td>';
+              tbody += '</tr>';
+            }
+          }
+          if(tbody.length > 0) {
+            html += '<table>';
+            html += '<caption><b>' + tcaption + '</b></caption>';
+            html += '<tbody>';
+            html += '<tr>';
+            html += '<th><b>Variable</b></th>';
+            html += '<th><b>Time</b></th>';
+            html += '<th><b>Latest Value</b></th>';
+            html += '</tr>';
+            html += tbody;
+            html += '</tbody>';
+            html += '</table>';
+            html += '<br/>';
+          }
+        }
+        document.getElementById("output").innerHTML = html;
+      }
+
+      /**
+       * Callback to run tests on the SOS latest observations
+       */
+      function runSingleStationLatestObsTests(e) {
+        /* Example:  If only a single station's observations have been
+          returned, for example, by pre-filtering on FOI before calling
+          off.getLatestObservations(), then there's no need to post-filter
+          the result via off.getFilteredObservationRecord().  We can instead
+          call off.getObservationRecord(), which simplifies things a little */
+
         console.log("***** post getLatestObservations tests *****");
 
         console.log("this (off) = ");
