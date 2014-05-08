@@ -29,6 +29,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       offering: null,
       offeringId: null,
       observedProperty: null,
+      foiId: null,
       startDatetime: null,
       endDatetime: null,
       relativeTime: null,
@@ -46,6 +47,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.offering = null;
         this.offeringId = null;
         this.observedProperty = null;
+        this.foiId = null;
         this.startDatetime = null;
         this.endDatetime = null;
         this.relativeTime = "today";
@@ -111,6 +113,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               sectorMargin: 5
             }
           },
+          messages: {
+            noDataForDateRange: "No data available for given dates."
+          },
           mode: {append: true}
         };
         jQuery.extend(true, this, options);
@@ -124,9 +129,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Find the magnitude & direction from the retrieved data
         for(var i = 0, len = this.config.plot.series.length; i < len; i++) {
-          if(/Speed/i.test(this.config.plot.series[i].label)) {
+          if(/Speed/i.test(this.config.plot.series[i].name)) {
             mag = this.config.plot.series[i];
-          } else if(/Direction/i.test(this.config.plot.series[i].label)) {
+          } else if(/Direction/i.test(this.config.plot.series[i].name)) {
             dir = this.config.plot.series[i];
           }
         }
@@ -152,17 +157,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             if(this.config.plot.annotations.show) {
               this.drawAnnotations(mag);
             }
-          }
 
-          // Optionally generate the plot overview
-          if(this.config.overview.options.show) {
-            this.drawOverview();
+            // Optionally generate the plot overview
+            if(this.config.overview.options.show) {
+              this.drawOverview();
+            }
+          } else {
+            var container = jQuery('#' + this.config.plot.id);
+            container.html(this.formatInformationMessage(this.config.messages.noDataForDateRange));
           }
-        }
-
-        // Now we have the base plot, plot any additional data
-        if(SOS.Utils.isValidObject(this.additional)) {
-          this.addData();
         }
       },
 

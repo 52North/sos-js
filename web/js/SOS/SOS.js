@@ -30,8 +30,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
       "SOSDescribeSensorErrorMessage": "SOS Describe Sensor failed: "
     });
 
-    /* This library uses a proxy host.  Change the path accordingly */
-    OpenLayers.ProxyHost = "/cgi-bin/proxy.cgi?url=";
+    /* This library uses a proxy host, by default.  See the SOS.Proxy object
+       (below) to configure/enable/disable this proxy at runtime */
+    var SOS_DEFAULT_PROXY_HOST = "/cgi-bin/proxy.cgi?url=";
+    OpenLayers.ProxyHost = SOS_DEFAULT_PROXY_HOST;
 
     /**
      * SOS Class
@@ -72,9 +74,20 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
             resultModel: "om:Measurement",
             responseMode: "inline",
             forceSort: true
+          },
+          post: {
+            setUrlFromCapabilities: true,
+            constraint: "Content-Type",
+            responseFormatType: "(application|text)/xml",
+            url: null
           }
         };
         OpenLayers.Util.extend(this, options);
+
+        /* By default, the POST URL is the same as the GET URL */
+        if(this.url) {
+          this.config.post.url = this.url;
+        }
       },
 
       /**
@@ -155,6 +168,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
       _parseCapabilities: function(response) {
         this.SOSCapabilities = this.capsFormatter.read(response.responseXML || response.responseText);
         this.setObservationResponseFormatFromTypeSuggestion(this.config.observation.responseFormatType);
+        if(this.config.post.setUrlFromCapabilities) {
+          this.setPostUrl();
+        }
         this.events.triggerEvent("sosCapsAvailable", {response: response});
       },
 
@@ -180,6 +196,67 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
             }
           }
         }
+      },
+
+      /**
+       * Set the config.post.url member to an available URL, capable of
+       * handling responses of the configured type, parsed from the
+       * capabilities object
+       */
+      setPostUrl: function() {
+        /* A SOS can use a different URL for GET & POST requests, so we find
+           the POST URL from the capabilities object & store it */
+        if(this.haveValidCapabilitiesObject()) {
+          if(SOS.Utils.isValidObject(this.SOSCapabilities.operationsMetadata)) {
+            var op = this.SOSCapabilities.operationsMetadata.GetObservation || this.SOSCapabilities.operationsMetadata.GetCapabilities;
+
+            if(SOS.Utils.isValidObject(op)) {
+              if(SOS.Utils.isValidObject(op.dcp.http.post)) {
+                this._setPostUrlFromDcpSection(op.dcp.http.post);
+              }
+            }
+          }
+        }
+      },
+
+      /**
+       * Set the config.post.url member to the first URL that matches any
+       * configured constraints, parsed from the DCP section of the 
+       * capabilities object
+       */
+      _setPostUrlFromDcpSection: function(post) {
+        for(var i = 0, len = post.length; i < len; i++) {
+          if(SOS.Utils.isValidObject(post[i].constraints)) {
+            if(this._setPostUrlFromTypeSuggestion(post[i], this.config.post.responseFormatType)) {
+              break;
+            }
+          } else {
+            this.config.post.url = post[i].url;
+            break;
+          }
+        }
+      },
+
+      /**
+       * If the given POST array entry is capable of handling responses of the
+       * given type (regexp), then set the config.post.url member to this
+       * entry's corresponding URL
+       */
+      _setPostUrlFromTypeSuggestion: function(entry, type) {
+        var v = entry.constraints[this.config.post.constraint].allowedValues;
+        var matched = false;
+
+        if(SOS.Utils.isValidObject(v)) {
+          for(var format in v) {
+            if(format && format.match(type)) {
+              this.config.post.url = entry.url;
+              matched = true;
+              break;
+            }
+          }
+        }
+
+        return matched;
       },
 
       /**
@@ -310,12 +387,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           params.foi = {objectId: this.foiId};
         }
         var xml = this.obsFormatter.write(params);
+        xml = this.fixRequestXml(xml);
         OpenLayers.Request.POST({
-          url: this.url,
+          url: this.config.post.url,
           scope: this,
           async: this.config.async,
           failure: function() {
-            alert(OpenLayers.i18n("SOSGetLatestObservationsErrorMessage") + this.url);
+            alert(OpenLayers.i18n("SOSGetLatestObservationsErrorMessage") + this.config.post.url);
           },
           success: this._parseLatestObservations,
           data: xml
@@ -350,6 +428,25 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
       },
 
       /**
+       * Ensure request XML is as expected, after passing through OL formatter
+       */
+      fixRequestXml: function(xml) {
+        // IE 11 bugfix.  See: http://osgeo-org.1560.x6.nabble.com/WFS-and-IE-11-td5090636.html
+        xml = xml.replace(/xmlns:NS\d+=""\s+NS\d+:/g, "");
+
+        return xml;
+      },
+
+      /**
+       * Format a request datetime string given a javascript date object
+       */
+      formatRequestTimeString: function(D) {
+        /* A number of tested SOS instances can't handle the subsecond time
+           component, thus we remove it for broad applicability */
+        return D.toISOString().replace(/\.\d+Z$/, "Z");
+      },
+ 
+      /**
        * Construct a GML time period given start and end datetimes
        */
       constructGmlTimeperiod: function(start, end) {
@@ -364,8 +461,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
                   "<ogc:TM_During>" +
                     "<ogc:PropertyName>om:samplingTime</ogc:PropertyName>" +
                     "<gml:TimePeriod>" +
-                      "<gml:beginPosition>" + t.start.toISOString() + "</gml:beginPosition>" +
-                      "<gml:endPosition>" + t.end.toISOString() + "</gml:endPosition>" +
+                      "<gml:beginPosition>" + this.formatRequestTimeString(t.start) + "</gml:beginPosition>" +
+                      "<gml:endPosition>" + this.formatRequestTimeString(t.end) + "</gml:endPosition>" +
                     "</gml:TimePeriod>" +
                   "</ogc:TM_During>" +
                 "</eventTime>";
@@ -379,8 +476,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
        */
       insertGmlTimeperiodInRequest: function(xml, start, end) {
         var timeperiodXml = this.constructGmlTimeperiod(start, end);
-        xml = xml.replace("xmlns:ogc=\"http://www.opengis.net/ogc\"", "xmlns:ogc=\"http://www.opengis.net/ogc\" xmlns:gml=\"http://www.opengis.net/gml\"");
-        xml = xml.replace("<eventTime/>", timeperiodXml);
+
+        xml = xml.replace(/\<eventTime\s*\/\>/, timeperiodXml);
 
         return xml;
       },
@@ -404,13 +501,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           params.foi = {objectId: this.foiId};
         }
         var xml = this.obsFormatter.write(params);
+        xml = this.fixRequestXml(xml);
         xml = this.insertGmlTimeperiodInRequest(xml, start, end);
         OpenLayers.Request.POST({
-          url: this.url,
+          url: this.config.post.url,
           scope: this,
           async: this.config.async,
           failure: function() {
-            alert(OpenLayers.i18n("SOSGetObservationsErrorMessage") + this.url);
+            alert(OpenLayers.i18n("SOSGetObservationsErrorMessage") + this.config.post.url);
           },
           success: this._parseObservations,
           data: xml
@@ -462,7 +560,49 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         if(this.haveValidObservationsObject()) {
           record = this.SOSObservations.measurements[i];
 
-          // Some convenience properties
+          // Add some convenience properties
+          record = this.addPropertiesToObservationRecord(record);
+        }
+
+        return record;
+      },
+
+      /**
+       * Get the observation for the given index from the internal
+       * observations object, as long as it matches the given filter rules
+       */
+      getFilteredObservationRecord: function(i, filter) {
+        var record;
+
+        if(this.haveValidObservationsObject()) {
+          var r = this.SOSObservations.measurements[i];
+
+          if(SOS.Utils.isValidObject(filter)) {
+            if(SOS.Utils.isValidObject(filter.foiId)) {
+              if(r.fois[0].features[0].attributes.id == filter.foiId) {
+                record = this.SOSObservations.measurements[i];
+              }
+            } else if(SOS.Utils.isValidObject(filter.observedProperty)) {
+              if(r.observedProperty == filter.observedProperty) {
+                record = this.SOSObservations.measurements[i];
+              }
+            }
+          } else {
+            record = this.SOSObservations.measurements[i];
+          }
+
+          // Add some convenience properties
+          record = this.addPropertiesToObservationRecord(record);
+        }
+
+        return record;
+      },
+
+      /**
+       * Add some standard properties to the given observation record
+       */
+      addPropertiesToObservationRecord: function(record) {
+        if(SOS.Utils.isValidObject(record)) {
           record.time = record.samplingTime.timeInstant.timePosition;
           record.observedPropertyTitle = SOS.Utils.toTitleCase(SOS.Utils.toDisplayName(SOS.Utils.urnToName(record.observedProperty)));
           record.uomTitle = SOS.Utils.toDisplayUom(record.result.uom);
@@ -480,12 +620,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           fois: [foiId]
         };
         var xml = this.foiFormatter.write(params);
+        xml = this.fixRequestXml(xml);
         OpenLayers.Request.POST({
-          url: this.url,
+          url: this.config.post.url,
           scope: this,
           async: this.config.async,
           failure: function() {
-            alert(OpenLayers.i18n("SOSGetFeatureOfInterestErrorMessage") + this.url);
+            alert(OpenLayers.i18n("SOSGetFeatureOfInterestErrorMessage") + this.config.post.url);
           },
           success: this._parseFeatureOfInterest,
           data: xml
@@ -512,12 +653,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           foi: foiId
         };
         var xml = this.foiTimeFormatter.write(params);
+        xml = this.fixRequestXml(xml);
         OpenLayers.Request.POST({
-          url: this.url,
+          url: this.config.post.url,
           scope: this,
           async: this.config.async,
           failure: function() {
-            alert(OpenLayers.i18n("SOSGetFeatureOfInterestTimeErrorMessage") + this.url);
+            alert(OpenLayers.i18n("SOSGetFeatureOfInterestTimeErrorMessage") + this.config.post.url);
           },
           success: this._parseTemporalCoverage,
           data: xml
@@ -541,12 +683,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           procedure: procedureId
         };
         var xml = this.sensorDescFormatter.write(params);
+        xml = this.fixRequestXml(xml);
         OpenLayers.Request.POST({
-          url: this.url,
+          url: this.config.post.url,
           scope: this,
           async: this.config.async,
           failure: function() {
-            alert(OpenLayers.i18n("SOSDescribeSensorErrorMessage") + this.url);
+            alert(OpenLayers.i18n("SOSDescribeSensorErrorMessage") + this.config.post.url);
           },
           success: this._parseSensorDescription,
           data: xml
@@ -695,6 +838,56 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         this.getObservationsForOffering(this, start, end);
       }
     });
+
+    /**
+     * SOS.Proxy namespace.  Proxy functions for SOS connections
+     */
+    SOS.Proxy = {
+      use: true,
+      url: SOS_DEFAULT_PROXY_HOST,
+ 
+      /**
+       * Initialise the proxy for communicating to the SOS
+       */
+      init: function(options) {
+        // We can optionally modify the proxy settings here
+        if(SOS.Utils.isValidObject(options)) {
+          for(var p in options) {
+            this[p] = options[p];
+          }
+        }
+        /* Initialise the proxy, based on the "use" flag */
+        if(this.use) {
+          this.enable();
+        } else {
+          this.disable();
+        }
+      },
+ 
+      /**
+       * Enable the proxy for communicating to the SOS
+       */
+      enable: function(options) {
+        // We can optionally modify the proxy settings here
+        if(SOS.Utils.isValidObject(options)) {
+          for(var p in options) {
+            this[p] = options[p];
+          }
+        }
+        if(this.url) {
+          OpenLayers.ProxyHost = this.url;
+        }
+
+        return this.url;
+      },
+ 
+      /**
+       * Disable the proxy for communicating to the SOS
+       */
+      disable: function() {
+        OpenLayers.ProxyHost = null;
+      }
+    };
 
     /**
      * SOS.Utils namespace.  Utility functions for SOS classes
@@ -870,6 +1063,29 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         return y;
       },
 
+      applyTemplate: function(x, template, reFlags) {
+        var reFlags = reFlags || "gi";
+        var t = template;
+
+        // Can't test x is an object first, as an array is also an object
+        if(this.isArray(x)) {
+          t = [];
+
+          for(var i = 0, len = x.length; i < len; i++) {
+            t.push(this.applyTemplate(x[i], template, reFlags));
+          }
+        } else {
+          if(t) {
+            for(var p in x) {
+              var re = new RegExp("\\[%\\s*" + p + "\\s*%\\]", reFlags);
+              t = t.replace(re, x[p]);
+            }
+          }
+        }
+
+        return t;
+      },
+
       isoToDateObject: function(x) {
         var y = x;
 
@@ -879,6 +1095,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           if(a.length < 2) {a[1] = "00:00:00.000Z";}
           var d = a[0].split(/-/);
           a[1] = a[1].replace(/Z$/, "");
+
+          var tz = /([-+])(\d{2})[:]?(\d{2})?/.exec(a[1]);
+          var tzMins = 0;
+          if(tz) {
+            if(tz.length > 2) {tzMins += parseInt(tz[2], 10) * 60;}
+            if(tz.length > 3) {tzMins += parseInt(tz[3], 10);}
+            if(tz.length > 1 && tz[1] === '+') {tzMins *= -1;}
+          }
+          a[1] = a[1].replace(/[-+].+$/, "");
+
           var t = a[1].split(/:/);
           var ms = t[2].replace(/^\d+\./, "");
           t[2] = t[2].replace(/\.\d+$/, "");
@@ -890,6 +1116,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
                        parseInt(t[1], 10),
                        parseInt(t[2], 10),
                        parseInt(ms, 10)));
+
+          if(!isNaN(y)) {
+            if(tzMins != 0) {
+              y.setTime(y.getTime() + tzMins * 60 * 1000);
+            }
+          } else {
+            y = x;
+          }
         } else if(this.isArray(x)) {
           y = [];
 
@@ -923,7 +1157,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
 
         if(typeof x == "string" || typeof x == "number") {
           var D = new Date(x);
-          y = D.toISOString();
+
+          if(!isNaN(D)) {
+            y = D.toISOString();
+          }
         } else if(this.isArray(x)) {
           y = [];
 
@@ -1132,6 +1369,30 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
 
     /* OpenLayers formatters for parsing various SOS response documents.
        These are missing from a stock OpenLayers install */
+
+    /**
+     * Method: write
+     *
+     * Parameters:
+     * options - {Object} Optional object.
+     *
+     * Returns:
+     * {String} An SOS GetObservation request XML string.
+     */
+    OpenLayers.Format.SOSGetObservation.prototype.write = function(options) {
+        var node = this.writeNode("sos:GetObservation", options);
+        node.setAttribute("xmlns:om", this.namespaces.om);
+        node.setAttribute("xmlns:ogc", this.namespaces.ogc);
+
+        /* N.B.: The original OL method didn't include the gml namespace */
+        node.setAttribute("xmlns:gml", this.namespaces.gml);
+
+        this.setAttributeNS(
+            node, this.namespaces.xsi,
+            "xsi:schemaLocation", this.schemaLocation
+        );
+        return OpenLayers.Format.XML.prototype.write.apply(this, [node]);
+    }
 
     /**
      * Method: write
