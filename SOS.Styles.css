@@ -25,6 +25,9 @@
   background: #ffffff;
   filter: alpha(opacity=80);
   opacity: 0.8;
+  -moz-border-radius: 6px;
+  -webkit-border-radius: 6px;
+  border-radius: 6px;
   border: thin solid grey;
   padding: 5px;
   z-index: 1200;
@@ -55,6 +58,15 @@
   font-size: 60%;
 }
 
+.sos-plot-square {
+  width: 500px;
+  height: 500px;
+}
+
+.sos-plot-square-offset {
+  left: 110px;
+}
+
 .sos-control-title {
   font-weight: bold;
 }
@@ -70,6 +82,16 @@
   border-radius: 6px;
   border: thin solid lightgray;
   padding: 1px;
+}
+
+.sos-message-container {
+  margin-top: 10px;
+  padding: 0pt 0.7em;
+}
+
+.sos-message-icon {
+  float: left;
+  margin-right: 0.3em;
 }
 
 .sos-selected-interval-stats-table, .sos-embedded-table {

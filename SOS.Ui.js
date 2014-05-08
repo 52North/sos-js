@@ -169,38 +169,106 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
-       * Get data from given SOS query result object & return as a table
-       * suitable for displaying
+       * Initialise a data table
        */
-      constructDataTable: function(res) {
-        var table = {label: "", headerLabel: "", name: "", uom: "", uomTitle: "", data: []};
+      initDataTable: function() {
+        var table = {label: "", headerLabel: "", ordinateLabel: "", name: "", uom: "", uomTitle: "", foiName: "", offeringName: "", data: []};
+
+        return table;
+      },
+
+      /**
+       * Initialise the default label templates for a data table
+       */
+      initLabelTemplates: function() {
+        var labelTemplates = {
+          label: "[%foiName%] [%name%]",
+          headerLabel: "[%foiName%] [%name%] / [%uomTitle%]",
+          ordinateLabel: "[%name%] / [%uomTitle%]"
+        };
+
+        return labelTemplates;
+      },
+
+      /**
+       * Get data from given SOS query result object & return as a table
+       * suitable for displaying.  Optionally format the table labels
+       * according to the given templates, otherwise defaults are used.  If an
+       * optional filter is given, then only return observations that match
+       * the filter rules
+       */
+      constructDataTable: function(res, labelTemplates, filter) {
+        var labelTemplates = labelTemplates || this.initLabelTemplates();
+        var table = this.initDataTable();
 
         // Construct the data table
         for(var i = 0, len = res.getCountOfObservations(); i < len; i++) {
-          var ob = res.getObservationRecord(i);
+          var ob = res.getFilteredObservationRecord(i, filter);
 
-          if(table.name.length < 1) {
-            table.name = ob.observedPropertyTitle;
+          if(ob) {
+            if(table.name.length < 1) {
+              table.name = ob.observedPropertyTitle;
+            }
+            if(table.uom.length < 1) {
+              table.uom = ob.result.uom;
+              table.uomTitle = ob.uomTitle;
+            }
+            if(table.foiName.length < 1) {
+              table.foiName = ob.fois[0].features[0].attributes.name;
+            }
+            table.data.push([SOS.Utils.isoToJsTimestamp(ob.time), ob.result.value]);
           }
-          if(table.uom.length < 1) {
-            table.uom = ob.result.uom;
-            table.uomTitle = ob.uomTitle;
-          }
-          table.data.push([SOS.Utils.isoToJsTimestamp(ob.time), ob.result.value]);
         }
 
-        /* Construct label as Offering + Observed Property,
-           & headerLabel as Offering + Observed Property + UOM */
         if(res.name) {
-          table.label = res.name;
+          table.offeringName = res.name;
         } else if(res.id) {
-          table.label = res.id;
+          table.offeringName = res.id;
         }
-        if(table.label.length > 0) table.label += " ";
-        table.label += table.name;
-        table.headerLabel = table.label + (table.uomTitle.length > 0 ? " / " + table.uomTitle : "");
+
+        // Construct the table labels according to the templates
+        this.constructLabels(table, labelTemplates);
 
         return table;
+      },
+
+      /**
+       * Construct table labels from the parsed metadata in the table object,
+       * according to the given templates.  Given a table: {name: "a", ...},
+       * & templates: {label: "[%name%] ...", headerLabel: "[%name%] ..."},
+       * this will infill table thus: {label: "a ...", headerLabel: "a ..."}
+       */
+      constructLabels: function(table, templates) {
+        if(SOS.Utils.isValidObject(table) && SOS.Utils.isValidObject(templates)) {
+          table.label = SOS.Utils.applyTemplate(table, templates.label);
+          table.headerLabel = SOS.Utils.applyTemplate(table, templates.headerLabel);
+          table.ordinateLabel = SOS.Utils.applyTemplate(table, templates.ordinateLabel);
+        }
+
+        return table;
+      },
+
+      /**
+       * Get data from given SOS query result object & return as an array of
+       * tables suitable for displaying.  Format the table labels according
+       * to the given templates
+       */
+      constructDataSeries: function(offering, labelTemplates) {
+        var tables = [];
+        var fois = offering.getFeatureOfInterestIds();
+
+        /* If foiId wasn't passed in the request & the offering is a
+           multi-station offering, then we filter the result on FOI (station),
+           to produce a number of data tables */
+        if(!SOS.Utils.isValidObject(offering.foiId) && fois.length > 1) {
+          for(var i = 0, len = fois.length; i < len; i++) {
+            tables.push(this.constructDataTable(offering, labelTemplates, {foiId: fois[i]}));
+          }
+        } else {
+          tables.push(this.constructDataTable(offering, labelTemplates));
+        }
+
+        return tables;
       },
 
       /**
@@ -210,12 +278,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var subset = [], n = 0;
 
         for(var i = 0, slen = series.length; i < slen; i++) {
-          subset[i] = {label: "", headerLabel: "", name: "", uom: "", uomTitle: "", data: []};
+          subset[i] = this.initDataTable();
           n = 0;
 
           // Copy all metadata
-          for(var key in {label: "", headerLabel: "", name: "", uom: "", uomTitle: ""}) {
-            subset[i][key] = series[i][key];
+          for(var key in this.initDataTable()) {
+            if(key != "data") {
+              subset[i][key] = series[i][key];
+            }
           }
 
           // Only select data whose datetime lie on the given closed interval
@@ -232,6 +302,23 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         }
 
         return subset;
+      },
+
+      /**
+       * Get a total count of all series data
+       */
+      getCountOfSeriesData: function(series) {
+        var n = 0;
+
+        if(series) {
+          for(var i = 0, len = series.length; i < len; i++) {
+            if(series[i].data) {
+              n += series[i].data.length;
+            }
+          }
+        }
+
+        return n;
       },
 
       /**
@@ -259,6 +346,58 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Format the given message text for display, with optional level.  The
+       * level numbers are based on syslog levels (0 = emergency, ...,
+       * 7 = debug)
+       */
+      formatMessage: function(text, options) {
+        var options = options || {level: {text: "", suffix: "", n: 6}};
+        var container = jQuery('<div></div>', {
+          "class": "ui-corner-all sos-message-container"
+        });
+        var paragraph = jQuery('<p></p>');
+        var icon = jQuery('<span></span>', {
+          "class": "ui-icon sos-message-icon"
+        });
+        var level = jQuery('<strong></strong>', {
+          html: ((options.level && options.level.text ? options.level.text : "") + (options.level && options.level.suffix ? options.level.suffix : ""))
+        });
+        var message = jQuery('<span></span>', {
+          html: text
+        });
+
+        if(options.level && options.level.n < 4) {
+          container.addClass("ui-state-error");
+          icon.addClass("ui-icon-alert");
+        } else {
+          container.addClass("ui-state-highlight");
+          icon.addClass("ui-icon-info");
+        }
+        container.append(paragraph);
+        paragraph.append(icon);
+        paragraph.append(level);
+        paragraph.append(message);
+
+        return container;
+      },
+
+      /**
+       * Format the given message text as an information-level message
+       */
+      formatInformationMessage: function(text) {
+        var options = {level: {n: 6}};
+        return this.formatMessage(text, options);
+      },
+
+      /**
+       * Format the given message text as an alert-level message
+       */
+      formatAlertMessage: function(text) {
+        var options = {level: {n: 1}};
+        return this.formatMessage(text, options);
+      },
+
+      /**
        * Display summary stats about the given selected observation data
        */
       displaySelectedIntervalStats: function(container, selected) {
@@ -279,7 +418,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         ];
 
         var dialog = panel.dialog({position: ['center', 'center'], buttons: buttons, title: series.label, width: 540, zIndex: 1010, stack: false});
-        dialog.bind('dialogclose', function() {jQuery(this).remove(); jQuery(this).dialog().dialog("destroy");});
+        dialog.bind('dialogclose', function() {
+          jQuery(this).dialog().dialog("destroy");
+          jQuery(this).remove();
+        });
       },
 
       /**
@@ -310,7 +452,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         table += '</tbody></table>';
         st.append(table);
 
-        panel.append('<span class="sos-control-title">' + series.name + ' / ' + series.uomTitle + '</span>', '<hr></hr>');
+        panel.append('<span class="sos-control-title">' + series.ordinateLabel + '</span>', '<hr></hr>');
         panel.append(st, sp);
 
         // Generate stats plot
@@ -346,6 +488,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       offering: null,
       offeringId: null,
       observedProperty: null,
+      foiId: null,
       startDatetime: null,
       endDatetime: null,
       relativeTime: null,
@@ -363,6 +506,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.offering = null;
         this.offeringId = null;
         this.observedProperty = null;
+        this.foiId = null;
         this.startDatetime = null;
         this.endDatetime = null;
         this.relativeTime = "today";
@@ -378,6 +522,12 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               xaxes: [],
               yaxes: [],
               haveCustomAxes: false,
+              forceSingleAxis: false,
+              labelTemplates: {
+                label: "[%foiName%] [%name%]",
+                headerLabel: "[%foiName%] [%name%] / [%uomTitle%]",
+                ordinateLabel: "[%name%] / [%uomTitle%]"
+              },
               selection: {mode: "x"},
               zoom: {interactive: true},
               pan: {interactive: true},
@@ -409,6 +559,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               digits: 2,
               formatter: SOS.Ui.prototype.formatValueFancy
             }
+          },
+          messages: {
+            noDataForDateRange: "No data available for given dates."
           },
           mode: {append: false}
         };
@@ -455,6 +608,18 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       setAxisReverse: function(axis) {
         axis = axis || "yaxis";
         this.config.plot.options[axis].transform = this.config.plot.options[axis].inverseTransform = function(v) {return -v;};
+        this.config.overview.options[axis].transform = this.config.plot.options[axis].transform;
+        this.config.overview.options[axis].inverseTransform = this.config.plot.options[axis].inverseTransform;
+      },
+
+      /**
+       * Set the given axis to reverse logarithmic
+       */
+      setAxisReverseLogarithmic: function(axis, base) {
+        axis = axis || "yaxis";
+        base = base || 10;
+        this.config.plot.options[axis].transform = function(v) {return (v != 0 ? -(Math.log(v) / Math.log(base)) : 0);};
+        this.config.plot.options[axis].inverseTransform = function(v) {return -Math.pow(base, v);};
         this.config.overview.options[axis].transform = this.config.plot.options[axis].transform;
         this.config.overview.options[axis].inverseTransform = this.config.plot.options[axis].inverseTransform;
       },
@@ -510,6 +675,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               this.offering.filterObservedProperties(this.observedProperty);
             }
           }
+
+          // The FOI will identify a given station in a multi-station offering
+          if(SOS.Utils.isValidObject(this.foiId)) {
+            this.offering.foiId = this.foiId;
+          }
           this.determineObservationQueryTimeParameters();
           this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawObservationData});
           this.offering.getObservations(this.startDatetime, this.endDatetime);
@@ -536,6 +706,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Display the data series
         this.draw();
+
+        // Now we have the base plot, plot any additional data
+        if(SOS.Utils.isValidObject(this.additional)) {
+          this.addData();
+        }
       },
 
       /**
@@ -543,16 +718,23 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       storeObservationData: function() {
         // Construct the data series
-        var table = this.constructDataTable(this.offering);
+        var tables = this.constructDataSeries(this.offering, this.config.plot.options.labelTemplates);
 
         // We can add to an existing base plot or overwrite, dependent on mode
         if(this.config.mode.append) {
-          this.config.plot.series.push(table);
+          this.config.plot.series = this.config.plot.series.concat(tables);
         } else {
-          this.config.plot.series = [table];
+          this.config.plot.series = tables;
         }
       },
 
+      /**
+       * Check whether we have some data to plot
+       */
+      haveRequiredData: function() {
+        return this.getCountOfSeriesData(this.config.plot.series);
+      },
+ 
       /**
        * Plot the given observation data
        */
@@ -564,26 +746,26 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.applyDefaults();
 
         if(this.config.plot.options.show) {
-          // Generate the plot
-          this.config.plot.object = jQuery.plot(jQuery('#' + this.config.plot.id), this.config.plot.series, this.config.plot.options);
+          if(this.haveRequiredData()) {
+            // Generate the plot
+            this.config.plot.object = jQuery.plot(jQuery('#' + this.config.plot.id), this.config.plot.series, this.config.plot.options);
 
-          // Optionally generate the plot overview
-          if(this.config.overview.options.show) {
-            this.drawOverview();
+            // Optionally generate the plot overview
+            if(this.config.overview.options.show) {
+              this.drawOverview();
+            }
+
+            // Manage the plot's interactive behaviour
+            this.setupBehaviour();
+
+            // Optionally manage the plot overview behaviour
+            if(this.config.overview.options.show) {
+              this.setupOverviewBehaviour();
+            }
+          } else {
+            var container = jQuery('#' + this.config.plot.id);
+            container.html(this.formatInformationMessage(this.config.messages.noDataForDateRange));
           }
-
-          // Manage the plot's interactive behaviour
-          this.setupBehaviour();
-
-          // Optionally manage the plot overview behaviour
-          if(this.config.overview.options.show) {
-            this.setupOverviewBehaviour();
-          }
-        }
-
-        // Now we have the base plot, plot any additional data
-        if(SOS.Utils.isValidObject(this.additional)) {
-          this.addData();
         }
       },
 
@@ -608,13 +790,19 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           // We normally setup labels for y axes unless told otherwise
           if(!options.haveCustomAxes) {
             options.yaxes = options.yaxes || [];
-
-            for(var i = 0, len = series.length; i < len; i++) {
-              options.yaxes[i] = {};
-              series[i].yaxis = (i + 1);
-
-              options.yaxes[i].axisLabel = series[i].name;
-              options.yaxes[i].axisLabel += (series[i].uomTitle.length > 0 ? " / " + series[i].uomTitle : "");
+              
+            // We can force multiple data series to share a single axis
+            if(options.forceSingleAxis) {
+              if(series.length > 0) {
+                options.yaxes = [];
+                options.yaxis.axisLabel = series[0].ordinateLabel;
+              }
+            } else {
+              for(var i = 0, len = series.length; i < len; i++) {
+                options.yaxes[i] = {};
+                series[i].yaxis = (i + 1);
+                options.yaxes[i].axisLabel = series[i].ordinateLabel;
+              }
             }
           }
         }
@@ -770,6 +958,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               if(SOS.Utils.isValidObject(this.observedProperty)) {
                 this.offering.filterObservedProperties(this.observedProperty);
               }
+              if(SOS.Utils.isValidObject(this.foiId)) {
+                this.offering.foiId = this.foiId;
+              }
               this.determineObservationQueryTimeParameters();
               this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawAdditionalData});
               this.offering.getObservations(this.startDatetime, this.endDatetime);
@@ -786,16 +977,24 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawAdditionalData});
 
         // Construct the data series
-        var table = this.constructDataTable(this.offering);
-        this.config.plot.series.push(table);
+        var tables = this.constructDataSeries(this.offering, this.config.plot.options.labelTemplates);
 
         if(this.config.plot.options.show) {
-          this.update();
+          if(tables && tables[0].data && tables[0].data.length > 0) {
+            /* If base plot exists, we update, otherwise we generate plot */
+            if(SOS.Utils.isValidObject(this.config.plot.object)) {
+              this.config.plot.series = this.config.plot.series.concat(tables);
+              this.update();
+            } else {
+              this.config.plot.series = tables;
+              this.draw();
+            }
 
-          // Optionally update the plot overview also
-          if(this.config.overview.options.show) {
-            this.config.overview.series = this.config.plot.series;
-            this.updateOverview();
+            // Optionally update the plot overview also
+            if(this.config.overview.options.show) {
+              this.config.overview.series = this.config.plot.series;
+              this.updateOverview();
+            }
           }
         }
       },
@@ -804,18 +1003,22 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Redraw an existing plot
        */
       update: function() {
-        this.config.plot.object.setData(this.config.plot.series);
-        this.config.plot.object.setupGrid();
-        this.config.plot.object.draw();
+        if(SOS.Utils.isValidObject(this.config.plot.object)) {
+          this.config.plot.object.setData(this.config.plot.series);
+          this.config.plot.object.setupGrid();
+          this.config.plot.object.draw();
+        }
       },
 
       /**
        * Redraw an existing overview plot
        */
       updateOverview: function() {
-        this.config.overview.object.setData(this.config.overview.series);
-        this.config.overview.object.setupGrid();
-        this.config.overview.object.draw();
+        if(SOS.Utils.isValidObject(this.config.overview.object)) {
+          this.config.overview.object.setData(this.config.overview.series);
+          this.config.overview.object.setupGrid();
+          this.config.overview.object.draw();
+        }
       },
 
       /**
@@ -883,6 +1086,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       offering: null,
       offeringId: null,
       observedProperty: null,
+      foiId: null,
       startDatetime: null,
       endDatetime: null,
       relativeTime: null,
@@ -900,6 +1104,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.offering = null;
         this.offeringId = null;
         this.observedProperty = null;
+        this.foiId = null;
         this.startDatetime = null;
         this.endDatetime = null;
         this.relativeTime = "today";
@@ -913,6 +1118,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               header: {},
               columns: {
                 names: ["Time", "Value"]
+              },
+              labelTemplates: {
+                label: "[%foiName%] [%name%]",
+                headerLabel: "[%foiName%] [%name%] / [%uomTitle%]",
+                ordinateLabel: "[%name%] / [%uomTitle%]"
               },
               scrollable: false
             }
@@ -940,6 +1150,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               digits: 2,
               formatter: SOS.Ui.prototype.formatValueFancy
             }
+          },
+          messages: {
+            noDataForDateRange: "No data available for given dates."
           },
           mode: {append: false}
         };
@@ -1019,6 +1232,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               this.offering.filterObservedProperties(this.observedProperty);
             }
           }
+
+          // The FOI will identify a given station in a multi-station offering
+          if(SOS.Utils.isValidObject(this.foiId)) {
+            this.offering.foiId = this.foiId;
+          }
           this.determineObservationQueryTimeParameters();
           this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawObservationData});
           this.offering.getObservations(this.startDatetime, this.endDatetime);
@@ -1045,6 +1263,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Display the data series
         this.draw();
+
+        // Now we have the base table, add any additional data
+        if(SOS.Utils.isValidObject(this.additional)) {
+          this.addData();
+        }
       },
 
       /**
@@ -1052,14 +1275,21 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       storeObservationData: function() {
         // Construct the data series
-        var table = this.constructDataTable(this.offering);
+        var tables = this.constructDataSeries(this.offering, this.config.table.options.labelTemplates);
 
         // We can add to an existing base table or overwrite, dependent on mode
         if(this.config.mode.append) {
-          this.config.table.series.push(table);
+          this.config.table.series = this.config.table.series.concat(tables);
         } else {
-          this.config.table.series = [table];
+          this.config.table.series = tables;
         }
+      },
+
+      /**
+       * Check whether we have some data to display
+       */
+      haveRequiredData: function() {
+        return this.getCountOfSeriesData(this.config.table.series);
       },
 
       /**
@@ -1073,28 +1303,28 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.applyDefaults();
 
         if(this.config.table.options.show) {
-          // Generate the table
-          var t = jQuery('#' + this.config.table.id);
-          this.clearTable(t);
-          this.config.table.object = this.generateTable(t, this.config.table.series, this.config.table.options);
+          if(this.haveRequiredData()) {
+            // Generate the table
+            var t = jQuery('#' + this.config.table.id);
+            this.clearTable(t);
+            this.config.table.object = this.generateTable(t, this.config.table.series, this.config.table.options);
 
-          // Optionally generate the table overview
-          if(this.config.overview.options.show) {
-            this.drawOverview();
+            // Optionally generate the table overview
+            if(this.config.overview.options.show) {
+              this.drawOverview();
+            }
+
+            // Manage the table's interactive behaviour
+            this.setupBehaviour();
+
+            // Optionally manage the table overview behaviour
+            if(this.config.overview.options.show) {
+              this.setupOverviewBehaviour();
+            }
+          } else {
+            var container = jQuery('#' + this.config.table.id);
+            container.html(this.formatInformationMessage(this.config.messages.noDataForDateRange));
           }
-
-          // Manage the table's interactive behaviour
-          this.setupBehaviour();
-
-          // Optionally manage the table overview behaviour
-          if(this.config.overview.options.show) {
-            this.setupOverviewBehaviour();
-          }
-        }
-
-        // Now we have the base table, add any additional data
-        if(SOS.Utils.isValidObject(this.additional)) {
-          this.addData();
         }
       },
 
@@ -1115,10 +1345,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         }
         options.yaxes = options.yaxes || [];
 
-        // Specify which yaxis applies to which data series
-        for(var i = 0, len = series.length; i < len; i++) {
-          options.yaxes[i] = {};
-          series[i].yaxis = (i + 1);
+        // We can force multiple data series to share a single axis
+        if(!options.forceSingleAxis) {
+          // Specify which yaxis applies to which data series
+          for(var i = 0, len = series.length; i < len; i++) {
+            options.yaxes[i] = {};
+            series[i].yaxis = (i + 1);
+          }
         }
       },
 
@@ -1321,6 +1554,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               if(SOS.Utils.isValidObject(this.observedProperty)) {
                 this.offering.filterObservedProperties(this.observedProperty);
               }
+              if(SOS.Utils.isValidObject(this.foiId)) {
+                this.offering.foiId = this.foiId;
+              }
               this.determineObservationQueryTimeParameters();
               this.offering.registerUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawAdditionalData});
               this.offering.getObservations(this.startDatetime, this.endDatetime);
@@ -1337,16 +1573,24 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.offering.unregisterUserCallback({event: "sosObsAvailable", scope: this, callback: this.drawAdditionalData});
 
         // Construct the data series
-        var table = this.constructDataTable(this.offering);
-        this.config.table.series.push(table);
+        var tables = this.constructDataSeries(this.offering, this.config.table.options.labelTemplates);
 
         if(this.config.table.options.show) {
-          this.update();
+          if(tables && tables[0].data && tables[0].data.length > 0) {
+            /* If base table exists, we update, otherwise we generate table */
+            if(SOS.Utils.isValidObject(this.config.table.object)) {
+              this.config.table.series = this.config.table.series.concat(tables);
+              this.update();
+            } else {
+              this.config.table.series = tables;
+              this.draw();
+            }
 
-          // Optionally update the plot overview also
-          if(this.config.overview.options.show) {
-            this.config.overview.series = this.config.table.series;
-            this.updateOverview();
+            // Optionally update the plot overview also
+            if(this.config.overview.options.show) {
+              this.config.overview.series = this.config.table.series;
+              this.updateOverview();
+            }
           }
         }
       },
@@ -1355,17 +1599,21 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Redraw an existing table
        */
       update: function() {
-        this.config.table.object.html("");
-        this.generateTable(this.config.table.object, this.config.table.series, this.config.table.options);
+        if(SOS.Utils.isValidObject(this.config.table.object)) {
+          this.config.table.object.html("");
+          this.generateTable(this.config.table.object, this.config.table.series, this.config.table.options);
+        }
       },
 
       /**
        * Redraw an existing overview plot
        */
       updateOverview: function() {
-        this.config.overview.object.setData(this.config.overview.series);
-        this.config.overview.object.setupGrid();
-        this.config.overview.object.draw();
+        if(SOS.Utils.isValidObject(this.config.overview.object)) {
+          this.config.overview.object.setData(this.config.overview.series);
+          this.config.overview.object.setupGrid();
+          this.config.overview.object.draw();
+        }
       },
 
       /**
@@ -1808,6 +2056,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 "labelOutlineColor": "white",
                 "labelOutlineWidth": 3
               }),
+              crs: {
+                format: {
+                  /* Optionally specifies coordinate order in layer CRS.
+                     If null, relies on OpenLayers defaults.
+                     If true, order will be xy (e.g., lon/lat).
+                     If false, order will be yx */
+                  xy: null
+                }
+              },
               displayLatestObservations: false
             }
           },
@@ -1955,15 +2212,24 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       initFeatureOfInterestLayer: function() {
         var styleMap = new OpenLayers.StyleMap(this.config.featureOfInterestLayer.options.pointStyle);
 
+        var protocolFormatOptions = {
+          internalProjection: this.config.map.object.getProjectionObject(),
+          externalProjection: this.config.map.options.defaultProjection
+        };
+
+        /* Allows the coordinate order in layer CRS to be explicitly
+           specified.  For example, the OpenLayers default for EPSG:4326 is
+           false = yx = lat/lon, but some SOS instances return lon/lat */
+        if(SOS.Utils.isValidObject(this.config.featureOfInterestLayer.options.crs.format.xy)) {
+          protocolFormatOptions.xy = this.config.featureOfInterestLayer.options.crs.format.xy;
+        }
+
         // Query FOIs from the SOS and present them as a vector layer
         var layer = new OpenLayers.Layer.Vector(this.config.featureOfInterestLayer.options.label, {
           strategies: [new OpenLayers.Strategy.Fixed()],
           protocol: new OpenLayers.Protocol.SOS({
-            formatOptions: {
-              internalProjection: this.config.map.object.getProjectionObject(),
-              externalProjection: this.config.map.options.defaultProjection
-            },
-            url: this.url,
+            formatOptions: protocolFormatOptions,
+            url: this.sos.config.post.url,
             fois: this.sos.getFeatureOfInterestIds()
           }),
           styleMap: styleMap
@@ -2127,6 +2393,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               listBoxes: {
                 multiple: false,
                 size: 5,
+                useToolTip: true,
                 useSelectBox: false
               },
               datePickers: {
@@ -2569,12 +2836,63 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Set datepicker values from the time properties of the given item
+       */
+      setDatepickerValues: function(item) {
+        if(SOS.Utils.isValidObject(item.time)) {
+          if(SOS.Utils.isValidObject(item.time.startDatetime)) {
+            var sd = jQuery('#' + this.config.menu.id + 'ControlsStartDatetime');
+            sd.datepicker("setDate", SOS.Utils.isoToDateObject(item.time.startDatetime));
+          }
+          if(SOS.Utils.isValidObject(item.time.endDatetime)) {
+            var ed = jQuery('#' + this.config.menu.id + 'ControlsEndDatetime');
+            ed.datepicker("setDate", SOS.Utils.isoToDateObject(item.time.endDatetime));
+          }
+        }
+      },
+
+      /**
+       * Get datepicker values & store in the time properties of the returned
+       * item object
+       */
+      getDatepickerValues: function() {
+        var item = {time: {startDatetime: null, endDatetime: null}};
+        var sd = jQuery('#' + this.config.menu.id + 'ControlsStartDatetime');
+        var ed = jQuery('#' + this.config.menu.id + 'ControlsEndDatetime');
+        var start = sd.datepicker("getDate");
+        var end = ed.datepicker("getDate");
+
+        // N.B.: Datepicker returns the client's local time, but we require UTC
+
+        // Ensure the date range is inclusive
+        if(start) {
+          start.setTime(start.getTime() - start.getTimezoneOffset() * 60 * 1000);
+          item.time.startDatetime = start.toISOString();
+        }
+        if(end) {
+          end.setTime(end.getTime() - end.getTimezoneOffset() * 60 * 1000);
+          item.time.endDatetime = (new Date(end.getTime() + 8.64e7 - 1)).toISOString();
+        }
+
+        return item;
+      },
+
+      /**
+       * Get current date values & store in the current selected item
+       */
+      updateCurrentItemDateRange: function() {
+        var item = this.getDatepickerValues();
+
+        return this.updateCurrentItem(item);
+      },
+ 
+      /**
        * Event handler for datepicker change
        */
       datepickerChangeHandler: function(evt) {
         var self = evt.data.self;
         var pos = evt.data.pos;
-        var val = jQuery(this).val();
+        var val = jQuery(this).datepicker("getDate");
         var item = {time: {}};
         var firstItem = self.getFirstItem();
 
@@ -2582,13 +2900,20 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                  The time axis is always set the same for all selected items */
 
         if(pos == "start") {
-          item.time.startDatetime = val;
+          if(val) {
+            val.setTime(val.getTime() - val.getTimezoneOffset() * 60 * 1000);
+            item.time.startDatetime = val.toISOString();
+          }
 
           if(SOS.Utils.isValidObject(firstItem) && SOS.Utils.isValidObject(firstItem.time)) {
             item.time.endDatetime = firstItem.time.endDatetime;
           }
         } else if(pos == "end") {
-          item.time.endDatetime = val;
+          // Ensure end datetime is inclusive
+          if(val) {
+            val.setTime(val.getTime() - val.getTimezoneOffset() * 60 * 1000);
+            item.time.endDatetime = (new Date(val.getTime() + 8.64e7 - 1)).toISOString();
+          }
 
           if(SOS.Utils.isValidObject(firstItem) && SOS.Utils.isValidObject(firstItem.time)) {
             item.time.startDatetime = firstItem.time.startDatetime;
@@ -2739,16 +3064,21 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       initMenu: function(tab) {
         var lb = this.config.menu.options.listBoxes;
         var s = jQuery('<select id="' + this.config.menu.id + 'SelectList"' + (lb.multiple ? ' multiple="multiple"' : '') + (lb.size ? ' size="' + lb.size + '"' : '') + ' class="sos-menu-select-list"></select>');
-        var options = [];
 
         tab.html("");
         tab.append(s);
 
         // Initialise the menu entries
         for(var i = 0, len = this.config.menu.entries.length; i < len; i++) {
-          options.push('<option value="' + this.config.menu.entries[i].value + '">' + this.config.menu.entries[i].label + '</option>');
+          var opt = jQuery("<option></option>", {
+            value: this.config.menu.entries[i].value,
+            html: this.config.menu.entries[i].label
+          });
+          if(lb.useToolTip) {
+            opt.attr("title", this.config.menu.entries[i].label);
+          }
+          s.append(opt);
         }
-        s.html(options.join(''));
 
         if(lb.useSelectBox && typeof jQuery('body').selectBox == "function") {
           // This call uses a jquery plugin to replace vanilla select boxes
@@ -3142,14 +3472,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Set CSS class for the info panel
        */
       setClass: function(c) {
-        this.config.info.class = c;
+        this.config.info["class"] = c;
       },
 
       /**
        * Add a CSS class to the info panel
        */
       addClass: function(c) {
-        this.config.info.class += " " + c;
+        this.config.info["class"] += " " + c;
       },
 
       /**
@@ -3186,7 +3516,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(p.length < 1) {
           p = jQuery("<div></div>", {
             id: this.config.info.id,
-            "class": this.config.info.class
+            "class": this.config.info["class"]
           });
           jQuery('body').append(p);
         }
@@ -3220,7 +3550,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       displayContent: function() {
         if(SOS.Utils.isValidObject(this.config.info.object)) {
-          var s = this.config.info.object.children("." + this.config.info.options.contentSection.class);
+          var s = this.config.info.object.children("." + this.config.info.options.contentSection["class"]);
           s.html(this.config.info.content);
         }
       },
@@ -3253,7 +3583,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(SOS.Utils.isValidObject(this.config.info.object)) {
           if(this.config.info.options.show && this.config.info.options.contentSection.active) {
             var c = jQuery("<div></div>", {
-              "class": this.config.info.options.contentSection.class
+              "class": this.config.info.options.contentSection["class"]
             });
 
             // Add the content section to this info panel
@@ -3270,7 +3600,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(SOS.Utils.isValidObject(this.config.info.object)) {
           if(this.config.info.options.show && this.config.info.options.controlsSection.active) {
             var c = jQuery("<div></div>", {
-              "class": this.config.info.options.controlsSection.class
+              "class": this.config.info.options.controlsSection["class"]
             });
 
             // Add the controls section to this info panel
@@ -3286,12 +3616,12 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(SOS.Utils.isValidObject(this.config.info.object)) {
           if(this.config.info.options.show && this.config.info.options.controlsSectionTitle.active) {
             var c = jQuery("<div></div>", {
-              "class": this.config.info.options.controlsSectionTitle.class,
+              "class": this.config.info.options.controlsSectionTitle["class"],
               html: this.config.info.options.controlsSectionTitle.label
             });
 
             // Add the control to this info panel's control section
-            var s = this.config.info.object.children("." + this.config.info.options.controlsSection.class);
+            var s = this.config.info.object.children("." + this.config.info.options.controlsSection["class"]);
             s.append(c);
           }
         }
@@ -3305,13 +3635,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(SOS.Utils.isValidObject(this.config.info.object)) {
           if(this.config.info.options.show && this.config.info.options.showHideControl.active) {
             var c = jQuery("<div></div>", {
-              "class": this.config.info.options.showHideControl.class
+              "class": this.config.info.options.showHideControl["class"]
             });
             c.addClass(this.config.info.options.showHideControl.icons.show);
             c.bind("click", {self: this}, this.showHideControlClickHandler);
 
             // Add the control to this info panel's control section
-            var s = this.config.info.object.children("." + this.config.info.options.controlsSection.class);
+            var s = this.config.info.object.children("." + this.config.info.options.controlsSection["class"]);
             s.append(c);
           }
         }
@@ -3345,13 +3675,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(SOS.Utils.isValidObject(this.config.info.object)) {
           if(this.config.info.options.show && this.config.info.options.closeControl.active) {
             var c = jQuery("<div></div>", {
-              "class": this.config.info.options.closeControl.class
+              "class": this.config.info.options.closeControl["class"]
             });
             c.addClass(this.config.info.options.closeControl.icons.close);
             c.bind("click", {self: this}, this.closeControlClickHandler);
 
             // Add the control to this info panel's control section
-            var s = this.config.info.object.children("." + this.config.info.options.controlsSection.class);
+            var s = this.config.info.object.children("." + this.config.info.options.controlsSection["class"]);
             s.append(c);
           }
         }
@@ -3403,6 +3733,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       offering: null,
       offeringId: null,
       observedProperty: null,
+      foiId: null,
       startDatetime: null,
       endDatetime: null,
       relativeTime: null,
@@ -3420,6 +3751,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.offering = null;
         this.offeringId = null;
         this.observedProperty = null;
+        this.foiId = null;
         this.startDatetime = null;
         this.endDatetime = null;
         this.relativeTime = null;
@@ -3445,6 +3777,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               time: {
                 useOfferingTimePeriod: false,
                 ms: 31 * 8.64e7
+              },
+              observation: {
+                useFoiId: true
               },
               info: SOS.App.Resources.config.app.options.info
             }
@@ -3581,6 +3916,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         components.infoHelp.setTitle(this.config.app.options.info.help.title);
         components.infoMetadata.setContent(this.config.app.options.info.metadata.initialContent);
         components.infoHelp.setContent(this.config.app.options.info.help.initialContent);
+
+        // For external listeners (application-level plumbing)
+        this.sos.events.triggerEvent("sosAppInitComponents");
       },
  
       /**
@@ -3601,6 +3939,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.sos.registerUserCallback({event: "sosMenuDownloadDataClick", scope: this, callback: this.sosMenuDownloadDataClickHandler});
 
         this.setupInfoComponentsBehaviour();
+
+        // For external listeners (application-level plumbing)
+        this.sos.events.triggerEvent("sosAppSetupComponentsBehaviour");
       },
  
       /**
@@ -3618,10 +3959,12 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           scope: components.infoMetadata,
           callback: function() {
             var ft = this.config.format.time;
-            var c = this.sos.SOSCapabilities.serviceIdentification.title
-            + "<p/>Data Availability<br/>"
-            + "Starts: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) + "<br/>"
-            + "Ends: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue) + "<br/>";
+            var c = this.sos.SOSCapabilities.serviceIdentification.title;
+            if(SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime)) {
+              c += "<p/>Data Availability<br/>"
+              + "Starts: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) + "<br/>"
+              + "Ends: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue) + "<br/>";
+            }
             this.updateContent(c);
           }
         });
@@ -3631,10 +3974,12 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           scope: components.infoMetadata,
           callback: function() {
             var ft = this.config.format.time;
-            var c = this.sos.SOSCapabilities.serviceIdentification.title
-            + "<p/>Data Availability<br/>"
-            + "Starts: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) + "<br/>"
-            + "Ends: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue) + "<br/>";
+            var c = this.sos.SOSCapabilities.serviceIdentification.title;
+            if(SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime)) {
+              c += "<p/>Data Availability<br/>"
+              + "Starts: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) + "<br/>"
+              + "Ends: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue) + "<br/>";
+            }
             this.updateContent(c);
           }
         });
@@ -3668,7 +4013,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           scope: components.infoMetadata,
           callback: function() {
             // Setup a template as the content comes from more than one SOS call
-            this.setContentTemplate("[%foi%] ([%lon%]&deg;, [%lat%]&deg;)<p/>Data Availability<br/>Starts: [%startDatetime%]<br/>Ends: [%endDatetime%]<br/>");
+            this.setContentTemplate("[%foi%] (lon [%lon%]&deg;, lat [%lat%]&deg;)<p/>Data Availability<br/>Starts: [%startDatetime%]<br/>Ends: [%endDatetime%]<br/>");
             this.initContentFromTemplate();
             var item = components.menu.getCurrentItem();
             if(item) {
@@ -3687,9 +4032,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           scope: components.infoMetadata,
           callback: function() {
             var ft = this.config.format.time;
-            this.setContentFromTemplate(/\[%startDatetime%\]/, ft.formatter(this.sos.SOSTemporalCoverage.timePeriod.beginPosition));
-            this.setContentFromTemplate(/\[%endDatetime%\]/, ft.formatter(this.sos.SOSTemporalCoverage.timePeriod.endPosition));
-            this.displayContent();
+            if(SOS.Utils.isValidObject(this.sos.SOSTemporalCoverage) && SOS.Utils.isValidObject(this.sos.SOSTemporalCoverage.timePeriod)) {
+              this.setContentFromTemplate(/\[%startDatetime%\]/, ft.formatter(this.sos.SOSTemporalCoverage.timePeriod.beginPosition));
+              this.setContentFromTemplate(/\[%endDatetime%\]/, ft.formatter(this.sos.SOSTemporalCoverage.timePeriod.endPosition));
+              this.displayContent();
+            }
           }
         });
 
@@ -3846,6 +4193,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         a.bind("tabscreate", {self: this}, this.initAppHandler);
         a.tabs();
 
+        // Initially set app menu date range to the default for this app
+        this.initMenuDateRangeControls();
+
         // Display the app info panels & add to the right-hand container
         this.config.app.components.infoMetadata.display();
         this.config.app.components.infoHelp.display();
@@ -3943,6 +4293,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
  
       /**
+       * Initialise the menu date range controls to this app's default
+       */
+      initMenuDateRangeControls: function() {
+        var item = {};
+        item.time = this.getDefaultObservationQueryTimeParameters(item);
+        this.config.app.components.menu.setDatepickerValues(item);
+      },
+
+      /**
        * Event handler for map feature-of-interest (FOI) select
        */
       sosMapFeatureOfInterestSelectHandler: function(evt) {
@@ -3975,6 +4334,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var item;
 
         if(components.menu.config.menu.selected) {
+          components.menu.updateCurrentItemDateRange();
           item = components.menu.getCurrentItem();
           item.time = this.getObservationQueryTimeParameters(item);
         }
@@ -3987,6 +4347,22 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             startDatetime: item.time.startDatetime,
             endDatetime: item.time.endDatetime
           });
+
+          /* For those data models that have multiple station data per
+             offering, we can specify the station via the selected FOI
+             (if selected from map) */
+          if(this.config.app.options.observation.useFoiId) {
+            if(SOS.Utils.isValidObject(item.foi)) {
+              jQuery.extend(true, this, {
+                foiId: item.foi.id
+              });
+            } else {
+              // Ensure we remove any reference to a previously selected FOI
+              if(SOS.Utils.isValidObject(this.foiId)) {
+                delete this.foiId;
+              }
+            }
+          }
 
           // Optionally add to existing base plot/table.  Otherwise overwrite
           if(SOS.Utils.isValidObject(item.options)) {
@@ -4119,7 +4495,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         ];
 
         var dialog = panel.dialog({position: ['center', 'center'], buttons: buttons, title: dlOptions.label, width: 400, zIndex: 1010, stack: false});
-        dialog.bind('dialogclose', function() {jQuery(this).remove(); jQuery(this).dialog().dialog("destroy");});
+        dialog.bind('dialogclose', function() {
+          jQuery(this).dialog().dialog("destroy");
+          jQuery(this).remove();
+        });
       },
 
       /**
@@ -4153,6 +4532,27 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Check that an offering contains an observed property
+       */
+      offeringHasObservedProperty: function(offeringId, observedPropertyId) {
+        var offering = this.sos.getOffering(offeringId);
+        var retval = false;
+
+        if(offering) {
+          var ids = offering.getObservedPropertyIds();
+
+          for(var i = 0, len = ids.length; i < len; i++) {
+            if(ids[i] == observedPropertyId) {
+              retval = true;
+              break;
+            }
+          }
+        }
+
+        return retval;
+      },
+
+      /**
        * Check whether the given item object contains the required
        * parameters to perform a getObservation request
        */
@@ -4163,7 +4563,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 this.isValidParameter(item.offering.id) &&
                 this.isValidParameter(item.observedProperty) &&
                 this.isValidParameter(item.time.startDatetime) &&
-                this.isValidParameter(item.time.endDatetime));
+                this.isValidParameter(item.time.endDatetime) &&
+                this.offeringHasObservedProperty(item.offering.id, item.observedProperty));
       },
 
       /**
@@ -4177,22 +4578,36 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(SOS.Utils.isValidObject(item.time) && this.isValidParameter(item.time.startDatetime) && this.isValidParameter(item.time.endDatetime)) {
           time = item.time;
         } else {
-          /* Optionally we can take the full available times from the
-             offering, however this could lead to performance problems */
-          if(this.config.app.options.time.useOfferingTimePeriod) {
+          time = this.getDefaultObservationQueryTimeParameters(item);
+        }
+
+        return time;
+      },
+
+      /**
+       * Get the fallback default time parameters for performing a
+       * getObservation request
+       */
+      getDefaultObservationQueryTimeParameters: function(item) {
+        var time = {startDatetime: null, endDatetime: null};
+
+        /* Optionally we can take the full available times from the
+           offering, however this could lead to performance problems */
+        if(this.config.app.options.time.useOfferingTimePeriod) {
+          if(SOS.Utils.isValidObject(item)) {
             if(SOS.Utils.isValidObject(item.offering)) {
               var offering = this.sos.getOffering(item.offering.id);
               time.startDatetime = offering.time.timePeriod.beginPosition;
               time.endDatetime = offering.time.timePeriod.endPosition;
             }
-          } else {
-            // Fallback default: show data between configured ms ago up to now
-            if(this.config.app.options.time.ms) {
-              var t = {start: new Date(), end: new Date()};
-              t = SOS.Utils.adjustTimeInterval(t, -this.config.app.options.time.ms, 0);
-              time.startDatetime = t.start.toISOString();
-              time.endDatetime = t.end.toISOString();
-            }
+          }
+        } else {
+          // Fallback default: show data between configured ms ago up to now
+          if(this.config.app.options.time.ms) {
+            var t = {start: new Date(), end: new Date()};
+            t = SOS.Utils.adjustTimeInterval(t, -this.config.app.options.time.ms, 0);
+            time.startDatetime = t.start.toISOString();
+            time.endDatetime = t.end.toISOString();
           }
         }
 
@@ -4220,6 +4635,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               }
             } else {
               this.offering.filterObservedProperties(this.observedProperty);
+            }
+          }
+
+          // The FOI will identify a given station in a multi-station offering
+          if(this.config.app.options.observation.useFoiId) {
+            if(SOS.Utils.isValidObject(this.foiId)) {
+              this.offering.foiId = this.foiId;
             }
           }
           this.determineObservationQueryTimeParameters();
