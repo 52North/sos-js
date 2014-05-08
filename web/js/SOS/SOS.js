@@ -438,6 +438,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
       },
 
       /**
+       * Format a request datetime string given a javascript date object
+       */
+      formatRequestTimeString: function(D) {
+        /* A number of tested SOS instances can't handle the subsecond time
+           component, thus we remove it for broad applicability */
+        return D.toISOString().replace(/\.\d+Z$/, "Z");
+      },
+ 
+      /**
        * Construct a GML time period given start and end datetimes
        */
       constructGmlTimeperiod: function(start, end) {
@@ -452,8 +461,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
                   "<ogc:TM_During>" +
                     "<ogc:PropertyName>om:samplingTime</ogc:PropertyName>" +
                     "<gml:TimePeriod>" +
-                      "<gml:beginPosition>" + t.start.toISOString() + "</gml:beginPosition>" +
-                      "<gml:endPosition>" + t.end.toISOString() + "</gml:endPosition>" +
+                      "<gml:beginPosition>" + this.formatRequestTimeString(t.start) + "</gml:beginPosition>" +
+                      "<gml:endPosition>" + this.formatRequestTimeString(t.end) + "</gml:endPosition>" +
                     "</gml:TimePeriod>" +
                   "</ogc:TM_During>" +
                 "</eventTime>";
@@ -551,7 +560,49 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         if(this.haveValidObservationsObject()) {
           record = this.SOSObservations.measurements[i];
 
-          // Some convenience properties
+          // Add some convenience properties
+          record = this.addPropertiesToObservationRecord(record);
+        }
+
+        return record;
+      },
+
+      /**
+       * Get the observation for the given index from the internal
+       * observations object, as long as it matches the given filter rules
+       */
+      getFilteredObservationRecord: function(i, filter) {
+        var record;
+
+        if(this.haveValidObservationsObject()) {
+          var r = this.SOSObservations.measurements[i];
+
+          if(SOS.Utils.isValidObject(filter)) {
+            if(SOS.Utils.isValidObject(filter.foiId)) {
+              if(r.fois[0].features[0].attributes.id == filter.foiId) {
+                record = this.SOSObservations.measurements[i];
+              }
+            } else if(SOS.Utils.isValidObject(filter.observedProperty)) {
+              if(r.observedProperty == filter.observedProperty) {
+                record = this.SOSObservations.measurements[i];
+              }
+            }
+          } else {
+            record = this.SOSObservations.measurements[i];
+          }
+
+          // Add some convenience properties
+          record = this.addPropertiesToObservationRecord(record);
+        }
+
+        return record;
+      },
+
+      /**
+       * Add some standard properties to the given observation record
+       */
+      addPropertiesToObservationRecord: function(record) {
+        if(SOS.Utils.isValidObject(record)) {
           record.time = record.samplingTime.timeInstant.timePosition;
           record.observedPropertyTitle = SOS.Utils.toTitleCase(SOS.Utils.toDisplayName(SOS.Utils.urnToName(record.observedProperty)));
           record.uomTitle = SOS.Utils.toDisplayUom(record.result.uom);
@@ -1012,6 +1063,29 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         return y;
       },
 
+      applyTemplate: function(x, template, reFlags) {
+        var reFlags = reFlags || "gi";
+        var t = template;
+
+        // Can't test x is an object first, as an array is also an object
+        if(this.isArray(x)) {
+          t = [];
+
+          for(var i = 0, len = x.length; i < len; i++) {
+            t.push(this.applyTemplate(x[i], template, reFlags));
+          }
+        } else {
+          if(t) {
+            for(var p in x) {
+              var re = new RegExp("\\[%\\s*" + p + "\\s*%\\]", reFlags);
+              t = t.replace(re, x[p]);
+            }
+          }
+        }
+
+        return t;
+      },
+
       isoToDateObject: function(x) {
         var y = x;
 
@@ -1021,6 +1095,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
           if(a.length < 2) {a[1] = "00:00:00.000Z";}
           var d = a[0].split(/-/);
           a[1] = a[1].replace(/Z$/, "");
+
+          var tz = /([-+])(\d{2})[:]?(\d{2})?/.exec(a[1]);
+          var tzMins = 0;
+          if(tz) {
+            if(tz.length > 2) {tzMins += parseInt(tz[2], 10) * 60;}
+            if(tz.length > 3) {tzMins += parseInt(tz[3], 10);}
+            if(tz.length > 1 && tz[1] === '+') {tzMins *= -1;}
+          }
+          a[1] = a[1].replace(/[-+].+$/, "");
+
           var t = a[1].split(/:/);
           var ms = t[2].replace(/^\d+\./, "");
           t[2] = t[2].replace(/\.\d+$/, "");
@@ -1032,6 +1116,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
                        parseInt(t[1], 10),
                        parseInt(t[2], 10),
                        parseInt(ms, 10)));
+
+          if(!isNaN(y)) {
+            if(tzMins != 0) {
+              y.setTime(y.getTime() + tzMins * 60 * 1000);
+            }
+          } else {
+            y = x;
+          }
         } else if(this.isArray(x)) {
           y = [];
 
@@ -1065,7 +1157,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
 
         if(typeof x == "string" || typeof x == "number") {
           var D = new Date(x);
-          y = D.toISOString();
+
+          if(!isNaN(D)) {
+            y = D.toISOString();
+          }
         } else if(this.isArray(x)) {
           y = [];
 

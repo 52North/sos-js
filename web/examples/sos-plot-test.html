@@ -28,6 +28,7 @@
           url: 'http://sosmet.nerc-bas.ac.uk:8080/sosmet/sos',
           offeringId: "HalleyMet",
           observedProperty: "air_temperature",
+          foiId: "foi_34579",
           relativeTime: "rollingmonth"
         };
         var plot = new SOS.Plot(options);
@@ -38,7 +39,7 @@
   </head>
   <body onload="init()">
     <h3 id="title">SOS Plot Test</h3>
-    <p>This tests the SOS.Plot component from the SOS.Ui.js module.  It requests the <em>air_temperature</em> observed property from the <em>HalleyMet</em> offering, with a relative time of <em>rollingmonth</em>.  It also includes an optional overview plot below the plot, which allows the plot to be subsetted, via a dragged selection across the overview plot.  Similarly, a dragged selection can be made on the plot to subselect, which is also reflected in the overview plot.  Clicking anywhere on the overview plot resets the subselection.  Furthermore, two points can be clicked on the plot, which will then produce summary statistics for the selected interval, displayed in a pop-up dialog.</p>
+    <p>This tests the SOS.Plot component from the SOS.Ui.js module.  It requests the <em>air_temperature</em> observed property, for FOI <em>foi_34579</em> (Halley) from the <em>HalleyMet</em> offering, with a relative time of <em>rollingmonth</em>.  It also includes an optional overview plot below the plot, which allows the plot to be subsetted, via a dragged selection across the overview plot.  Similarly, a dragged selection can be made on the plot to subselect, which is also reflected in the overview plot.  Clicking anywhere on the overview plot resets the subselection.  Furthermore, two points can be clicked on the plot, which will then produce summary statistics for the selected interval, displayed in a pop-up dialog.</p>
     <div id="sosPlot" class="sos-plot"></div>
   </body>
 </html>
