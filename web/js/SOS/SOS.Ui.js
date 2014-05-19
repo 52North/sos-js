@@ -214,7 +214,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               table.uomTitle = ob.uomTitle;
             }
             if(table.foiName.length < 1) {
-              table.foiName = ob.fois[0].features[0].attributes.name;
+              var foi = res.getFeatureOfInterestFromObservationRecord(ob);
+
+              if(foi) {
+                table.foiName = foi.attributes.name;
+              }
             }
             table.data.push([SOS.Utils.isoToJsTimestamp(ob.time), ob.result.value]);
           }
@@ -2404,6 +2408,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 changeMonth: true,
                 onSelect: function(s, ui) {jQuery(this).trigger('change');}
               },
+              offerings: {
+                useFqn: false
+              },
+              observedProperties: {
+                /* Toggle fully-qualified name (FQN) in menus.  For example:
+                   FQN: "urn:ogc:def:phenomenon:OGC:1.0.30:air_temperature"
+                   Name: "Air Temperature"
+                   If useFqn is false, we use Name, otherwise FQN */
+                useFqn: false
+              },
               createNewItem: false,
               promptForSelection: true,
               plotTableControlsSection: {
@@ -2553,11 +2567,23 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
           for(var i = 0, len = offerings.length; i < len; i++) {
             ids.push(offerings[i].id);
-            names.push(offerings[i].name);
+
+            // Optionally transform from fully-qualified name (FQN) to name
+            if(this.config.menu.options.offerings.useFqn) {
+              names.push(offerings[i].name);
+            } else {
+              names.push(SOS.Utils.toTitleCase(SOS.Utils.toDisplayName(SOS.Utils.fqnToName(offerings[i].name))));
+            }
           }
         } else {
           ids = this.sos.getOfferingIds();
-          names = this.sos.getOfferingNames();
+
+          // Optionally transform from fully-qualified name (FQN) to name
+          if(this.config.menu.options.offerings.useFqn) {
+            names = this.sos.getOfferingNames();
+          } else {
+            names = SOS.Utils.toTitleCase(SOS.Utils.toDisplayName(SOS.Utils.fqnToName(this.sos.getOfferingNames())));
+          }
         }
 
         for(var i = 0, len = ids.length; i < len; i++) {
@@ -2715,7 +2741,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(SOS.Utils.isValidObject(item) && SOS.Utils.isValidObject(item.offering)) {
           var offering = this.sos.getOffering(item.offering.id);
           ids = offering.getObservedPropertyIds();
-          names = SOS.Utils.toTitleCase(SOS.Utils.toDisplayName(SOS.Utils.urnToName(offering.getObservedPropertyNames())));
+
+          // Optionally transform from fully-qualified name (FQN) to name
+          if(this.config.menu.options.observedProperties.useFqn) {
+            names = offering.getObservedPropertyIds();
+          } else {
+            names = SOS.Utils.toTitleCase(SOS.Utils.toDisplayName(SOS.Utils.fqnToName(offering.getObservedPropertyNames())));
+          }
 
           for(var i = 0, len = ids.length; i < len; i++) {
             var entry = {value: ids[i], label: names[i]};
@@ -3778,6 +3810,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 useOfferingTimePeriod: false,
                 ms: 31 * 8.64e7
               },
+              foi: {
+                getTemporalCoverage: true
+              },
               observation: {
                 useFoiId: true
               },
@@ -4022,7 +4057,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               this.setContentFromTemplate(/\[%lon%\]/, parseFloat(point.x).toFixed(2));
               this.setContentFromTemplate(/\[%lat%\]/, parseFloat(point.y).toFixed(2));
               // Get data availability over all offerings at this FOI
-              this.sos.getTemporalCoverageForFeatureOfInterestId(item.foi.id);
+              if(self.config.app.options.foi.getTemporalCoverage) {
+                this.sos.getTemporalCoverageForFeatureOfInterestId(item.foi.id);
+              }
             }
           }
         });
