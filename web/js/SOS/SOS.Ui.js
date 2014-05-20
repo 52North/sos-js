@@ -3791,7 +3791,6 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           app: {
             object: null,
             id: "sosApp",
-            step: -1,
             components: {
               menu: null,
               map: null,
@@ -3815,6 +3814,20 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               },
               observation: {
                 useFoiId: true
+              },
+              /* Any properties set on sub-objects of this, will be passed
+                 down to the corresponding component on instantiation.
+                 For example:
+                 components: {
+                   plot: {
+                     plot: {options: {zoom: {interactive: false}}},
+                     format: {value: {digits: 1}}
+                   }
+                 }
+              */
+              components: {
+                table: {table: {options: {scrollable: true}}},
+                menu: {menu: {step: -1}}
               },
               info: SOS.App.Resources.config.app.options.info
             }
@@ -3867,6 +3880,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       setOverviewOptions: function(options) {
         jQuery.extend(true, this.config.overview.options, options);
+      },
+
+      /**
+       * Set options for the app components
+       */
+      setAppComponentsOptions: function(options) {
+        jQuery.extend(true, this.config.app.options.components, options);
       },
 
       /**
@@ -3934,8 +3954,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         components.infoHelp.config.info.id = this.config.app.id + "InfoHelpBox";
 
         // Set any component-specific initial options
-        components.menu.config.menu.step = this.config.app.step;
-        components.table.setTableOptions({scrollable: true});
+        this.applyComponentsOptions();
 
         /* Optionally show data overview.  Using an application-level overview
            allows the selections made on the components (plot, table) to talk
@@ -3955,7 +3974,28 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         // For external listeners (application-level plumbing)
         this.sos.events.triggerEvent("sosAppInitComponents");
       },
- 
+  
+      /**
+       * Apply any options that have been set for this app's components
+       */
+      applyComponentsOptions: function() {
+        var components = this.config.app.components;
+        var confs = this.config.app.options.components;
+
+        /* If a component configuration object exists with the same name as a
+           component of this app, then set the configured properties on the
+           component */
+        if(confs) {
+          for(var p in components) {
+            if(SOS.Utils.isValidObject(confs[p])) {
+              if(SOS.Utils.isValidObject(components[p])) {
+                jQuery.extend(true, components[p].config, confs[p]);
+              }
+            }
+          }
+        }
+      },
+
       /**
        * Setup the behaviour for this app's components
        */
