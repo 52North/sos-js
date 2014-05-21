@@ -114,10 +114,12 @@ SOS.Offering
 Once we've identified an offering we're interested in, we can fetch a SOS.Offering object that encapsulates that offering::
 
   var offering = sos.getOffering(offId);
+  var offering = sos.getOfferingByName(offName);
 
-or we can fetch an array of SOS.Offering objects pertaining to a given FOI::
+or we can fetch an array of SOS.Offering objects pertaining to a given FOI or procedure::
 
   var offerings = sos.getOfferingsForFeatureOfInterestId(foiId);
+  var offerings = sos.getOfferingsForProcedureId(procId);
 
 We can inspect the details of a particular offering, via its method calls:: 
 
@@ -186,7 +188,11 @@ Note that if the requested observations are not pre-filtered by specifying obser
 
       if(ob) {
         if(tcaption.length < 1) {
-          tcaption = ob.fois[0].features[0].attributes.name;
+          var foi = this.getFeatureOfInterestFromObservationRecord(ob);
+
+          if(foi) {
+            tcaption = foi.attributes.name;
+          }
         }
         tbody += '<tr>';
         tbody += '<td>' + ob.observedPropertyTitle + '</td>';
