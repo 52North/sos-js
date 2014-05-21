@@ -2004,8 +2004,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             object: null,
             id: "sosMap",
             options: {
+              /* Use centre and zoom, or params.restrictedExtent to set the
+                 map's initial view */
               defaultProjection: new OpenLayers.Projection("EPSG:4326"),
               centre: new OpenLayers.LonLat(0, 0),
+              zoom: 0,
               params: {
                 projection: "EPSG:4326",
                 displayProjection: new OpenLayers.Projection("EPSG:4326")
@@ -2033,6 +2036,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             object: null,
             id: "sosMapBaseLayer",
             options: {
+              useOsm: false,      // Set true to use OSM instead of WMS
               label: "OpenLayers WMS",
               url: "http://vmap0.tiles.osgeo.org/wms/vmap0?",
               params: {
@@ -2190,10 +2194,14 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        */
       initBaseLayer: function() {
         var map = this.config.map.object;
+        var baseLayer;
 
         // Setup the map's base layer, and its controls
-        var baseLayer = new OpenLayers.Layer.WMS(this.config.baseLayer.options.label, this.config.baseLayer.options.url, this.config.baseLayer.options.params, this.config.baseLayer.options.extras);
-
+        if(this.config.baseLayer.options.useOsm) {
+          baseLayer = new OpenLayers.Layer.OSM();
+        } else {
+          baseLayer = new OpenLayers.Layer.WMS(this.config.baseLayer.options.label, this.config.baseLayer.options.url, this.config.baseLayer.options.params, this.config.baseLayer.options.extras);
+        }
         map.addLayers([baseLayer]);
 
         this.config.baseLayer.object = baseLayer;
@@ -2205,9 +2213,13 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       initView: function() {
         var map = this.config.map.object;
         var centre = this.config.map.options.centre || new OpenLayers.LonLat(0, 0);
+        var zoom = this.config.map.options.zoom || 0;
 
-        map.setCenter(centre);
-        map.zoomToMaxExtent();
+        if(zoom) {
+          map.setCenter(centre, zoom);
+        } else {
+          map.zoomToMaxExtent();
+        }
       },
   
       /**
