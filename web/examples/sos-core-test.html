@@ -92,7 +92,11 @@
             var ob = this.getFilteredObservationRecord(j, filter);
             if(ob) {
               if(tcaption.length < 1) {
-                tcaption = ob.fois[0].features[0].attributes.name;
+                var foi = this.getFeatureOfInterestFromObservationRecord(ob);
+
+                if(foi) {
+                  tcaption = foi.attributes.name;
+                }
               }
               tbody += '<tr>';
               tbody += '<td>' + ob.observedPropertyTitle + '</td>';
