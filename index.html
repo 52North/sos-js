@@ -35,6 +35,39 @@
 		  //url: 'http://sensorweb.demo.52north.org/52n-sos-webapp/sos/service'
         };
         var app = new SOS.App(options);
+
+        /* We make the default plot interval 1 day.  This SOS doesn't support
+           the get FOI time request, so we disable it */
+        app.setAppOptions({
+          time: {ms: 1 * 8.64e7},
+          foi: {getTemporalCoverage: false}
+        });
+
+        var ll = new OpenLayers.Projection("EPSG:4326");
+        var tr = new OpenLayers.Projection("EPSG:900913");
+
+        /* We can use centre and zoom, or params.restrictedExtent to set the
+           map's initial view */
+
+        /* Customise the app's components */
+        app.setAppComponentsOptions({
+          // Setup map component to use OpenStreetMap
+          map: {
+            map: {
+              options: {
+                defaultProjection: new OpenLayers.Projection("EPSG:4326"),
+                centre: new OpenLayers.LonLat(7.62,51.95).transform(ll, tr),
+                zoom: 12,
+                params: {
+                  projection: "EPSG:900913",
+                  // restrictedExtent: new OpenLayers.Bounds(7.59,51.93,7.65,51.97).transform(ll, tr)
+                }
+              }
+            },
+            baseLayer: {options: {useOsm: true}}
+          }
+        });
+
         app.display();
       }
     </script>
@@ -53,6 +86,16 @@
         position: absolute;
         left: 3em;
         top: 220px;
+      }
+      .sos-map {
+        width: 768px;
+        height: 512px;
+      }
+      .olControlAttribution {
+        position: absolute;
+        left: 5px;
+        bottom: 3px;
+        font-size: 0.65em;
       }
 	  
 	  /* fork me banner: */
