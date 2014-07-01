@@ -198,6 +198,10 @@ table.sos-table-scrollable {
   width: 140px;
 }
 
+.sos-menu-search-box-container {
+  z-index: 1005;
+}
+
 .sos-menu-search-box {
   width: 132px;
 }

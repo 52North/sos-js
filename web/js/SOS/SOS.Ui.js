@@ -2650,6 +2650,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           if(options.showPrompt) {
             tab.append('<p/>', mOpts.searchOfferings.prompt);
           }
+          /* This class sets the z-index of the tab panel, to ensure that the
+             autocomplete list is above other objects, such as the map */
+          tab.addClass("sos-menu-search-box-container");
           tab.append('<p/>', this.constructSearchOfferingsInput());
         }
 
