@@ -4049,13 +4049,20 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           scope: components.infoMetadata,
           callback: function() {
             var ft = this.config.format.time;
-            var c = this.sos.SOSCapabilities.serviceIdentification.title;
-            if(SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime)) {
-              c += "<p/>Data Availability<br/>"
-              + "Starts: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) + "<br/>"
-              + "Ends: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue) + "<br/>";
+            var c = "";
+            if(SOS.Utils.isValidObject(this.sos.SOSCapabilities.serviceIdentification) && self.isValidParameter(this.sos.SOSCapabilities.serviceIdentification.title)) {
+              c = this.sos.SOSCapabilities.serviceIdentification.title;
             }
-            this.updateContent(c);
+            if(SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime) && SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues) && SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range)) {
+              if(self.isValidParameter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) && self.isValidParameter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue)) {
+                c += "<p/>Data Availability<br/>"
+                + "Starts: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) + "<br/>"
+                + "Ends: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue) + "<br/>";
+              }
+            }
+            if(self.isValidParameter(c)) {
+              this.updateContent(c);
+            }
           }
         });
 
@@ -4064,13 +4071,20 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           scope: components.infoMetadata,
           callback: function() {
             var ft = this.config.format.time;
-            var c = this.sos.SOSCapabilities.serviceIdentification.title;
-            if(SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime)) {
-              c += "<p/>Data Availability<br/>"
-              + "Starts: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) + "<br/>"
-              + "Ends: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue) + "<br/>";
+            var c = "";
+            if(SOS.Utils.isValidObject(this.sos.SOSCapabilities.serviceIdentification) && self.isValidParameter(this.sos.SOSCapabilities.serviceIdentification.title)) {
+              c = this.sos.SOSCapabilities.serviceIdentification.title;
             }
-            this.updateContent(c);
+            if(SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime) && SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues) && SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range)) {
+              if(self.isValidParameter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) && self.isValidParameter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue)) {
+                c += "<p/>Data Availability<br/>"
+                + "Starts: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) + "<br/>"
+                + "Ends: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue) + "<br/>";
+              }
+            }
+            if(self.isValidParameter(c)) {
+              this.updateContent(c);
+            }
           }
         });
 
