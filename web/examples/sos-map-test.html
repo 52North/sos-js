@@ -34,13 +34,14 @@
           centre: new OpenLayers.LonLat(0, -90),
           params: {
             projection: "EPSG:3031",
-            maxExtent: new OpenLayers.Bounds(-5000000.0,-5000000.0,5000000.0,5000000.0),
+            maxExtent: new OpenLayers.Bounds(-5000000.0,-5000000.0,5000000.0,5000000.0)
           }
         });
         map.setBaseLayerOptions({
           label: "SCAR ADD",
-          url: "http://www.add.scar.org:8080/geoserver/wms?",
-          params: {
+          /* url: "http://www.add.scar.org:8080/geoserver/wms?", */
+          url: "http://add.antarctica.ac.uk/geoserver/wms?",
+         params: {
             layers: ["add:timmermann_bathy_3031", "add:bamber_hillshade", "add:cst10_polygon", "add:cst10_linestring", "add:sgssi10_polygon", "add:macquarie10_polygon", "add:heard10_polygon", "add:outliers10_polygon", "add:graticule", "add:add_data_limit"]
           }
         });
