@@ -16,6 +16,10 @@ This projects uses Sphinx to write and build the documentation, all details at h
 
 To build documentation install Sphinx and then run ``make html`` in the root directory ``/``.
 
+License
+-------
+
+This project is licensed under the Apache Software License, Version 2.0. For details see the LICENSE file.
 
 .. _OGC: http://www.opengeospatial.org/
 .. _SOS: http://www.opengeospatial.org/standards/sos
