@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>SOS App TESTING</title>
+
+    <link rel="stylesheet" href="http://basmet.nerc-bas.ac.uk/js/sos/jquery/theme/default/jquery-ui.min.css" type="text/css"/>
+    <link rel="stylesheet" href="js/SOS/SOS.Styles.css" type="text/css"/>
+	
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/proj4js/lib/proj4js-combined.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/OpenLayers/OpenLayers.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/jquery/jquery-ui.min.js"></script>
+    <!--[if lte IE 8]><script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/excanvas.min.js"></script><![endif]-->
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.selection.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.axislabels.min.js"></script>
+    <script type="text/javascript" src="http://basmet.nerc-bas.ac.uk/js/sos/flot/jquery.flot.navigate.min.js"></script>
+	
+    <script type="text/javascript" src="js/SOS/SOS.js"></script>
+    <script type="text/javascript" src="js/SOS/SOS.Ui.js"></script>
+
+    <script type="text/javascript">
+		SOS.Proxy.disable();
+
+		$(document).ready(function() {
+			document.getElementById("sos").onchange = function() {
+				var sel = document.getElementById("sos");
+			
+				var options = {
+					// need SOS with CORS support
+					//url: 'http://geoviqua.dev.52north.org/SOS-Q/sos/'
+					//url: 'http://sosmet.nerc-bas.ac.uk:8080/sosmet/sos'
+					url: sel.options[sel.selectedIndex].text
+				};
+				
+				var app = new SOS.App(options);
+				app.display();
+			};
+		});
+    </script>
+    <style>
+      .sos-app-container {
+        width: 100%;
+        position: relative;
+        left: 0px;
+        top: 10px;
+      }
+      .sos-app {
+        width: 81%;
+        height: 600px;
+        padding: 5px;
+        position: absolute;
+        left: 210px;
+        top: 5px;
+      }
+      .sos-menu-controls-container {
+        height: 180px;
+        position: absolute;
+        left: 8px;
+        top: 198px;
+      }
+    </style>
+  </head>
+  <body>
+	<div>
+		<h3 id="title">SOS App Test</h3>
+        <p>Select a SOS from the dropdown.
+			<select id="sos">
+				<option>Select an SOS endpoint</option>
+				<option>http://geoviqua.dev.52north.org/SOS-Q/sos/kvp</option>
+				<option>http://localhost:8080/52n-sos-webapp/sos/kvp</option>
+			</select>
+		</p>
+	</div>
+  </body>
+</html>
+
