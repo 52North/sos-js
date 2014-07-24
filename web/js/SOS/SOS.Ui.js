@@ -5,6 +5,21 @@
 * Author:  Paul M. Breen
 * Date:    2012-12-12
 * Id:      $Id$
+* License:
+
+  Copyright 2014 52°North Initiative for Geospatial Open Source Software GmbH
+  
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+    
+	http://www.apache.org/licenses/LICENSE-2.0
+	
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
 ******************************************************************************/
 
 /**
@@ -2650,6 +2665,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           if(options.showPrompt) {
             tab.append('<p/>', mOpts.searchOfferings.prompt);
           }
+          /* This class sets the z-index of the tab panel, to ensure that the
+             autocomplete list is above other objects, such as the map */
+          tab.addClass("sos-menu-search-box-container");
           tab.append('<p/>', this.constructSearchOfferingsInput());
         }
 
@@ -4046,13 +4064,20 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           scope: components.infoMetadata,
           callback: function() {
             var ft = this.config.format.time;
-            var c = this.sos.SOSCapabilities.serviceIdentification.title;
-            if(SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime)) {
-              c += "<p/>Data Availability<br/>"
-              + "Starts: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) + "<br/>"
-              + "Ends: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue) + "<br/>";
+            var c = "";
+            if(SOS.Utils.isValidObject(this.sos.SOSCapabilities.serviceIdentification) && self.isValidParameter(this.sos.SOSCapabilities.serviceIdentification.title)) {
+              c = this.sos.SOSCapabilities.serviceIdentification.title;
             }
-            this.updateContent(c);
+            if(SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime) && SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues) && SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range)) {
+              if(self.isValidParameter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) && self.isValidParameter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue)) {
+                c += "<p/>Data Availability<br/>"
+                + "Starts: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) + "<br/>"
+                + "Ends: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue) + "<br/>";
+              }
+            }
+            if(self.isValidParameter(c)) {
+              this.updateContent(c);
+            }
           }
         });
 
@@ -4061,13 +4086,20 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           scope: components.infoMetadata,
           callback: function() {
             var ft = this.config.format.time;
-            var c = this.sos.SOSCapabilities.serviceIdentification.title;
-            if(SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime)) {
-              c += "<p/>Data Availability<br/>"
-              + "Starts: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) + "<br/>"
-              + "Ends: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue) + "<br/>";
+            var c = "";
+            if(SOS.Utils.isValidObject(this.sos.SOSCapabilities.serviceIdentification) && self.isValidParameter(this.sos.SOSCapabilities.serviceIdentification.title)) {
+              c = this.sos.SOSCapabilities.serviceIdentification.title;
             }
-            this.updateContent(c);
+            if(SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime) && SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues) && SOS.Utils.isValidObject(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range)) {
+              if(self.isValidParameter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) && self.isValidParameter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue)) {
+                c += "<p/>Data Availability<br/>"
+                + "Starts: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.minValue) + "<br/>"
+                + "Ends: " + ft.formatter(this.sos.SOSCapabilities.operationsMetadata.GetObservation.parameters.eventTime.allowedValues.range.maxValue) + "<br/>";
+              }
+            }
+            if(self.isValidParameter(c)) {
+              this.updateContent(c);
+            }
           }
         });
 
