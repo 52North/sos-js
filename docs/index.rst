@@ -15,6 +15,7 @@ SOS.js is a JavaScript library to browse, visualise, and access, data from an Op
    proxy
    52n-sos-guide
    contribute
+   develop
    
 
 Indices and tables
@@ -30,7 +31,7 @@ LICENSE
 
 This project is licensed under the Apache Software License, Version 2.0. For details see the LICENSE file. ::
 
-  Copyright 2014 52°North Initiative for Geospatial Open Source Software GmbH
+  Copyright 2014 52Â°North Initiative for Geospatial Open Source Software GmbH
   
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
