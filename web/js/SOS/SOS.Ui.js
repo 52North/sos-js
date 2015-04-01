@@ -2088,7 +2088,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                   xy: null
                 }
               },
-              displayLatestObservations: false
+              displayLatestObservations: false,
+              // Override to filter which FOIs are displayed
+              foiFilter: function(fois) {return fois;}
             }
           },
           latestObservationsPopup: {
@@ -2261,7 +2263,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           protocol: new OpenLayers.Protocol.SOS({
             formatOptions: protocolFormatOptions,
             url: this.sos.config.post.url,
-            fois: this.sos.getFeatureOfInterestIds()
+            fois: this.config.featureOfInterestLayer.options.foiFilter(this.sos.getFeatureOfInterestIds())
           }),
           styleMap: styleMap
         });
