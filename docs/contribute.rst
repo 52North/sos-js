@@ -1,3 +1,5 @@
+.. _contribute-page:
+
 Contribute to the Project
 =========================
 
