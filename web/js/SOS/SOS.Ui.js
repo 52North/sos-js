@@ -2061,7 +2061,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               }
             }
           },
-          featureOfInterestLayer: {
+          // We can have multiple FOI layers, but must have at least one
+          featureOfInterestLayers: [{
             object: null,
             id: "sosMapFeatureOfInterestLayer",
             options: {
@@ -2088,9 +2089,12 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                   xy: null
                 }
               },
-              displayLatestObservations: false
+              displayLatestObservations: false,
+              // Override to filter which FOIs are displayed
+              foiFilter: function(fois) {return fois;}
             }
-          },
+          }],
+          addFeatureOfInterestLayersInReverseOrder: false,
           latestObservationsPopup: {
             active: true,
             caption: "Latest Values",
@@ -2101,6 +2105,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             ]
           }
         };
+        // The default FOI layer
+        this.config.featureOfInterestLayer = this.config.featureOfInterestLayers[0];
         jQuery.extend(true, this, options);
       },
 
@@ -2166,7 +2172,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.initOverviewMap();
         this.initBaseLayer();
         this.initView();
-        this.initFeatureOfInterestLayer();
+        this.initFeatureOfInterestLayers();
         this.config.isInitLoad = false;
       },
  
@@ -2236,12 +2242,12 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           map.zoomToMaxExtent();
         }
       },
-  
+
       /**
-       * Initialise the feature-of-interest layer
+       * Construct a feature-of-interest layer from the given config
        */
-      initFeatureOfInterestLayer: function() {
-        var styleMap = new OpenLayers.StyleMap(this.config.featureOfInterestLayer.options.pointStyle);
+      constructFeatureOfInterestLayer: function(config) {
+        var styleMap = new OpenLayers.StyleMap(config.options.pointStyle);
 
         var protocolFormatOptions = {
           internalProjection: this.config.map.object.getProjectionObject(),
@@ -2251,31 +2257,66 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         /* Allows the coordinate order in layer CRS to be explicitly
            specified.  For example, the OpenLayers default for EPSG:4326 is
            false = yx = lat/lon, but some SOS instances return lon/lat */
-        if(SOS.Utils.isValidObject(this.config.featureOfInterestLayer.options.crs.format.xy)) {
-          protocolFormatOptions.xy = this.config.featureOfInterestLayer.options.crs.format.xy;
+        if(SOS.Utils.isValidObject(config.options.crs.format.xy)) {
+          protocolFormatOptions.xy = config.options.crs.format.xy;
         }
 
         // Query FOIs from the SOS and present them as a vector layer
-        var layer = new OpenLayers.Layer.Vector(this.config.featureOfInterestLayer.options.label, {
+        var layer = new OpenLayers.Layer.Vector(config.options.label, {
           strategies: [new OpenLayers.Strategy.Fixed()],
           protocol: new OpenLayers.Protocol.SOS({
             formatOptions: protocolFormatOptions,
             url: this.sos.config.post.url,
-            fois: this.sos.getFeatureOfInterestIds()
+            fois: config.options.foiFilter(this.sos.getFeatureOfInterestIds())
           }),
           styleMap: styleMap
         });
-        this.config.map.object.addLayer(layer);
+        config.object = layer;
+      },
 
-        // Setup behaviour for this layer
-        var ctrl = new OpenLayers.Control.SelectFeature(layer, {
+      /**
+       * Setup event handlers to manage the FOI layers' behaviour
+       */
+      setupFeatureOfInterestLayersBehaviour: function(layers) {
+        // Setup behaviour for the given array of layers
+        var ctrl = new OpenLayers.Control.SelectFeature(layers, {
           scope: this,
           onSelect: this.featureOfInterestSelectHandler
         });
         this.config.map.object.addControl(ctrl);
         ctrl.activate();
+      },
 
-        this.config.featureOfInterestLayer.object = layer;
+      /**
+       * Initialise the given feature-of-interest layer.  If no layer config
+       * is passed, then the default FOI layer is initialised
+       */
+      initFeatureOfInterestLayer: function(config) {
+        var config = config || this.config.featureOfInterestLayer;
+
+        this.constructFeatureOfInterestLayer(config);
+        this.config.map.object.addLayer(config.object);
+        this.setupFeatureOfInterestLayersBehaviour(config.object);
+      },
+
+      /**
+       * Initialise all the feature-of-interest layers
+       */
+      initFeatureOfInterestLayers: function() {
+        var layers = [];
+
+        /* Create each layer from its config, then add the layers to the map,
+           and setup a single select handler for all layers */
+        for(var i = 0, len = this.config.featureOfInterestLayers.length; i < len; i++) {
+          this.constructFeatureOfInterestLayer(this.config.featureOfInterestLayers[i]);
+          layers.push(this.config.featureOfInterestLayers[i].object);
+        }
+
+        if(this.config.addFeatureOfInterestLayersInReverseOrder) {
+          layers.reverse();
+        }
+        this.config.map.object.addLayers(layers);
+        this.setupFeatureOfInterestLayersBehaviour(layers);
       },
 
       /**
