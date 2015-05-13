@@ -2066,6 +2066,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             object: null,
             id: "sosMapFeatureOfInterestLayer",
             options: {
+              visibility: true,   // Initially checked in layerswitcher
               label: "Feature Of Interest",
               pointStyle: new OpenLayers.Style({
                 "pointRadius": 5,
@@ -2295,6 +2296,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var config = config || this.config.featureOfInterestLayer;
 
         this.constructFeatureOfInterestLayer(config);
+
+        // Optionally set this layer's initial checked state in layerswitcher
+        if(config.options.visibility != null) {
+          config.object.setVisibility(config.options.visibility);
+        }
         this.config.map.object.addLayer(config.object);
         this.setupFeatureOfInterestLayersBehaviour(config.object);
       },
@@ -2309,6 +2315,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
            and setup a single select handler for all layers */
         for(var i = 0, len = this.config.featureOfInterestLayers.length; i < len; i++) {
           this.constructFeatureOfInterestLayer(this.config.featureOfInterestLayers[i]);
+
+          // Optionally set this layer's initial checked state in layerswitcher
+          if(this.config.featureOfInterestLayers[i].options.visibility != null) {
+            this.config.featureOfInterestLayers[i].object.setVisibility(this.config.featureOfInterestLayers[i].options.visibility);
+          }
           layers.push(this.config.featureOfInterestLayers[i].object);
         }
 
