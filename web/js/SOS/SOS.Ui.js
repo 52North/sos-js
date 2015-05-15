@@ -2092,7 +2092,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               },
               displayLatestObservations: false,
               // Override to filter which FOIs are displayed
-              foiFilter: function(fois) {return fois;}
+              foiFilter: function(fois) {return fois;},
+              // Optional OL vector layer properties
+              params: {
+              }
             }
           }],
           addFeatureOfInterestLayersInReverseOrder: false,
@@ -2248,6 +2251,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Construct a feature-of-interest layer from the given config
        */
       constructFeatureOfInterestLayer: function(config) {
+        var params = config.options.params || {};
         var styleMap = new OpenLayers.StyleMap(config.options.pointStyle);
 
         var protocolFormatOptions = {
@@ -2262,8 +2266,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           protocolFormatOptions.xy = config.options.crs.format.xy;
         }
 
-        // Query FOIs from the SOS and present them as a vector layer
-        var layer = new OpenLayers.Layer.Vector(config.options.label, {
+        // Configure optional and required layer parameters
+        jQuery.extend(true, params, {
           strategies: [new OpenLayers.Strategy.Fixed()],
           protocol: new OpenLayers.Protocol.SOS({
             formatOptions: protocolFormatOptions,
@@ -2272,6 +2276,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           }),
           styleMap: styleMap
         });
+
+        // Query FOIs from the SOS and present them as a vector layer
+        var layer = new OpenLayers.Layer.Vector(config.options.label, params);
         config.object = layer;
       },
 
