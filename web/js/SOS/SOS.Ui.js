@@ -2066,6 +2066,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             object: null,
             id: "sosMapFeatureOfInterestLayer",
             options: {
+              visibility: true,   // Initially checked in layerswitcher
               label: "Feature Of Interest",
               pointStyle: new OpenLayers.Style({
                 "pointRadius": 5,
@@ -2091,7 +2092,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               },
               displayLatestObservations: false,
               // Override to filter which FOIs are displayed
-              foiFilter: function(fois) {return fois;}
+              foiFilter: function(fois) {return fois;},
+              // Optional OL vector layer properties
+              params: {
+              }
             }
           }],
           addFeatureOfInterestLayersInReverseOrder: false,
@@ -2247,6 +2251,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Construct a feature-of-interest layer from the given config
        */
       constructFeatureOfInterestLayer: function(config) {
+        var params = config.options.params || {};
         var styleMap = new OpenLayers.StyleMap(config.options.pointStyle);
 
         var protocolFormatOptions = {
@@ -2261,8 +2266,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           protocolFormatOptions.xy = config.options.crs.format.xy;
         }
 
-        // Query FOIs from the SOS and present them as a vector layer
-        var layer = new OpenLayers.Layer.Vector(config.options.label, {
+        // Configure optional and required layer parameters
+        jQuery.extend(true, params, {
           strategies: [new OpenLayers.Strategy.Fixed()],
           protocol: new OpenLayers.Protocol.SOS({
             formatOptions: protocolFormatOptions,
@@ -2271,6 +2276,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           }),
           styleMap: styleMap
         });
+
+        // Query FOIs from the SOS and present them as a vector layer
+        var layer = new OpenLayers.Layer.Vector(config.options.label, params);
         config.object = layer;
       },
 
@@ -2295,6 +2303,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var config = config || this.config.featureOfInterestLayer;
 
         this.constructFeatureOfInterestLayer(config);
+
+        // Optionally set this layer's initial checked state in layerswitcher
+        if(config.options.visibility != null) {
+          config.object.setVisibility(config.options.visibility);
+        }
         this.config.map.object.addLayer(config.object);
         this.setupFeatureOfInterestLayersBehaviour(config.object);
       },
@@ -2309,6 +2322,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
            and setup a single select handler for all layers */
         for(var i = 0, len = this.config.featureOfInterestLayers.length; i < len; i++) {
           this.constructFeatureOfInterestLayer(this.config.featureOfInterestLayers[i]);
+
+          // Optionally set this layer's initial checked state in layerswitcher
+          if(this.config.featureOfInterestLayers[i].options.visibility != null) {
+            this.config.featureOfInterestLayers[i].object.setVisibility(this.config.featureOfInterestLayers[i].options.visibility);
+          }
           layers.push(this.config.featureOfInterestLayers[i].object);
         }
 
