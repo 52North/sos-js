@@ -109,6 +109,25 @@
   margin-right: 0.3em;
 }
 
+.sos-message-box {
+  background: #ffffff;
+  filter: alpha(opacity=80);
+  opacity: 0.8;
+  -moz-border-radius: 6px;
+  -webkit-border-radius: 6px;
+  border-radius: 6px;
+  border: thin solid lightgray;
+  padding: 5px;
+}
+
+.sos-message {
+  position: absolute;
+  top: 33%;
+  left: 33%;
+  width: 33%;
+  z-index: 1005;
+}
+
 .sos-selected-interval-stats-table, .sos-embedded-table {
   font-size: 0.75em;
 }

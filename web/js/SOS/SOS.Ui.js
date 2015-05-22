@@ -417,6 +417,34 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Display the given message text according to the given options.
+       * If a level is specified, then the message will be formatted
+       * accordingly (see the formatMessage function), otherwise the message
+       * will be displayed as a plain informational message.
+       * If a duration (in ms) is specified, then the message will be
+       * displayed transiently
+       */
+      displayMessage: function(text, options) {
+        var options = options || {};
+        var container = jQuery("<div></div>");
+
+        if(options.level) {
+          container.addClass(options["class"] ? options["class"] : "sos-message");
+          container.html(this.formatMessage(text, options));
+        } else {
+          container.addClass(options["class"] ? options["class"] : "sos-message sos-message-box");
+          container.html(text);
+        }
+        if(options.duration) {
+          container.fadeIn({duration: options.duration});
+          container.fadeOut({duration: options.duration});
+        }
+        jQuery("body").append(container);
+
+        return container;
+      },
+
+      /**
        * Display summary stats about the given selected observation data
        */
       displaySelectedIntervalStats: function(container, selected) {
