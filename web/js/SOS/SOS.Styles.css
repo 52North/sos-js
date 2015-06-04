@@ -141,6 +141,56 @@
   top: 50px;
 }
 
+/* This is the centre of the parent container (div etc.).  Note that the
+   parent must have a position attribute set for this to work */
+.sos-container-centre {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+}
+
+.sos-busy-indicator-box {
+  position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  margin: auto;
+  filter: alpha(opacity=80);
+  opacity: 0.8;
+  -moz-border-radius: 6px;
+  -webkit-border-radius: 6px;
+  border-radius: 6px;
+  border: thin solid lightgray;
+  padding: 5px;
+  z-index: 1200;
+  display: block;
+  width: 80px;
+  height: 30px;
+  background-color: #ffffff;
+}
+
+.sos-busy-indicator-pulse {
+  position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  margin: auto 10px auto 10px;
+  filter: alpha(opacity=80);
+  opacity: 0.8;
+  -moz-border-radius: 6px;
+  -webkit-border-radius: 6px;
+  border-radius: 6px;
+  border: thin solid grey;
+  width: 10px;
+  height: 10px;
+  background-color: #333333;
+}
+
+/* This is half width/height + 6px (corner radius) of busy indicator box.
+   Hence, when a busy indicator is appended to a div styled with the
+   sos-container-centre class, it appears in the centre of the container */
+.sos-centred-busy-indicator {
+  position: absolute;
+  top: -21px;
+  left: -46px;
+}
+
 div.sos-table {
 }
 

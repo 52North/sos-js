@@ -518,6 +518,95 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         this.config.stats.object = jQuery.plot(sp, this.config.stats.series, this.config.stats.options);
       }
     });
+
+    /**
+     * SOS.Ui.BusyIndicator
+     * Utility object for providing visual feedback that a SOS.Ui object is
+     * busy (for example, waiting on asynchronous data over the network)
+     */
+    SOS.Ui.BusyIndicator = {
+      active: true,
+      box: null,
+      pulse: null,
+      boxClass: "sos-busy-indicator-box",
+      pulseClass: "sos-busy-indicator-pulse",
+      boxParent: "body",
+      initPause: 50,              // To avoid initial stuttering (ms)
+      duration: 2000,             // Duration of pulse transition (ms)
+      pulseWidth: 60,             // Distance the pulse travels (px)
+
+      /**
+       * Initialise the busy indicator
+       */
+      init: function(options) {
+        var options = options || {};
+
+        if(this.active) {
+          this.box = jQuery("<div></div>", {
+            "class": (options.boxClass || this.boxClass)
+          });
+          this.pulse = jQuery("<div></div>", {
+            "class": (options.pulseClass || this.pulseClass)
+          });
+
+          // Remove when clicked
+          this.box.bind("click", jQuery.proxy(this.stop, this));
+
+          // Animate the pulse via custom events
+          this.pulse.bind("sosUiBusyIndicatorTransitionEnd", {self: this}, this._toggleTransition);
+
+          jQuery(options.boxParent || this.boxParent).append(this.box);
+          this.box.append(this.pulse);
+
+          /* A brief initial pause to allow the page to be rendered.  This
+             avoids initial stuttering of the pulse animation */
+          window.setTimeout(jQuery.proxy(this.animate, this), options.initPause || this.initPause);
+        }
+      },
+
+      /**
+       * Event handler for the busy indicator pulse transition animation
+       */
+      _toggleTransition: function(evt) {
+        var self = evt.data.self;
+        var pulse = self.pulse;
+
+        // Reverse the direction of the pulse
+        self.pulseWidth *= -1;
+        var leftValue = (self.pulseWidth < 0 ? "-=" : "+=") + Math.abs(self.pulseWidth) + "px";
+
+        // Animate the pulse by moving it left or right
+        pulse.animate({left: leftValue}, {
+          duration: (self.duration || 2000),     // Must be non-zero
+          complete: function() {
+            pulse.trigger("sosUiBusyIndicatorTransitionEnd");
+          }
+        });
+      },
+ 
+      /**
+       * Stop the busy indicator
+       */
+      stop: function() {
+        if(this.box) {
+          this.box.remove();
+          this.box = null;
+          this.pulse = null;
+        }
+      },
+
+      /**
+       * Animate the busy indicator
+       */
+      animate: function() {
+        // Initialise the pulse to begin at the left
+        this.pulseWidth = Math.abs(this.pulseWidth) * -1;
+
+        if(this.pulse) {
+          this.pulse.trigger("sosUiBusyIndicatorTransitionEnd");
+        }
+      }
+    }
   }
 
   /* Create the SOS.Plot namespace */
