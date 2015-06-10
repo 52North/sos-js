@@ -248,6 +248,7 @@ table.sos-table-scrollable {
 }
 
 .sos-map {
+  position: relative;        /* Required for use with sos-container-centre */
   width: 512px;
   height: 256px;
 }

@@ -516,6 +516,48 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           }
         };
         this.config.stats.object = jQuery.plot(sp, this.config.stats.series, this.config.stats.options);
+      },
+
+      /**
+       * Construct a generic start event handler for a busy indicator
+       */
+      constructBusyIndicatorStartHandler: function(containerSelector) {
+        var f = function() {
+          // Ensure only one busy indicator active on object at any one time
+          if(!SOS.Utils.isValidObject(this.busyIndicator)) {
+            this.busyIndicator = SOS.Ui.BusyIndicator;
+            var c = jQuery(containerSelector);
+
+            // Ensure container has a centre point to locate the busy indicator
+            if(c.length > 0) {
+              var d = c.children(".sos-container-centre");
+
+              if(d.length < 1) {
+                d = jQuery("<div/>", {"class": "sos-container-centre"});
+                c.append(d);
+              }
+              if(d.length > 0) {
+                this.busyIndicator.init({boxParent: d, boxClass: "sos-busy-indicator-box sos-centred-busy-indicator"});
+              }
+            }
+          }
+        };
+
+        return f;
+      },
+
+      /**
+       * Construct a generic end event handler for a busy indicator
+       */
+      constructBusyIndicatorEndHandler: function() {
+        var f = function() {
+          if(SOS.Utils.isValidObject(this.busyIndicator)) {
+            this.busyIndicator.stop();
+            delete this.busyIndicator;
+          }
+        };
+
+        return f;
       }
     });
 
@@ -2184,6 +2226,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             id: "sosMapFeatureOfInterestLayer",
             options: {
               visibility: true,   // Initially checked in layerswitcher
+              showBusyIndicatorOnLoad: true,
               label: "Feature Of Interest",
               pointStyle: new OpenLayers.Style({
                 "pointRadius": 5,
@@ -2365,6 +2408,41 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Construct event handlers to manage the FOI layer's load behaviour
+       */
+      constructFeatureOfInterestLayerLoadHandlers: function(config) {
+        config.options.params = config.options.params || {};
+        config.options.params.eventListeners = config.options.params.eventListeners || {};
+        config.options.params.eventListeners.scope = config.options.params.eventListeners.scope || this;
+        var scope = config.options.params.eventListeners.scope;
+
+        /* Show a busy indicator whilst the FOI layer is loading.  If the user
+           has already specified load start/end event handlers, then we add a
+           busy indicator call to the end of the user's custom event handler */
+
+        if(config.options.params.eventListeners.loadstart) {
+          scope._sosMapFoiLoadstartHandlerOriginal = config.options.params.eventListeners.loadstart;
+          scope._sosMapFoiLoadstartHandler = this.constructBusyIndicatorStartHandler("#" + this.config.map.id);
+          config.options.params.eventListeners.loadstart = function(evt) {
+            scope._sosMapFoiLoadstartHandlerOriginal(evt);
+            scope._sosMapFoiLoadstartHandler(evt);
+          };
+        } else {
+          config.options.params.eventListeners.loadstart = this.constructBusyIndicatorStartHandler("#" + this.config.map.id);
+        }
+        if(config.options.params.eventListeners.loadend) {
+          scope._sosMapFoiLoadendHandlerOriginal = config.options.params.eventListeners.loadend;
+          scope._sosMapFoiLoadendHandler = this.constructBusyIndicatorEndHandler();
+          config.options.params.eventListeners.loadend = function(evt) {
+            scope._sosMapFoiLoadendHandlerOriginal(evt);
+            scope._sosMapFoiLoadendHandler(evt);
+          };
+        } else {
+          config.options.params.eventListeners.loadend = this.constructBusyIndicatorEndHandler();
+        }
+      },
+
+      /**
        * Construct a feature-of-interest layer from the given config
        */
       constructFeatureOfInterestLayer: function(config) {
@@ -2419,32 +2497,40 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       initFeatureOfInterestLayer: function(config) {
         var config = config || this.config.featureOfInterestLayer;
 
-        this.constructFeatureOfInterestLayer(config);
-
-        // Optionally set this layer's initial checked state in layerswitcher
-        if(config.options.visibility != null) {
-          config.object.setVisibility(config.options.visibility);
+        if(!SOS.Utils.isArray(config)) {
+          config = [config];
         }
-        this.config.map.object.addLayer(config.object);
-        this.setupFeatureOfInterestLayersBehaviour(config.object);
+
+        return this._initFeatureOfInterestLayers(config);
       },
 
       /**
        * Initialise all the feature-of-interest layers
        */
       initFeatureOfInterestLayers: function() {
+        return this._initFeatureOfInterestLayers(this.config.featureOfInterestLayers);
+      },
+
+      /**
+       * Initialise all the feature-of-interest layers
+       */
+      _initFeatureOfInterestLayers: function(configs) {
         var layers = [];
 
         /* Create each layer from its config, then add the layers to the map,
            and setup a single select handler for all layers */
-        for(var i = 0, len = this.config.featureOfInterestLayers.length; i < len; i++) {
-          this.constructFeatureOfInterestLayer(this.config.featureOfInterestLayers[i]);
+        for(var i = 0, len = configs.length; i < len; i++) {
+          // Optionally show a busy indicator when loading this layer
+          if(configs[i].options.showBusyIndicatorOnLoad) {
+            this.constructFeatureOfInterestLayerLoadHandlers(configs[i]);
+          }
+          this.constructFeatureOfInterestLayer(configs[i]);
 
           // Optionally set this layer's initial checked state in layerswitcher
-          if(this.config.featureOfInterestLayers[i].options.visibility != null) {
-            this.config.featureOfInterestLayers[i].object.setVisibility(this.config.featureOfInterestLayers[i].options.visibility);
+          if(configs[i].options.visibility != null) {
+            configs[i].object.setVisibility(configs[i].options.visibility);
           }
-          layers.push(this.config.featureOfInterestLayers[i].object);
+          layers.push(configs[i].object);
         }
 
         if(this.config.addFeatureOfInterestLayersInReverseOrder) {
