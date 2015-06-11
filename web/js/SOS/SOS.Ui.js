@@ -2417,29 +2417,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var scope = config.options.params.eventListeners.scope;
 
         /* Show a busy indicator whilst the FOI layer is loading.  If the user
-           has already specified load start/end event handlers, then we add a
-           busy indicator call to the end of the user's custom event handler */
-
-        if(config.options.params.eventListeners.loadstart) {
-          scope._sosMapFoiLoadstartHandlerOriginal = config.options.params.eventListeners.loadstart;
-          scope._sosMapFoiLoadstartHandler = this.constructBusyIndicatorStartHandler("#" + this.config.map.id);
-          config.options.params.eventListeners.loadstart = function(evt) {
-            scope._sosMapFoiLoadstartHandlerOriginal(evt);
-            scope._sosMapFoiLoadstartHandler(evt);
-          };
-        } else {
-          config.options.params.eventListeners.loadstart = this.constructBusyIndicatorStartHandler("#" + this.config.map.id);
-        }
-        if(config.options.params.eventListeners.loadend) {
-          scope._sosMapFoiLoadendHandlerOriginal = config.options.params.eventListeners.loadend;
-          scope._sosMapFoiLoadendHandler = this.constructBusyIndicatorEndHandler();
-          config.options.params.eventListeners.loadend = function(evt) {
-            scope._sosMapFoiLoadendHandlerOriginal(evt);
-            scope._sosMapFoiLoadendHandler(evt);
-          };
-        } else {
-          config.options.params.eventListeners.loadend = this.constructBusyIndicatorEndHandler();
-        }
+           has specified a scope, then the busy indicator calls run in that
+           scope */
+        config.options.params.eventListeners.loadstart = scope.constructBusyIndicatorStartHandler("#" + this.config.map.id);
+        config.options.params.eventListeners.loadend = scope.constructBusyIndicatorEndHandler();
       },
 
       /**
