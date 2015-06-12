@@ -325,6 +325,12 @@ table.sos-table-scrollable {
 }
 
 .sos-info-box-content {
+  /* This covers the whole content area, including the rounded corners */
+  -moz-border-radius: 0px 0px 6px 6px;
+  -webkit-border-radius: 0px 0px 6px 6px;
+  border-radius: 0px 0px 6px 6px;
+  margin: -5px;
+  padding: 6px;
 }
 
 .sos-info-box-control-section {
