@@ -3859,7 +3859,75 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           s.html(this.config.info.content);
         }
       },
- 
+
+      /**
+       * Set the content for this info panel and then highlight it, according
+       * to the given options.  If a class is specified, then the info panel
+       * is transitioned to that class, then back to its original.  If a
+       * background colour is specified, then the info panel is transitioned
+       * to that colour, then back to its original.  A duration (in ms)
+       * specifies the speed of the transition
+       */
+      highlightContent: function(content, options) {
+        var options = options || {};
+
+        if(SOS.Utils.isValidObject(this.config.info.object)) {
+          var dom = {
+            parentContainer: this.config.info.object,
+            container: this.config.info.object.children("." + this.config.info.options.contentSection["class"])
+          };
+
+          if(options.duration) {
+            if(options["class"]) {
+              this.highlightByClass(dom, content, options);
+            } else if(options.backgroundColor) {
+              this.highlightByBackgroundColor(dom, content, options);
+            }
+          }
+        }
+      },
+
+      /**
+       * Highlight by adding the given class, and then removing it
+       */
+      highlightByClass: function(dom, content, options) {
+        dom.container.css({display: "none"});
+        dom.container.addClass(options["class"]);
+        this.updateContent(content);
+
+        dom.container.fadeIn({duration: options.duration});
+        dom.container.fadeOut({
+          duration: options.duration,
+          complete: function() {
+            if(options["class"]) {
+              dom.container.removeClass(options["class"]);
+            }
+            dom.container.css({display: "block"});
+            dom.container.html(content);
+          }
+        });
+      },
+
+      /**
+       * Highlight by transitioning the background colour to the given colour,
+       * and then back to the original
+       */
+      highlightByBackgroundColor: function(dom, content, options) {
+        var origBackgroundColor = dom.parentContainer.css("background-color");
+        this.updateContent(content);
+
+        dom.container.animate({
+          backgroundColor: options.backgroundColor
+          }, {
+          duration: options.duration,
+          complete: function() {
+            dom.container.animate({
+              backgroundColor: origBackgroundColor
+            }, options.duration);
+          }
+        });
+      },
+
       /**
        * Set the content for this info panel and then display it
        */
