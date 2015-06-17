@@ -3882,7 +3882,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               this.highlightByClass(dom, content, options);
             } else if(options.backgroundColor) {
               this.highlightByBackgroundColor(dom, content, options);
+            } else {
+              this.updateContent(content);  // No options so just update
             }
+          } else {
+            this.updateContent(content);    // No options so just update
           }
         }
       },
