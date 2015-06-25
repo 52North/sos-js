@@ -1467,6 +1467,112 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
         }
 
         return y;
+      },
+
+      mergeSeries: function(x, options) {
+        var options = options || {n: 0, m: 1, missing: null};
+        var ivar = [];
+        var y = [];
+
+        if(this.isArray(x)) {
+          // Get a unique, sorted superset of the independent variable
+          for(var i = 0, len = x.length; i < len; i++) {
+            ivar = ivar.concat(this.extractColumn(x[i], options.n));
+          }
+          ivar.sort(function(a, b) {return a - b;});
+          ivar = this.getUniqueList(ivar);
+
+          // Combine into a sparse table (left outer join)
+          for(var i = 0, ilen = ivar.length; i < ilen; i++) {
+            var row = [];
+            row[0] = ivar[i];
+
+            for(var j = 0, jlen = x.length; j < jlen; j++) {
+              row[j+1] = options.missing;
+
+              for(var k = 0, klen = x[j].length; k < klen; k++) {
+                if(x[j][k][options.n] == ivar[i]) {
+                  row[j+1] = x[j][k][options.m];
+                  break;
+                }
+              }
+            }
+            y.push(row);
+          }
+        }
+
+        return y;
+      },
+
+      removeMissingDataRows: function(x, options) {
+        var options = options || {missing: null};
+        var y = [];
+
+        if(this.isArray(x) && this.isArray(x[0])) {
+          for(var i = 0, ilen = x.length; i < ilen; i++) {
+            var foundMissing = false;
+
+            for(var j = 0, jlen = x[i].length; j < jlen; j++) {
+              if(x[i][j] == options.missing) {
+                foundMissing = true;
+                break;
+              }
+            }
+            if(foundMissing == false) {
+              y.push(x[i]);
+            }
+          }
+        }
+
+        return y;
+      },
+
+      reorderColumns: function(x, cols) {
+        var y = [];
+
+        if(this.isArray(x) && this.isArray(x[0]) && this.isArray(cols)) {
+          if(Math.max.apply(null, cols) < x[0].length && Math.min.apply(null, cols) >= 0) {
+            for(var i = 0, ilen = x.length; i < ilen; i++) {
+              var row = [];
+
+              for(var j = 0, jlen = cols.length; j < jlen; j++) {
+                row.push(x[i][cols[j]]);
+              }
+              y.push(row);
+            }
+          }
+        }
+
+        return y;
+      },
+
+      removeColumns: function(x, cols) {
+        var y = [];
+        var keepCols = [];
+
+        /* The reorderColumns() function returns a new table, hence passing
+           a column list without the to-be-removed column indices effectively
+           removes those columns */
+        if(this.isArray(x) && this.isArray(x[0]) && this.isArray(cols)) {
+          if(Math.max.apply(null, cols) < x[0].length && Math.min.apply(null, cols) >= 0) {
+            for(var i = 0, ilen = x[0].length; i < ilen; i++) {
+              var removeColumn = false;
+
+              for(var j = 0, jlen = cols.length; j < jlen; j++) {
+                if(i == cols[j]) {
+                  removeColumn = true;
+                  break;
+                }
+              }
+              if(removeColumn == false) {
+                keepCols.push(i);
+              }
+            }
+            y = this.reorderColumns(x, keepCols);
+          }
+        }
+
+        return y;
       }
     };
 
