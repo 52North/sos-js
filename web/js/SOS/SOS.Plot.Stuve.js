@@ -74,7 +74,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             options: {
               show: true,
               xaxis: {mode: null, axisLabel: "Temperature / &deg;C", min: -90, max: 40},
-              yaxis: {min: 100, max: 1050, tickSize: 50, ticks: this.generateYaxisTicks, axisLabel: "Pressure / hPa"},
+              yaxes: [
+                {position: "left", min: 100, max: 1050, tickSize: 50, ticks: this.generateYaxisTicks, axisLabel: "Pressure / hPa"},
+                {position: "right", min: 0, ticks: [], axisLabel: "Altitude / m"}
+              ],
               series: {
                 lines: {show: true, fill: false},
                 points: {show: false},
@@ -161,15 +164,17 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
-       * Set the y-axis to reverse P^k
+       * Set the y-axis corresponding to the given index to reverse P^k
        */
-      setYAxisReversePk: function() {
-        var axis = "yaxis";
+      setYAxisReversePk: function(index) {
         var k = this.config.constants.k;
-        this.config.plot.options[axis].transform = function(v) {return -Math.pow(v, k);};
-        this.config.plot.options[axis].inverseTransform = function(v) {return -Math.pow(v, 1/k);};
-        this.config.overview.options[axis].transform = this.config.plot.options[axis].transform;
-        this.config.overview.options[axis].inverseTransform = this.config.plot.options[axis].inverseTransform;
+
+        if(index < this.config.plot.options.yaxes.length) {
+          this.config.plot.options.yaxes[index].transform = function(v) {return -Math.pow(v, k);};
+          this.config.plot.options.yaxes[index].inverseTransform = function(v) {return -Math.pow(v, 1/k);};
+          this.config.overview.options.yaxis.transform = this.config.plot.options.yaxes[index].transform;
+          this.config.overview.options.yaxis.inverseTransform = this.config.plot.options.yaxes[index].inverseTransform;
+        }
       },
 
       /**
@@ -206,7 +211,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Plot the given observation data
        */
       draw: function() {
-        var T, P, Td, W = {mag: null, dir: null};
+        var P, A, T, Td, W = {mag: null, dir: null};
 
         // Find the components from the retrieved data
         for(var i = 0, len = this.config.plot.series.length; i < len; i++) {
@@ -216,6 +221,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             T = this.config.plot.series[i];
           } else if(/Air Pressure/i.test(this.config.plot.series[i].name)) {
             P = this.config.plot.series[i];
+          } else if(/Altitude/i.test(this.config.plot.series[i].name)) {
+            A = this.config.plot.series[i];
           } else if(/Wind Speed/i.test(this.config.plot.series[i].name)) {
             W.mag = this.config.plot.series[i];
           } else if(/Wind Direction/i.test(this.config.plot.series[i].name)) {
@@ -225,17 +232,26 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         if(this.config.plot.options.show) {
           // Construct the data table required by the Stuve plot & store
-          if(T && P && Td) {
+          if(T && P && Td && A) {
             var series = this.constructStuveMainData(P, T, Td);
             this.config.plot.series = series;
             this.clearSeriesMetadata();
             this.storeSeriesMetadataLaunch(P);
-            this.storeSeriesMetadataColumns(P, T, Td);
+            this.storeSeriesMetadataColumns(P, A, T, Td);
 
-            this.setYAxisReversePk();
+            this.setYAxisReversePk(0);
 
             // Generate the plot
             this.config.plot.object = jQuery.plot(jQuery('#' + this.config.plot.id), series, this.config.plot.options);
+
+            // Print the altitude on the plot for certain pressure levels
+            var altitudeSeries = this.constructStuveAltitudeData(P, A);
+            this.config.plot.altitudeSeries = altitudeSeries;
+
+            if(altitudeSeries.length > 0) {
+              var ctx = this.config.plot.object.getCanvas().getContext("2d");
+              this.printAltitude(this.config.plot.object, ctx, altitudeSeries[0]);
+            }
 
             // Add wind data to the plot
             if(W.mag && W.dir) {
@@ -248,6 +264,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 this.drawWind(this.config.plot.object, ctx, windSeries[0]);
               }
             }
+
+            // Construct a complete cotemporal timeseries for all variables
+            var timeSeries = this.constructStuveTimeSeries(P, A, T, Td, W);
+            this.config.plot.timeSeries = timeSeries;
 
             // Optionally generate the plot overview
             if(this.config.overview.options.show) {
@@ -272,6 +292,24 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Get the corresponding altitude for the given pressure level value
+       */
+      getAltitudeForPressureLevelValue: function(value) {
+        var A = "";
+
+        if(this.config.plot.altitudeSeries.length > 0) {
+          for(var i = 0, len = this.config.plot.altitudeSeries[0].data.length; i < len; i++) {
+            if(this.config.plot.altitudeSeries[0].data[i][0] == value) {
+              A = this.config.plot.altitudeSeries[0].data[i][1];
+              break;
+            }
+          }
+        }
+ 
+        return A;
+      },
+
+      /**
        * Setup event handlers to manage the plot's behaviour
        */
       setupBehaviour: function() {
@@ -287,19 +325,22 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         // Show data coordinates (time, value) as mouse hovers over plot
         p.bind("plothover", {self: this}, function(evt, pos, item) {
           if(item) {
-            var ft = evt.data.self.config.format.time;
-            var fv = evt.data.self.config.format.value;
-            var metadata = evt.data.self.config.metadata;
+            var self = evt.data.self;
+            var ft = self.config.format.time;
+            var fv = self.config.format.value;
+            var metadata = self.config.metadata;
             // The small offsets avoid flickering when box is under mouse
             var x = pos.pageX + 20;
             var y = pos.pageY + 20;
             var T = item.datapoint[0];
             var P = item.datapoint[1];
+            var A = self.getAltitudeForPressureLevelValue(P);
             var html = jQuery('<p>'
             + '<span class="sos-control-title">Balloon Launch Time:</span> <span>' + ft.formatter(metadata.launch.datetime) + '</span><br/>'
             + '<span class="sos-control-title">Temperature:</span> <span>' + fv.formatter(T, fv.sciLimit, fv.digits) + ' ' + '&deg;C' + '</span><br/>'
             + '<span class="sos-control-title">Pressure:</span> <span>' + fv.formatter(P, fv.sciLimit, fv.digits) + ' ' + 'hPa' + '</span><br/>'
-            + '<span class="sos-control-title">Potential Temperature:</span> <span>' + fv.formatter(evt.data.self.theta(T, P), fv.sciLimit, fv.digits) + ' ' + '&deg;C' + '</span><br/>'
+            + '<span class="sos-control-title">Altitude:</span> <span>' + fv.formatter(A, fv.sciLimit, fv.digits) + ' ' + 'm' + '</span><br/>'
+            + '<span class="sos-control-title">Potential Temperature:</span> <span>' + fv.formatter(self.theta(T, P), fv.sciLimit, fv.digits) + ' ' + '&deg;C' + '</span><br/>'
             + '</p>');
             valueBox.html(html);
             valueBox.css({
@@ -339,6 +380,12 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               self.config.plot.object.unhighlight();
               delete self.config.plot.selected;
               self.update();
+
+              // Reinstate altitude data
+              if(self.config.plot.altitudeSeries.length > 0) {
+                var ctx = self.config.plot.object.getCanvas().getContext("2d");
+                self.printAltitude(self.config.plot.object, ctx, self.config.plot.altitudeSeries[0]);
+              }
 
               // Reinstate wind data
               if(self.config.plot.windSeries.length > 0) {
@@ -428,6 +475,8 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       drawWind: function(plot, ctx, table) {
         var axes = plot.getAxes();
 
+        ctx.fillStyle = "black";
+
         for(var i = 0, len = table.data.length; i < len; i++) {
           ctx.save();
 
@@ -514,7 +563,34 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         ctx.restore();
       },
- 
+
+      /**
+       * Print the corresponding altitude at the pressure gridlines on the plot
+       */
+      printAltitude: function(plot, ctx, table) {
+        var axes = plot.getAxes();
+
+        ctx.fillStyle = "grey";
+        ctx.font = "12px Arial";
+
+        /* Get the corresponding altitude for each gridline pressure level, if
+           it exists.  Print along the right-hand vertical side of the plot */ 
+        for(var i = axes.yaxis.min, len = axes.yaxis.max; i < len; i += axes.yaxis.tickSize) {
+          ctx.save();
+
+          var x = axes.xaxis.max - 12;
+          var y = i;
+          var A = this.getAltitudeForPressureLevelValue(i);
+          var off = plot.pointOffset({x: x, y: y});
+
+          if(A != "") {
+            A = parseInt(A);
+          }
+          ctx.fillText(A, off.left, off.top);
+          ctx.restore();
+        }
+      },
+
       /**
        * Construct the main data series required by Stuve plots
        */
@@ -533,14 +609,12 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       _constructStuveMainData: function(x, y) {
         var data = [], table = {};
 
-        // Merge cotemporal values
-        for(var i = 0, xlen = x.data.length; i < xlen; i++) {
-          for(var j = 0, ylen = y.data.length; j < ylen; j++) {
-            if(y.data[j] && (y.data[j][0] == x.data[i][0])) {
-              data.push([x.data[i][1], y.data[j][1], x.data[i][0]]);
-            }
-          }
-        }
+        /* Merge cotemporal values, remove any rows with missing column data,
+           then place the timestamp at the end as the Stuve plot doesn't
+           show time */
+        data = SOS.Utils.mergeSeries([x.data, y.data]);
+        data = SOS.Utils.removeMissingDataRows(data);
+        data = SOS.Utils.reorderColumns(data, [1,2,0]);
 
         /* Copy over all the metadata properties from the x variable,
            then add the data */
@@ -555,25 +629,65 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Construct the altitude data series required by Stuve plots
+       */
+      constructStuveAltitudeData: function(P, A) {
+        var data = [], table = {}, series = [];
+
+        // Merge cotemporal values, and move timestamp out of the way
+        data = SOS.Utils.mergeSeries([P.data, A.data]);
+        data = SOS.Utils.reorderColumns(data, [1,2,0]);
+
+        /* Copy over all the metadata properties from the Altitude series,
+           then add the data */
+        for(var p in A) {
+          if(p != "data") {
+            table[p] = A[p];
+          }
+        }
+        table.data = data;
+        series.push(table);
+
+        return series;
+      },
+
+      /**
        * Construct the wind data series required by Stuve plots
        */
       constructStuveWindData: function(P, W) {
         var data = [], table = {}, series = [];
 
-        // Merge cotemporal values
-        for(var i = 0, Wmlen = W.mag.data.length; i < Wmlen; i++) {
-          for(var j = 0, Plen = P.data.length; j < Plen; j++) {
-            if(P.data[j] && (P.data[j][0] == W.mag.data[i][0])) {
-              data.push([W.mag.data[i][1], W.dir.data[i][1], P.data[j][1]]);
-            }
-          }
-        }
+        // Merge cotemporal values, and move timestamp out of the way
+        data = SOS.Utils.mergeSeries([W.mag.data, W.dir.data, P.data]);
+        data = SOS.Utils.reorderColumns(data, [1,2,3,0]);
 
         /* Copy over all the metadata properties from the Wind Speed series,
            then add the data */
         for(var p in W.mag) {
           if(p != "data") {
             table[p] = W.mag[p];
+          }
+        }
+        table.data = data;
+        series.push(table);
+
+        return series;
+      },
+
+      /**
+       * Construct the time series required by Stuve plots
+       */
+      constructStuveTimeSeries: function(P, A, T, Td, W) {
+        var data = [], table = {}, series = [];
+
+        // We set missing data to the empty string, for displaying in a table
+        data = SOS.Utils.mergeSeries([P.data, A.data, T.data, Td.data, W.mag.data, W.dir.data], {n: 0, m: 1, missing: ""});
+
+        /* Copy over all the metadata properties from the Pressure series,
+           then add the data */
+        for(var p in P) {
+          if(p != "data") {
+            table[p] = P[p];
           }
         }
         table.data = data;
@@ -616,64 +730,16 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           names.push(arguments[i].name + " / " + arguments[i].uomTitle);
         }
       },
-  
+
       /**
        * Construct a series of all data, with Pressure as the independent
        * variable
        */
       constructPressureSeries: function() {
         var table = this.initDataTable();
-        var series = [], data = [], set1 = [], set2 = [], pcol = [];
+        var series = [];
 
-        /* We take the pressure/temperature data series, & then the
-           pressure/wind data series, & combine the superset of these */
-        if(this.config.plot.series.length > 0) {
-          var P = SOS.Utils.extractColumn(this.config.plot.series[0].data, 1);
-          var T = SOS.Utils.extractColumn(this.config.plot.series[0].data, 0);
-
-          if(this.config.plot.series.length > 1) {
-            var Td = SOS.Utils.extractColumn(this.config.plot.series[1].data, 0);
-            for(var i = 0, len = P.length; i < len; i++) {
-              set1.push([P[i], T[i], Td[i]]);
-            }
-
-            if(this.config.plot.windSeries.length > 0) {
-              var W = {mag: null, dir: null, P: null};
-              W.mag = SOS.Utils.extractColumn(this.config.plot.windSeries[0].data, 0);
-              W.dir = SOS.Utils.extractColumn(this.config.plot.windSeries[0].data, 1);
-              W.P = SOS.Utils.extractColumn(this.config.plot.windSeries[0].data, 2);
-
-              for(var i = 0, len = W.P.length; i < len; i++) {
-                set2.push([W.P[i], W.mag[i], W.dir[i]]);
-              }
-
-              // Get a unique, reverse-sorted superset of pressure values
-              var pcol = SOS.Utils.extractColumn(set1, 0);
-              pcol = pcol.concat(SOS.Utils.extractColumn(set2, 0));
-              pcol.sort(function(a, b) {return b - a;});
-              pcol = SOS.Utils.getUniqueList(pcol);
-
-              var max = Math.max(set1.length, set2.length);
-
-              // Combine into a sparse table (left outer join)
-              for(var i = 0, len = pcol.length; i < len; i++) {
-                data[i] = ["", "", "", "", ""];
-                data[i][0] = pcol[i];
-
-                for(var j = 0; j < max; j++) {
-                  if(j < set1.length && pcol[i] == set1[j][0]) {
-                    data[i][1] = set1[j][1];
-                    data[i][2] = set1[j][2];
-                  }
-                  if(j < set2.length && pcol[i] == set2[j][0]) {
-                    data[i][3] = set2[j][1];
-                    data[i][4] = set2[j][2];
-                  }
-                }
-              }
-            }
-          }
-
+        if(this.config.plot.timeSeries.length > 0) {
           // Setup metadata properties for this table
           if(this.haveValidOfferingObject()) {
             table.label = this.offering.name;
@@ -682,7 +748,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             table.headerLabel = table.label;
           }
           table.columns = this.config.metadata.columns;
-          table.data = data;
+
+          // Show all columns except the timestamp
+          table.data = SOS.Utils.removeColumns(this.config.plot.timeSeries[0].data, [0]);
           series.push(table);
         }
 
