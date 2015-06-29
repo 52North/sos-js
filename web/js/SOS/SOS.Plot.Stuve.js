@@ -233,7 +233,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(this.config.plot.options.show) {
           // Construct the data table required by the Stuve plot & store
           if(T && P && Td && A) {
-            var series = this.constructStuveMainData(P, T, Td);
+            var series = this.constructStuveMainData(P, A, T, Td);
             this.config.plot.series = series;
             this.clearSeriesMetadata();
             this.storeSeriesMetadataLaunch(P);
@@ -594,11 +594,22 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       /**
        * Construct the main data series required by Stuve plots
        */
-      constructStuveMainData: function(P, T, Td) {
-        var series = [];
+      constructStuveMainData: function(P, A, T, Td) {
+        var series = [], table;
+        var altitudeOpts = {yaxis: 2, lines: {show: false}, points: {show: false}, bars: {show: false}, label: null};
 
         series.push(this._constructStuveMainData(T, P));
         series.push(this._constructStuveMainData(Td, P));
+
+        /* We wish to store the data against altitude, as well as the pressure
+           level.  However, we don't want to show these lines on the plot, we
+           just want altitude as the second y-axis */
+        table = this._constructStuveMainData(T, A);
+        jQuery.extend(true, table, altitudeOpts);
+        series.push(table);
+        table = this._constructStuveMainData(Td, A);
+        jQuery.extend(true, table, altitudeOpts);
+        series.push(table);
 
         return series;
       },
