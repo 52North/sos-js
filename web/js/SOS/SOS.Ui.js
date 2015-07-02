@@ -1302,7 +1302,33 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 headerLabel: "[%foiName%] [%name%] / [%uomTitle%]",
                 ordinateLabel: "[%name%] / [%uomTitle%]"
               },
-              scrollable: false
+              scrollable: false,
+              mergeSeries: {
+                active: false,
+                /* n is time index, and m is value index, of each series.
+                   missing is substituted if a series has no value at a given
+                   time point of the merged series table */
+                mergeOptions: {n: 0, m: 1, missing: ""},
+                /* To make best use of column header space in the merged series
+                   table, we minimise the amount of repeated metadata.  Hence,
+                   for a merged table containing data from a single FOI only,
+                   we can place FOI name in the table header (headerLabel), so
+                   as not to repeat it in each column header (ordinateLabel) */
+                singleFoi: {
+                  labelTemplates: {
+                    label: "[%foiName%] [%name%]",
+                    headerLabel: "[%foiName%]",
+                    ordinateLabel: "[%name%] / [%uomTitle%]"
+                  }
+                },
+                multipleFois: {
+                  labelTemplates: {
+                    label: "[%foiName%] [%name%]",
+                    headerLabel: "",
+                    ordinateLabel: "[%foiName%] [%name%] / [%uomTitle%]"
+                  }
+                }
+              }
             }
           },
           overview: {
@@ -1871,9 +1897,145 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Ascertain whether the given data series contain multiple FOIs or
+       * multiple offerings, and determine the time interval
+       */
+      characteriseDataSeries: function(series) {
+        var characterisation = {
+          hasMultipleFois: false,
+          hasMultipleOfferings: false,
+          timeInterval: {start: null, end: null}
+        };
+        var first = {foiName: null, offeringName: null, time: null};
+        var last = {time: null};
+
+        for(var i = 0, len = series.length; i < len; i++) {
+          if(i == 0) {
+            first.foiName = series[i].foiName;
+            first.offeringName = series[i].offeringName;
+
+            if(SOS.Utils.isArray(series[i].data)) {
+              first.time = series[i].data[0][0];
+              last.time = series[i].data[series[i].data.length-1][0];
+            }
+          }
+          if(series[i].foiName != first.foiName) {
+            characterisation.hasMultipleFois = true;
+          }
+          if(series[i].offeringName != first.offeringName) {
+            characterisation.hasMultipleOfferings = true;
+          }
+          if(SOS.Utils.isArray(series[i].data)) {
+            first.time = Math.min(first.time, series[i].data[0][0]);
+            last.time = Math.max(last.time, series[i].data[series[i].data.length-1][0]);
+          }
+        }
+        characterisation.timeInterval.start = new Date(first.time);
+        characterisation.timeInterval.end = new Date(last.time);
+
+        return characterisation;
+      },
+
+      /**
+       * Construct appropriate metadata for a merged data series table
+       */
+      constructMergedDataSeriesMetadata: function(series, options, table) {
+        var columnHeaderTemplate = "[%foiName%] [%name%] / [%uomTitle%]";
+        var characterisation = this.characteriseDataSeries(series);
+
+        // Get the first column name (Time)
+        options.columns.names = options.columns.names.slice(0, 1);
+
+        // Minimise the amount of repeated metadata in the table/column headers
+        if(characterisation.hasMultipleFois) {
+          if(options.mergeSeries) {
+            columnHeaderTemplate = options.mergeSeries.multipleFois.labelTemplates.ordinateLabel;
+          }
+        } else {
+          if(options.mergeSeries) {
+            columnHeaderTemplate = options.mergeSeries.singleFoi.labelTemplates.ordinateLabel;
+          }
+        }
+
+        // Add each series' value column name
+        for(var i = 0, len = series.length; i < len; i++) {
+          options.columns.names.push(SOS.Utils.applyTemplate(series[i], columnHeaderTemplate));
+        }
+
+        /* Copy over all the metadata properties from the first series &
+           set the labels.  Ensure we don't overwrite the data */
+        for(var p in series[0]) {
+          if(p != "data") {
+            table[p] = series[0][p];
+          }
+        }
+        if(characterisation.hasMultipleFois) {
+          if(options.mergeSeries) {
+            table.label = SOS.Utils.applyTemplate(table, options.mergeSeries.multipleFois.labelTemplates.label);
+            table.headerLabel = SOS.Utils.applyTemplate(table, options.mergeSeries.multipleFois.labelTemplates.headerLabel);
+          }
+        } else {
+          if(options.mergeSeries) {
+            table.label = SOS.Utils.applyTemplate(table, options.mergeSeries.singleFoi.labelTemplates.label);
+            table.headerLabel = SOS.Utils.applyTemplate(table, options.mergeSeries.singleFoi.labelTemplates.headerLabel);
+          }
+        }
+
+        return table;
+      },
+
+      /**
+       * Merge the given series into a single cotemporal multi-column table
+       */
+      mergeDataSeriesAsTable: function(series, options, table) {
+        var seriesData = [];
+
+        // Get all series data as an array of arrays
+        for(var i = 0, len = series.length; i < len; i++) {
+          seriesData.push(series[i].data);
+        }
+
+        // Merge cotemporal values
+        var data = SOS.Utils.mergeSeries(seriesData, options);
+        table.data = data;
+
+        return table;
+      },
+
+      /**
+       * Merge the given series into a single cotemporal multi-column series
+       */
+      mergeDataSeries: function(series, options) {
+        var mergedSeries = [];
+        var table = this.initDataTable();
+
+        this.constructMergedDataSeriesMetadata(series, options, table);
+        this.mergeDataSeriesAsTable(series, options.mergeSeries.mergeOptions, table);
+        mergedSeries.push(table);
+
+        return mergedSeries;
+      },
+ 
+      /**
        * Generate a table of the given observation data
        */
       generateTable: function(t, series, options) {
+        var retval;
+
+        if(options.mergeSeries && options.mergeSeries.active) {
+          var mergedSeries = this.mergeDataSeries(series, options);
+          retval = this._generateTable(t, mergedSeries, options);
+        } else {
+          retval = this._generateTable(t, series, options);
+        }
+
+        return retval;
+      },
+ 
+      /**
+       * Generate a table of the given observation data
+       */
+      _generateTable: function(t, series, options) {
         var tcontent = "";
         var lengths = [];
         var ft = this.config.format.time;
@@ -1952,6 +2114,22 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
        * Generate a plain non-HTML table of the given observation data
        */
       generatePlainDataTable: function(t, series, options) {
+        var retval;
+
+        if(options.mergeSeries && options.mergeSeries.active) {
+          var mergedSeries = this.mergeDataSeries(series, options);
+          retval = this._generatePlainDataTable(t, mergedSeries, options);
+        } else {
+          retval = this._generatePlainDataTable(t, series, options);
+        }
+
+        return retval;
+      },
+
+      /**
+       * Generate a plain non-HTML table of the given observation data
+       */
+      _generatePlainDataTable: function(t, series, options) {
         var tcontent = "";
         var lengths = [];
         var ft = this.config.format.time;
@@ -1971,9 +2149,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         tcontent += commentCharacter;
 
-        // Series header label (with plain non-HTML UOMs)
+        // Series header label
         for(var i = 0, len = series.length; i < len; i++) {
-          tcontent += series[i].label + (series[i].uom.length > 0 ? " / " + series[i].uom : "");
+          tcontent += series[i].headerLabel;
 
           if(i < len - 1) {
             tcontent += columnSeparator;
