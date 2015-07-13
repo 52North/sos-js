@@ -1471,33 +1471,40 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null) {
 
       mergeSeries: function(x, options) {
         var options = options || {n: 0, m: 1, missing: null};
-        var ivar = [];
+        var ivar = [], dataIndices = [];
         var y = [];
 
         if(this.isArray(x)) {
-          // Get a unique, sorted superset of the independent variable
-          for(var i = 0, len = x.length; i < len; i++) {
-            ivar = ivar.concat(this.extractColumn(x[i], options.n));
-          }
-          ivar.sort(function(a, b) {return a - b;});
-          ivar = this.getUniqueList(ivar);
+          if(x.length > 1) {
+            // Get a unique, sorted superset of the independent variable
+            for(var i = 0, len = x.length; i < len; i++) {
+              ivar = ivar.concat(this.extractColumn(x[i], options.n));
+              dataIndices.push(0);
+            }
+            ivar.sort(function(a, b) {return a - b;});
+            ivar = this.getUniqueList(ivar);
 
-          // Combine into a sparse table (left outer join)
-          for(var i = 0, ilen = ivar.length; i < ilen; i++) {
-            var row = [];
-            row[0] = ivar[i];
+            // Combine into a sparse table (left outer join)
+            for(var i = 0, ilen = ivar.length; i < ilen; i++) {
+              var row = [];
+              row[0] = ivar[i];
 
-            for(var j = 0, jlen = x.length; j < jlen; j++) {
-              row[j+1] = options.missing;
+              for(var j = 0, jlen = x.length; j < jlen; j++) {
+                row[j+1] = options.missing;
 
-              for(var k = 0, klen = x[j].length; k < klen; k++) {
-                if(x[j][k][options.n] == ivar[i]) {
-                  row[j+1] = x[j][k][options.m];
-                  break;
+                for(var k = dataIndices[j], klen = x[j].length; k < klen; k++) {
+                  if(x[j][k][options.n] == ivar[i]) {
+                    row[j+1] = x[j][k][options.m];
+                    dataIndices[j] = k;
+                    break;
+                  }
                 }
               }
+              y.push(row);
             }
-            y.push(row);
+          } else {
+            // Optimisation: x has only one series, so short-circuiting
+            y = x[0];
           }
         }
 
