@@ -2857,14 +2857,18 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 onSelect: function(s, ui) {jQuery(this).trigger('change');}
               },
               offerings: {
-                useFqn: false
+                useFqn: false,
+                // Override to filter which menu entries are displayed
+                entryFilter: function(entries) {return entries;}
               },
               observedProperties: {
                 /* Toggle fully-qualified name (FQN) in menus.  For example:
                    FQN: "urn:ogc:def:phenomenon:OGC:1.0.30:air_temperature"
                    Name: "Air Temperature"
                    If useFqn is false, we use Name, otherwise FQN */
-                useFqn: false
+                useFqn: false,
+                // Override to filter which menu entries are displayed
+                entryFilter: function(entries) {return entries;}
               },
               createNewItem: false,
               promptForSelection: true,
@@ -2992,6 +2996,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       displayOfferings: function() {
         var tab = jQuery('#' + this.config.menu.id + 'OfferingsTab');
         this.constructOfferingsEntries();
+        this.filterOfferingsEntries();
         this.initMenu(tab);
         this.setupOfferingsBehaviour();
         this.constructOfferingsTabControls();
@@ -3037,6 +3042,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         for(var i = 0, len = ids.length; i < len; i++) {
           var entry = {value: ids[i], label: names[i]};
           this.config.menu.entries.push(entry);
+        }
+      },
+
+      /**
+       * Filter the offerings menu entries
+       */
+      filterOfferingsEntries: function() {
+        if(this.config.menu.options.offerings.entryFilter) {
+          this.config.menu.entries = this.config.menu.options.offerings.entryFilter(this.config.menu.entries);
         }
       },
 
@@ -3112,6 +3126,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // Clone the offerings entries as source for the search autocomplete
         this.constructOfferingsEntries({filterOnFOI: false});
+        this.filterOfferingsEntries();
         var src = this.config.menu.entries.slice(0);
 
         /* Create an autocomplete search box with placeholder text.  Filter
@@ -3176,6 +3191,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       displayObservedProperties: function() {
         var tab = jQuery('#' + this.config.menu.id + 'ObservedPropertiesTab');
         this.constructObservedPropertiesEntries();
+        this.filterObservedPropertiesEntries();
         this.initMenu(tab);
         this.setupObservedPropertiesBehaviour();
         this.promptForSelection(tab);
@@ -3204,6 +3220,15 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             var entry = {value: ids[i], label: names[i]};
             this.config.menu.entries.push(entry);
           }
+        }
+      },
+
+      /**
+       * Filter the observed properties menu entries
+       */
+      filterObservedPropertiesEntries: function() {
+        if(this.config.menu.options.observedProperties.entryFilter) {
+          this.config.menu.entries = this.config.menu.options.observedProperties.entryFilter(this.config.menu.entries);
         }
       },
 
@@ -3643,6 +3668,44 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         if(this.config.menu.options.promptForSelection) {
           tab.prev('h3[role="tab"]').trigger('click');
         }
+      },
+
+      /**
+       * Filter the given entries array according to the given filter.  The
+       * filter object can have one of either an include list or an exclude
+       * list of regular expressions.  The regular expression is tested
+       * against each entry's value and label
+       */
+      filterEntries: function(origEntries, filter) {
+        var entries = [];
+
+        if(filter.include && filter.include.length > 0) {
+          for(var i = 0, olen = origEntries.length; i < olen; i++) {
+            for(var j = 0, flen = filter.include.length; j < flen; j++) {
+              if(filter.include[j].test(origEntries[i].value) || filter.include[j].test(origEntries[i].label)) {
+                entries.push(origEntries[i]);
+              }
+            }
+          }
+        } else if(filter.exclude && filter.exclude.length > 0) {
+          for(var i = 0, olen = origEntries.length; i < olen; i++) {
+            var inExcludeList = false;
+
+            for(var j = 0, flen = filter.exclude.length; j < flen; j++) {
+              if(filter.exclude[j].test(origEntries[i].value) || filter.exclude[j].test(origEntries[i].label)) {
+                inExcludeList = true;
+                break;
+              }
+            }
+            if(inExcludeList == false) {
+              entries.push(origEntries[i]);
+            }
+          }
+        } else {
+          entries = origEntries;
+        }
+
+        return entries;
       },
 
       /**
