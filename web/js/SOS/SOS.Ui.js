@@ -4417,6 +4417,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 table: {table: {options: {scrollable: true}}},
                 menu: {menu: {step: -1}}
               },
+              showBusyIndicatorOnLoad: true,
               info: SOS.App.Resources.config.app.options.info
             }
           },
@@ -5049,6 +5050,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             components.table.config.mode.append = item.options.addToExisting;
           }
 
+          // Show a busy indicator whilst the observation data are loading
+          if(this.config.app.options.showBusyIndicatorOnLoad) {
+            this.startBusyIndicator("#" + this.config.app.id);
+          }
+
           this.getObservationData();
         }
       },
@@ -5376,6 +5382,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         components.plot.offering = this.offering;
         components.table.offering = this.offering;
 
+        if(this.config.app.options.showBusyIndicatorOnLoad) {
+          this.stopBusyIndicator();
+        }
+
         // Make the plot tab the active tab, then draw the plot & table
         jQuery('#' + this.config.app.id + 'PlotPanel').html("");
         jQuery('#' + this.config.app.id + 'PlotTab a').trigger('click');
@@ -5393,6 +5403,40 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // For external listeners (application-level plumbing)
         this.sos.events.triggerEvent("sosAppDrawObservationData");
+      },
+
+      /**
+       * Start a busy indicator
+       */
+      startBusyIndicator: function(containerSelector) {
+        // Ensure only one busy indicator active on object at any one time
+        if(!SOS.Utils.isValidObject(this.busyIndicator)) {
+          this.busyIndicator = new SOS.Ui.BusyIndicator();
+          var c = jQuery(containerSelector);
+
+          // Ensure container has a centre point to locate the busy indicator
+          if(c.length > 0) {
+            var d = c.children(".sos-container-centre");
+
+            if(d.length < 1) {
+              d = jQuery("<div/>", {"class": "sos-container-centre"});
+              c.append(d);
+            }
+            if(d.length > 0) {
+              this.busyIndicator.init({boxParent: d, boxClass: "sos-busy-indicator-box sos-app-busy-indicator sos-centred-busy-indicator"});
+            }
+          }
+        }
+      },
+
+      /**
+       * Stop the previously started busy indicator
+       */
+      stopBusyIndicator: function() {
+        if(SOS.Utils.isValidObject(this.busyIndicator)) {
+          this.busyIndicator.stop();
+          delete this.busyIndicator;
+        }
       }
     });
 

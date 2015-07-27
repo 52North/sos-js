@@ -414,6 +414,13 @@ table.sos-table-scrollable {
   top: 5px;
 }
 
+/* This accounts for the sos-app class' left position, so that the busy
+   indicator is centred correctly */
+.sos-app-busy-indicator {
+  position: absolute;
+  left: -210px;
+}
+
 .sos-tab-header {
   font-size: 0.9em;
 }
