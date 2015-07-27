@@ -439,7 +439,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           container.fadeIn({duration: options.duration});
           container.fadeOut({duration: options.duration});
         }
-        jQuery("body").append(container);
+        jQuery(options.containerSelector || "body").append(container);
 
         return container;
       },
