@@ -421,6 +421,14 @@ table.sos-table-scrollable {
   left: -210px;
 }
 
+.sos-app-message {
+  position: absolute;
+  top: 128px;
+  left: 33%;
+  width: 33%;
+  z-index: 1005;
+}
+
 .sos-tab-header {
   font-size: 0.9em;
 }
