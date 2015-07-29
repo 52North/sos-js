@@ -439,6 +439,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           container.fadeIn({duration: options.duration});
           container.fadeOut({duration: options.duration});
         }
+        if(options.closeOnClick) {
+          container.bind("click", function() {container.remove();});
+        }
         jQuery(options.containerSelector || "body").append(container);
 
         return container;
@@ -1015,6 +1018,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         // If valueBox div doesn't exist (the norm), create one on the fly
         if(valueBox.length < 1) {
           valueBox = jQuery('<div id="#' + this.config.plot.id + 'ValueBox" class="sos-plot-valuebox" style="display:none"/>');
+          valueBox.bind("click", function() {valueBox.remove();});
           jQuery('body').after(valueBox);
         }
 
