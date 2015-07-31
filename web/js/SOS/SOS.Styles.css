@@ -152,7 +152,7 @@
 .sos-busy-indicator-box {
   position: absolute;
   top: 0; bottom: 0; left: 0; right: 0;
-  margin: auto;
+  margin: 0px;
   filter: alpha(opacity=80);
   opacity: 0.8;
   -moz-border-radius: 6px;
@@ -406,12 +406,28 @@ table.sos-table-scrollable {
 }
 
 .sos-app {
-  width: 80%;
+  width: 1011px;
   height: 600px;
   padding: 5px;
   position: absolute;
   left: 210px;
   top: 5px;
+}
+
+/* This accounts for the sos-app class' left position, so that the busy
+   indicator is centred correctly */
+.sos-app-busy-indicator {
+  position: absolute;
+  top: -21px;
+  left: -150px;
+}
+
+.sos-app-message {
+  position: absolute;
+  top: 128px;
+  left: 33%;
+  width: 33%;
+  z-index: 1005;
 }
 
 .sos-tab-header {

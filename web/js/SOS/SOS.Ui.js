@@ -439,7 +439,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
           container.fadeIn({duration: options.duration});
           container.fadeOut({duration: options.duration});
         }
-        jQuery("body").append(container);
+        if(options.closeOnClick) {
+          container.bind("click", function() {container.remove();});
+        }
+        jQuery(options.containerSelector || "body").append(container);
 
         return container;
       },
@@ -525,7 +528,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         var f = function() {
           // Ensure only one busy indicator active on object at any one time
           if(!SOS.Utils.isValidObject(this.busyIndicator)) {
-            this.busyIndicator = SOS.Ui.BusyIndicator;
+            this.busyIndicator = new SOS.Ui.BusyIndicator();
             var c = jQuery(containerSelector);
 
             // Ensure container has a centre point to locate the busy indicator
@@ -566,88 +569,90 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
      * Utility object for providing visual feedback that a SOS.Ui object is
      * busy (for example, waiting on asynchronous data over the network)
      */
-    SOS.Ui.BusyIndicator = {
-      active: true,
-      box: null,
-      pulse: null,
-      boxClass: "sos-busy-indicator-box",
-      pulseClass: "sos-busy-indicator-pulse",
-      boxParent: "body",
-      initPause: 50,              // To avoid initial stuttering (ms)
-      duration: 2000,             // Duration of pulse transition (ms)
-      pulseWidth: 60,             // Distance the pulse travels (px)
+    SOS.Ui.BusyIndicator = function () {
+      return {
+        active: true,
+        box: null,
+        pulse: null,
+        boxClass: "sos-busy-indicator-box",
+        pulseClass: "sos-busy-indicator-pulse",
+        boxParent: "body",
+        initPause: 50,            // To avoid initial stuttering (ms)
+        duration: 2000,           // Duration of pulse transition (ms)
+        pulseWidth: 60,           // Distance the pulse travels (px)
 
-      /**
-       * Initialise the busy indicator
-       */
-      init: function(options) {
-        var options = options || {};
+        /**
+         * Initialise the busy indicator
+         */
+        init: function(options) {
+          var options = options || {};
 
-        if(this.active) {
-          this.box = jQuery("<div></div>", {
-            "class": (options.boxClass || this.boxClass)
-          });
-          this.pulse = jQuery("<div></div>", {
-            "class": (options.pulseClass || this.pulseClass)
-          });
+          if(this.active) {
+            this.box = jQuery("<div></div>", {
+              "class": (options.boxClass || this.boxClass)
+            });
+            this.pulse = jQuery("<div></div>", {
+              "class": (options.pulseClass || this.pulseClass)
+            });
 
-          // Remove when clicked
-          this.box.bind("click", jQuery.proxy(this.stop, this));
+            // Remove when clicked
+            this.box.bind("click", jQuery.proxy(this.stop, this));
 
-          // Animate the pulse via custom events
-          this.pulse.bind("sosUiBusyIndicatorTransitionEnd", {self: this}, this._toggleTransition);
+            // Animate the pulse via custom events
+            this.pulse.bind("sosUiBusyIndicatorTransitionEnd", {self: this}, this._toggleTransition);
 
-          jQuery(options.boxParent || this.boxParent).append(this.box);
-          this.box.append(this.pulse);
+            jQuery(options.boxParent || this.boxParent).append(this.box);
+            this.box.append(this.pulse);
 
-          /* A brief initial pause to allow the page to be rendered.  This
-             avoids initial stuttering of the pulse animation */
-          window.setTimeout(jQuery.proxy(this.animate, this), options.initPause || this.initPause);
-        }
-      },
-
-      /**
-       * Event handler for the busy indicator pulse transition animation
-       */
-      _toggleTransition: function(evt) {
-        var self = evt.data.self;
-        var pulse = self.pulse;
-
-        // Reverse the direction of the pulse
-        self.pulseWidth *= -1;
-        var leftValue = (self.pulseWidth < 0 ? "-=" : "+=") + Math.abs(self.pulseWidth) + "px";
-
-        // Animate the pulse by moving it left or right
-        pulse.animate({left: leftValue}, {
-          duration: (self.duration || 2000),     // Must be non-zero
-          complete: function() {
-            pulse.trigger("sosUiBusyIndicatorTransitionEnd");
+            /* A brief initial pause to allow the page to be rendered.  This
+               avoids initial stuttering of the pulse animation */
+            window.setTimeout(jQuery.proxy(this.animate, this), options.initPause || this.initPause);
           }
-        });
-      },
- 
-      /**
-       * Stop the busy indicator
-       */
-      stop: function() {
-        if(this.box) {
-          this.box.remove();
-          this.box = null;
-          this.pulse = null;
-        }
-      },
+        },
 
-      /**
-       * Animate the busy indicator
-       */
-      animate: function() {
-        // Initialise the pulse to begin at the left
-        this.pulseWidth = Math.abs(this.pulseWidth) * -1;
+        /**
+         * Event handler for the busy indicator pulse transition animation
+         */
+        _toggleTransition: function(evt) {
+          var self = evt.data.self;
+          var pulse = self.pulse;
 
-        if(this.pulse) {
-          this.pulse.trigger("sosUiBusyIndicatorTransitionEnd");
+          // Reverse the direction of the pulse
+          self.pulseWidth *= -1;
+          var leftValue = (self.pulseWidth < 0 ? "-=" : "+=") + Math.abs(self.pulseWidth) + "px";
+
+          // Animate the pulse by moving it left or right
+          pulse.animate({left: leftValue}, {
+            duration: (self.duration || 2000),   // Must be non-zero
+            complete: function() {
+              pulse.trigger("sosUiBusyIndicatorTransitionEnd");
+            }
+          });
+        },
+   
+        /**
+         * Stop the busy indicator
+         */
+        stop: function() {
+          if(this.box) {
+            this.box.remove();
+            this.box = null;
+            this.pulse = null;
+          }
+        },
+
+        /**
+         * Animate the busy indicator
+         */
+        animate: function() {
+          // Initialise the pulse to begin at the left
+          this.pulseWidth = Math.abs(this.pulseWidth) * -1;
+
+          if(this.pulse) {
+            this.pulse.trigger("sosUiBusyIndicatorTransitionEnd");
+          }
         }
-      }
+      };
     }
   }
 
@@ -1013,6 +1018,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         // If valueBox div doesn't exist (the norm), create one on the fly
         if(valueBox.length < 1) {
           valueBox = jQuery('<div id="#' + this.config.plot.id + 'ValueBox" class="sos-plot-valuebox" style="display:none"/>');
+          valueBox.bind("click", function() {valueBox.remove();});
           jQuery('body').after(valueBox);
         }
 
@@ -4415,6 +4421,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
                 table: {table: {options: {scrollable: true}}},
                 menu: {menu: {step: -1}}
               },
+              showBusyIndicatorOnLoad: true,
               info: SOS.App.Resources.config.app.options.info
             }
           },
@@ -5047,6 +5054,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
             components.table.config.mode.append = item.options.addToExisting;
           }
 
+          // Show a busy indicator whilst the observation data are loading
+          if(this.config.app.options.showBusyIndicatorOnLoad) {
+            this.startBusyIndicator("#" + this.config.app.id);
+          }
+
           this.getObservationData();
         }
       },
@@ -5374,6 +5386,10 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         components.plot.offering = this.offering;
         components.table.offering = this.offering;
 
+        if(this.config.app.options.showBusyIndicatorOnLoad) {
+          this.stopBusyIndicator();
+        }
+
         // Make the plot tab the active tab, then draw the plot & table
         jQuery('#' + this.config.app.id + 'PlotPanel').html("");
         jQuery('#' + this.config.app.id + 'PlotTab a').trigger('click');
@@ -5391,6 +5407,40 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
 
         // For external listeners (application-level plumbing)
         this.sos.events.triggerEvent("sosAppDrawObservationData");
+      },
+
+      /**
+       * Start a busy indicator
+       */
+      startBusyIndicator: function(containerSelector) {
+        // Ensure only one busy indicator active on object at any one time
+        if(!SOS.Utils.isValidObject(this.busyIndicator)) {
+          this.busyIndicator = new SOS.Ui.BusyIndicator();
+          var c = jQuery(containerSelector);
+
+          // Ensure container has a centre point to locate the busy indicator
+          if(c.length > 0) {
+            var d = c.children(".sos-container-centre");
+
+            if(d.length < 1) {
+              d = jQuery("<div/>", {"class": "sos-container-centre"});
+              c.append(d);
+            }
+            if(d.length > 0) {
+              this.busyIndicator.init({boxParent: d, boxClass: "sos-busy-indicator-box sos-app-busy-indicator sos-centred-busy-indicator"});
+            }
+          }
+        }
+      },
+
+      /**
+       * Stop the previously started busy indicator
+       */
+      stopBusyIndicator: function() {
+        if(SOS.Utils.isValidObject(this.busyIndicator)) {
+          this.busyIndicator.stop();
+          delete this.busyIndicator;
+        }
       }
     });
 
