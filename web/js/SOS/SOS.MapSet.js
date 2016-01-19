@@ -206,9 +206,9 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
         });
         this.maps[2].setBaseLayerOptions({
           label: "SCAR ADD",
-          url: "http://add.antarctica.ac.uk/geoserver/add/wms?",
+          url: "https://maps.bas.ac.uk/antarctic/wms?",
           params: {
-            layers: ["add:timmermann_bathy_3031", "add:bamber_hillshade", "add:cst10_polygon", "add:cst10_linestring", "add:sgssi10_polygon", "add:macquarie10_polygon", "add:heard10_polygon", "add:outliers10_polygon", "add:graticule", "add:add_data_limit"]
+            layers: ["add:antarctic_coastline", "add:antarctic_hillshade_and_bathymetry", "add:antarctic_add_data_limit", "add:antarctic_graticule"]
           }
         });
         this.maps[2].setOverviewOptions({show: true});
