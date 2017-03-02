@@ -2437,6 +2437,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               displayLatestObservations: false,
               // Override to filter which FOIs are displayed
               foiFilter: function(fois) {return fois;},
+              parseFoiIdFromGmlName: true,
               // Optional OL vector layer properties
               params: {
               }
@@ -2711,7 +2712,7 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       featureOfInterestSelectHandler: function(feature) {
         var item = {
           foi: {
-            id: feature.attributes.id,
+            id: (this.config.featureOfInterestLayer.options.parseFoiIdFromGmlName ? feature.attributes.name : feature.attributes.id),
             name: feature.attributes.name,
             geometry: feature.geometry
           }
