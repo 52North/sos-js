@@ -2437,6 +2437,11 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
               displayLatestObservations: false,
               // Override to filter which FOIs are displayed
               foiFilter: function(fois) {return fois;},
+              /* Specifies how to parse FOI ID from feature object.
+                 "auto": auto-discover where FOI ID is held,
+                 "name": asserts that FOI ID is held in gml:name,
+                 "id": asserts that FOI ID is held in gml:id */
+              parseFoiIdMethod: "auto",
               // Optional OL vector layer properties
               params: {
               }
@@ -2706,15 +2711,41 @@ if(typeof OpenLayers !== "undefined" && OpenLayers !== null &&
       },
 
       /**
+       * Parse a foi object from the given feature object, according to options
+       */
+      parseFeatureObject: function(feature, options) {
+        var options = options || {parseFoiIdMethod: "auto"};
+        var foi = {
+          id: feature.attributes.id,
+          name: feature.attributes.name,
+          geometry: feature.geometry
+        };
+
+        // Auto-discover where FOI ID is held
+        if(options.parseFoiIdMethod === "auto") {
+          var fois = this.sos.getFeatureOfInterestIds();
+
+          if(OpenLayers.Util.indexOf(fois, foi.id) < 0) {
+            foi.id = feature.attributes.name;
+
+            if(OpenLayers.Util.indexOf(fois, foi.id) < 0) {
+              foi.id = feature.attributes.identifier;
+            }
+          }
+        } else {
+          // User explicitly specified where to parse FOI ID from
+          foi.id = feature.attributes[options.parseFoiIdMethod];
+        }
+
+        return foi;
+      },
+
+      /**
        * Setup behaviour for when user clicks on a feature-of-interest (FOI)
        */
       featureOfInterestSelectHandler: function(feature) {
         var item = {
-          foi: {
-            id: feature.attributes.id,
-            name: feature.attributes.name,
-            geometry: feature.geometry
-          }
+          foi: this.parseFeatureObject(feature, this.config.featureOfInterestLayer.options)
         };
 
         // Store each selected item (FOI)
